@@ -9,6 +9,7 @@ const TABLES = [
   "notifications",
   "acknowledgments",
   "dutyAssignments",
+  "leaveDays",
   "movements",
   "flights",
   "bookings",
@@ -175,8 +176,9 @@ export const run = internalMutation({
       ["Grace Naserian", "Housekeeping", "+254745119027", ["SW", "Maa"]],
       ["Samuel Otieno", "Porter", "+254718660431", ["EN", "SW"]],
     ];
+    const staffIds: Id<"staff">[] = [];
     for (const [name, role, phone, languages] of team) {
-      await ctx.db.insert("staff", {
+      const id = await ctx.db.insert("staff", {
         lodgeId: riverbend,
         name,
         role,
@@ -187,7 +189,24 @@ export const run = internalMutation({
         leaveBalance: 10,
         available: true,
       });
+      staffIds.push(id);
     }
+
+    // Seed a few leave days so the planner has content. Day-start ms.
+    const DAY = 86400000;
+    const dayStart = midnight.getTime();
+    const addLeave = async (staffIdx: number, offsets: number[]) => {
+      for (const o of offsets) {
+        await ctx.db.insert("leaveDays", {
+          lodgeId: riverbend,
+          staffId: staffIds[staffIdx]!,
+          date: dayStart + o * DAY,
+        });
+      }
+    };
+    await addLeave(4, [2, 3, 4, 5, 6]); // Grace Naserian — a week off
+    await addLeave(2, [8, 9, 10]); // Peter Lemayian
+    await addLeave(0, [14, 15]); // Daniel Saitoti
 
     // ── flights ──────────────────────────────────────────────────────────────
     const F = async (

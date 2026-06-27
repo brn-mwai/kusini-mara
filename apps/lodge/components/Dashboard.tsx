@@ -40,6 +40,7 @@ const NAV: NavSection[] = [
     sec: "Workforce",
     items: [
       { key: "duties", label: "Duties", icon: "ph-clipboard-text" },
+      { key: "leave", label: "Leave planner", icon: "ph-calendar-dots" },
       { key: "staff", label: "Staff", icon: "ph-users-three" },
     ],
   },
@@ -52,6 +53,7 @@ const TITLES: Record<string, string> = {
   departures: "Departures",
   bookings: "Bookings",
   duties: "Duties",
+  leave: "Leave planner",
   staff: "Staff",
   reports: "Reports",
   notifications: "Notifications",
@@ -141,6 +143,7 @@ export function Dashboard({ me }: { me: Me }) {
       )}
       {view === "bookings" && <BookingsView />}
       {view === "duties" && <DutiesView />}
+      {view === "leave" && <LeaveView />}
       {view === "staff" && <StaffView />}
       {view === "reports" && <ReportsView board={board} />}
       {view === "notifications" && <NotificationsView notifs={notifs} />}
@@ -432,6 +435,104 @@ function DutiesView() {
             </tbody>
           </table>
         )}
+      </Panel>
+    </>
+  );
+}
+
+// ── Leave planner ─────────────────────────────────────────────────────────────
+function LeaveView() {
+  const startDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+  const data = useQuery(api.leave.grid, { startDate, days: 30, minCoverage: 3 });
+  const toggle = useMutation(api.leave.toggle);
+  const toast = useToast();
+
+  if (!data) {
+    return (
+      <>
+        <div className="page-header-row">
+          <div>
+            <h1 className="page-title">Leave planner</h1>
+            <p className="page-subtitle">Loading…</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  const onToggle = async (staffId: Id<"staff">, ms: number) => {
+    try {
+      const r = await toggle({ staffId, date: ms });
+      toast(r.onLeave ? "Leave added" : "Leave removed", "ph-calendar-dots");
+    } catch (e: any) {
+      toast(e.message ?? "Failed", "ph-warning");
+    }
+  };
+
+  const rangeEnd = new Date(startDate + 29 * 86400000);
+  return (
+    <>
+      <div className="page-header-row">
+        <div>
+          <h1 className="page-title">Leave planner</h1>
+          <p className="page-subtitle">
+            {data.staffCount} staff · next 30 days · click a cell to toggle leave
+          </p>
+        </div>
+      </div>
+
+      <Panel
+        title="Leave grid"
+        desc={`${new Date(startDate).toDateString()} → ${rangeEnd.toDateString()}`}
+      >
+        <div
+          className="banner"
+          style={
+            data.shortDays
+              ? { color: "var(--risk-fg)", background: "var(--risk-bg)" }
+              : undefined
+          }
+        >
+          <i className={`ph ${data.shortDays ? "ph-warning" : "ph-check-circle"}`} />
+          {data.shortDays
+            ? `${data.shortDays} day${data.shortDays === 1 ? "" : "s"} below minimum coverage (${data.minCoverage} staff)`
+            : `Coverage maintained — at least ${data.minCoverage} staff available every day`}
+        </div>
+
+        {data.rows.map((r: any) => (
+          <div className="lvrow" key={r.id}>
+            <div className="lvname">
+              <div className="n">{r.name}</div>
+              <div className="rl">{r.role}</div>
+            </div>
+            <div className="grid">
+              {data.days.map((d: any) => {
+                const onLeave = r.leave.includes(d.index);
+                const cls = onLeave ? "celld lv" : d.weekend ? "celld wk" : "celld";
+                return (
+                  <div
+                    key={d.index}
+                    className={cls}
+                    style={{ cursor: "pointer" }}
+                    title={`${new Date(d.ms).toDateString()}${onLeave ? " · on leave" : ""}`}
+                    onClick={() => onToggle(r.id, d.ms)}
+                  />
+                );
+              })}
+            </div>
+            <div className="lvbal">{r.leaveBalance}/{r.entitlementDays}</div>
+          </div>
+        ))}
+
+        <div className="legend">
+          <span><span className="sw" style={{ background: "var(--mut-bg)" }} /> Working</span>
+          <span><span className="sw" style={{ background: "#7FA86A" }} /> On leave</span>
+          <span><span className="sw" style={{ background: "color-mix(in srgb,var(--mut-bg) 60%,var(--border))" }} /> Weekend</span>
+        </div>
       </Panel>
     </>
   );

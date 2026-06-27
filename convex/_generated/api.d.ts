@@ -14,6 +14,7 @@ import type * as duties from "../duties.js";
 import type * as escalation from "../escalation.js";
 import type * as fleet from "../fleet.js";
 import type * as flights from "../flights.js";
+import type * as leave from "../leave.js";
 import type * as lib_constants from "../lib/constants.js";
 import type * as lib_events from "../lib/events.js";
 import type * as lib_providers from "../lib/providers.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   escalation: typeof escalation;
   fleet: typeof fleet;
   flights: typeof flights;
+  leave: typeof leave;
   "lib/constants": typeof lib_constants;
   "lib/events": typeof lib_events;
   "lib/providers": typeof lib_providers;

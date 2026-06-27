@@ -232,6 +232,17 @@ export default defineSchema({
     .index("by_movement", ["movementId"])
     .index("by_lodge", ["lodgeId"]),
 
+  // Per-staff leave days (one row per staff per day off). The planner reads a
+  // window of these; the optimizer (OR-Tools CP-SAT) is out of scope this pass.
+  leaveDays: defineTable({
+    lodgeId: v.id("organizations"),
+    staffId: v.id("staff"),
+    date: v.number(), // day-start ms
+  })
+    .index("by_lodge", ["lodgeId"])
+    .index("by_staff", ["staffId"])
+    .index("by_staff_date", ["staffId", "date"]),
+
   dutyAssignments: defineTable({
     movementId: v.id("movements"),
     lodgeId: v.id("organizations"),
