@@ -15,9 +15,11 @@ other **live**, with no polling.
 | **Kusini Lodge** | `kusini-lodge-brn-mwais-projects.vercel.app` | lodge duty contact + team | offline-first PWA |
 | **Kusini Air** | `kusini-air-brn-mwais-projects.vercel.app` | charter operator ops | online-first PWA |
 
-> Both deployed to Vercel (team `brn-mwais-projects`) against one Convex prod
-> deployment (`judicious-giraffe-509`). To make them publicly reachable + auth’d,
-> two dashboard actions remain — see **Go-live checklist** at the bottom.
+> **Live now** (demo mode): both deployed to Vercel (team `brn-mwais-projects`)
+> against one Convex prod deployment (`judicious-giraffe-509`), publicly reachable,
+> no credentials. Auth is a **fake login** for the demo (no Clerk); each app acts
+> as a fixed seed org — Lodge = Riverbend, Air = Mara Wings. The shared Convex
+> backend stays live, so scheduling on Air updates Lodge in real time.
 
 ---
 
@@ -55,13 +57,15 @@ rows, so a mutation in one is pushed to the other within ~a second.
   - `tests/` — convex-test suite (loop + tenant isolation)
 - **Backend = Convex.** Database, reactive queries, mutations, actions, the escalation
   cron, and file storage. Reactive queries are what make the two apps update each other.
-- **Auth = Clerk** (separate login per app). Each user belongs to exactly one organization
-  (a lodge **or** an airline).
+- **Auth = fake login (demo)**. Clerk is removed for this demo; each app uses a cosmetic
+  login and acts as a fixed seed org (Lodge = Riverbend, Air = Mara Wings). Production
+  would swap the demo resolver in `convex/lib/tenancy.ts` for the Clerk-identity resolver
+  (kept in git history).
 - **No row-level security.** Tenant isolation is enforced **in code**: every public query
-  and mutation is built from a centralized wrapper (`convex/lib/tenancy.ts`) that resolves
-  the caller’s org from the verified Clerk identity and filters by tenant key
-  (`lodgeId` / `airlineId`). A client-supplied tenant id is never trusted. A test proves a
-  cross-tenant read fails.
+  and mutation is built from a centralized wrapper (`convex/lib/tenancy.ts`) that injects
+  the caller’s org and filters by tenant key (`lodgeId` / `airlineId`). Cross-tenant guards
+  hold even in demo mode — a test proves the Lodge app cannot read or acknowledge another
+  lodge’s movement.
 - **Notifications port** (`convex/lib/providers.ts`, `convex/notifications.ts`) — Africa’s
   Talking **SMS is the guaranteed channel and escalation backbone**; WhatsApp (Twilio) is a
   preference channel. Both sit behind one interface; with no creds the pilot runs SMS-only
@@ -198,25 +202,16 @@ Tokens: primary `#1C3319`, page `#FAFCF1`, sidebar `#EDEFE4`, border `#DBDED4`.
 Operational data (tail numbers, ETAs, refs) in **IBM Plex Mono**; UI text in **Hanken
 Grotesk**; **Phosphor** icons (self-hosted for offline).
 
-## Go-live checklist (2 dashboard actions)
+## Deploy notes
 
-Both apps are deployed to Vercel and built green; two settings make them a public,
-authenticated demo:
+Each Vercel project has **Root Directory** set to its app (`apps/lodge` / `apps/air`)
+and builds on git push. Each app vendors the design system into `apps/*/uikit` (synced
+from the canonical `packages/ui`) so it builds standalone. Only env var needed:
+`NEXT_PUBLIC_CONVEX_URL` → the shared Convex prod deployment.
 
-1. **Make them public** — Vercel → each project (`kusini-lodge`, `kusini-air`) →
-   *Settings → Deployment Protection → Vercel Authentication → Disabled → Save.*
-   (New team projects gate every deployment behind Vercel login by default.)
-2. **Turn on auth** — set Clerk (see *Auth setup* above) on both Vercel projects
-   (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`) and on the Convex prod
-   deployment (`CLERK_JWT_ISSUER_DOMAIN`), then redeploy:
-   ```bash
-   # from repo root, per app:
-   printf '{ "version":2, "builds":[{ "src":"apps/lodge/package.json", "use":"@vercel/next" }] }' > vercel.json
-   vercel link --yes --project kusini-lodge --scope brn-mwais-projects
-   vercel deploy --prod --yes --scope brn-mwais-projects
-   # repeat with apps/air + kusini-air
-   ```
-   Until real Clerk keys are set, each app serves a “setup required” page (build-safe).
+To restore real auth later, reinstate Clerk: `@clerk/nextjs` + `ClerkProvider` +
+`ConvexProviderWithClerk` + `clerkMiddleware`, and swap the demo resolver in
+`convex/lib/tenancy.ts` back to the Clerk-identity one.
 
 ## License
 
