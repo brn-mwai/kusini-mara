@@ -219,7 +219,9 @@ export function Shell({
             </button>
           </div>
         </div>
-        <div className="page-content">{children}</div>
+        <div className="page-content">
+          <div className="page-inner">{children}</div>
+        </div>
       </div>
 
       <CommandPalette open={palette} onClose={() => setPalette(false)} items={paletteItems} />

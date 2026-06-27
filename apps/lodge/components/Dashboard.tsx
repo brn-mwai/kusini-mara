@@ -12,6 +12,7 @@ import {
   Modal,
   Field,
   EmptyState,
+  DataTable,
   useToast,
   fmt,
   type NavSection,
@@ -185,78 +186,56 @@ function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
         <Stat icon="ph-airplane" tone="blue" label="Total today" value={rows.length} sub="arrivals + departures" />
       </div>
 
-      <Panel title={`${TITLES[view]} board`} desc="Live — updates the instant the airline schedules or you acknowledge">
-        {rows.length === 0 ? (
-          <EmptyState icon="ph-airplane">No movements in this view.</EmptyState>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th className="flag"></th>
-                <th>Flight</th>
-                <th>Route</th>
-                <th>Guest</th>
-                <th>Time</th>
-                <th>Status</th>
-                <th>Ground</th>
-                <th className="act"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((m) => {
-                const [tone, icon, label] = moveStatus(m);
-                const rowCls = m.status === "escalated" ? "esc" : canAck(m) ? "attn" : "";
-                const cd = fmt.countdown(m.scheduledTime);
-                return (
-                  <tr key={m._id} className={rowCls}>
-                    <td className="flag"><span /></td>
-                    <td>
-                      <div className="flt mono">{m.flight?.reg ?? "—"}</div>
-                      <div className="reg">{m.flight?.code ?? "awaiting flight"}</div>
-                    </td>
-                    <td>
-                      <div className="route">
-                        <i className={`ph ${m.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} />
-                        <span>{m.airstrip}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="flt">{m.guestName}</div>
-                      <div className="reg">{m.pax} pax</div>
-                    </td>
-                    <td>
-                      <div className="eta mono">{fmt.hhmm(m.scheduledTime)}</div>
-                      <div className={`cd ${cd.overdue ? "risk" : ""}`}>{cd.text}</div>
-                    </td>
-                    <td><Pill tone={tone} icon={icon}>{label}</Pill></td>
-                    <td>
-                      {m.assignedStaff ? (
-                        <div className="assign">
-                          <span className="av">{fmt.initials(m.assignedStaff.name)}</span>
-                          {m.assignedStaff.name}
-                        </div>
-                      ) : (
-                        <span className="reg">unassigned</span>
-                      )}
-                    </td>
-                    <td className="act">
-                      {canAck(m) && (
-                        <button className="ackbtn" onClick={() => onAck(m)}>
-                          <i className="ph ph-check" />
-                          {m.reconfirmRequested ? "Reconfirm" : "Acknowledge"}
-                        </button>
-                      )}{" "}
-                      <Btn icon="ph-user-plus" onClick={() => setAssignFor(m)}>
-                        Assign
-                      </Btn>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </Panel>
+      <DataTable<any>
+        rows={rows}
+        noun="movement"
+        getRowKey={(m) => m._id}
+        searchText={(m) => `${m.guestName} ${m.airstrip} ${m.flight?.reg ?? ""} ${m.flight?.code ?? ""}`}
+        searchPlaceholder="Search guest, airstrip, tail…"
+        rowClassName={(m) => (m.status === "escalated" ? "esc" : canAck(m) ? "attn" : "")}
+        empty={{ icon: "ph-airplane", title: "No movements in this view." }}
+        columns={[
+          {
+            key: "flight", label: "Flight",
+            render: (m) => (<><div className="flt mono">{m.flight?.reg ?? "—"}</div><div className="reg">{m.flight?.code ?? "awaiting flight"}</div></>),
+          },
+          {
+            key: "route", label: "Route",
+            render: (m) => (<div className="route"><i className={`ph ${m.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} /><span>{m.airstrip}</span></div>),
+          },
+          {
+            key: "guest", label: "Guest",
+            render: (m) => (<><div className="flt">{m.guestName}</div><div className="reg">{m.pax} pax</div></>),
+          },
+          {
+            key: "time", label: "Time",
+            render: (m) => { const cd = fmt.countdown(m.scheduledTime); return (<><div className="eta mono">{fmt.hhmm(m.scheduledTime)}</div><div className={`cd ${cd.overdue ? "risk" : ""}`}>{cd.text}</div></>); },
+          },
+          {
+            key: "status", label: "Status",
+            render: (m) => { const [tone, icon, label] = moveStatus(m); return <Pill tone={tone} icon={icon}>{label}</Pill>; },
+          },
+          {
+            key: "ground", label: "Ground",
+            render: (m) => m.assignedStaff
+              ? (<div className="assign"><span className="av">{fmt.initials(m.assignedStaff.name)}</span>{m.assignedStaff.name}</div>)
+              : (<span className="reg">unassigned</span>),
+          },
+          {
+            key: "act", label: "", align: "right",
+            render: (m) => (
+              <div className="row-actions">
+                {canAck(m) && (
+                  <button className="ackbtn" onClick={() => onAck(m)}>
+                    <i className="ph ph-check" />{m.reconfirmRequested ? "Reconfirm" : "Acknowledge"}
+                  </button>
+                )}
+                <Btn icon="ph-user-plus" onClick={() => setAssignFor(m)}>Assign</Btn>
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {assignFor && <AssignModal movement={assignFor} onClose={() => setAssignFor(null)} />}
     </>

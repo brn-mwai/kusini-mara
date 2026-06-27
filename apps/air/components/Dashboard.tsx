@@ -12,6 +12,7 @@ import {
   Modal,
   Field,
   EmptyState,
+  DataTable,
   useToast,
   fmt,
   type NavSection,
@@ -150,89 +151,77 @@ function FlightsView({ flights }: { flights: any[] }) {
         <Stat icon="ph-warning" tone="red" label="Escalated" value={escal} />
       </div>
 
-      <Panel title="Flights board" desc="Ack counts tick up the instant a lodge acknowledges">
-        {flights.length === 0 ? (
-          <EmptyState icon="ph-airplane">No flights yet — schedule a request.</EmptyState>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th className="flag"></th>
-                <th>Flight</th>
-                <th>Pilot</th>
-                <th>Circuit</th>
-                <th>Departs</th>
-                <th>Manifest</th>
-                <th>Lodge acks</th>
-                <th>Status</th>
-                <th className="act"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {flights.map((f) => {
-                const [tone, icon, label] = flightStatusPill(f.status);
-                const ackTone: PillTone = f.escalated ? "risk" : f.ackCount === f.legCount && f.legCount > 0 ? "ok" : "warn";
-                const ackIcon = f.escalated ? "ph-warning" : f.ackCount === f.legCount && f.legCount > 0 ? "ph-check" : "ph-bell-ringing";
-                const rowCls = f.escalated ? "esc" : f.legCount > f.ackCount ? "attn" : "";
-                return (
-                  <tr key={f._id} className={rowCls}>
-                    <td className="flag"><span /></td>
-                    <td>
-                      <div className="flt mono">{f.aircraftReg}</div>
-                      <div className="reg">{f.code}</div>
-                    </td>
-                    <td><div className="assign"><span className="av">{fmt.initials(f.pilotName)}</span>{f.pilotName}</div></td>
-                    <td>
-                      <div className="route" style={{ flexWrap: "wrap" }}>
-                        {f.circuit.length ? (
-                          f.circuit.map((s: string, i: number) => (
-                            <span key={s}>
-                              {i > 0 && <span className="ar"> → </span>}
-                              {s}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="reg">no legs yet</span>
-                        )}
-                      </div>
-                    </td>
-                    <td><div className="eta mono">{fmt.hhmm(f.departTime)}</div><div className="cd">{f.base} base</div></td>
-                    <td>
-                      {f.legCount ? (
-                        <>
-                          <div className="flt">{f.legCount} guests · {f.pax} pax</div>
-                          <div className="reg">{f.mixed && <span className="tag">in + out</span>}{f.pax} / {f.seats} seats</div>
-                        </>
-                      ) : (
-                        <span className="reg">empty</span>
-                      )}
-                    </td>
-                    <td>
-                      {f.legCount ? (
-                        <Pill tone={ackTone} icon={ackIcon}>{f.ackCount} / {f.legCount} acked</Pill>
-                      ) : (
-                        <span className="reg">—</span>
-                      )}
-                    </td>
-                    <td><Pill tone={tone} icon={icon}>{label}</Pill></td>
-                    <td className="act">
-                      <Btn icon="ph-list-bullets" onClick={() => setManifestFor(f)}>Manifest</Btn>{" "}
-                      {f.status === "planned" && (
-                        <button className="ackbtn" onClick={async () => { await dispatch({ flightId: f._id }); toast(`${f.aircraftReg} dispatched`, "ph-airplane-takeoff"); }}>
-                          <i className="ph ph-airplane-takeoff" />Dispatch
-                        </button>
-                      )}
-                      {f.status === "in_flight" && (
-                        <Btn icon="ph-flag-checkered" onClick={async () => { await land({ flightId: f._id }); toast(`${f.aircraftReg} landed`, "ph-flag-checkered"); }}>Land</Btn>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </Panel>
+      <DataTable<any>
+        rows={flights}
+        noun="flight"
+        getRowKey={(f) => f._id}
+        searchText={(f) => `${f.aircraftReg} ${f.code} ${f.pilotName} ${f.circuit.join(" ")}`}
+        searchPlaceholder="Search tail, flight, pilot, strip…"
+        onRowClick={(f) => setManifestFor(f)}
+        rowClassName={(f) =>
+          [manifestFor?._id === f._id ? "sel" : "", f.escalated ? "esc" : f.legCount > f.ackCount ? "attn" : ""]
+            .filter(Boolean).join(" ")}
+        empty={{ icon: "ph-airplane", title: "No flights yet — schedule a request." }}
+        columns={[
+          {
+            key: "flight", label: "Flight",
+            render: (f) => (<><div className="flt mono">{f.aircraftReg}</div><div className="reg">{f.code}</div></>),
+          },
+          {
+            key: "pilot", label: "Pilot",
+            render: (f) => (<div className="assign"><span className="av">{fmt.initials(f.pilotName)}</span>{f.pilotName}</div>),
+          },
+          {
+            key: "circuit", label: "Circuit",
+            render: (f) => (
+              <div className="route" style={{ flexWrap: "wrap" }}>
+                {f.circuit.length
+                  ? f.circuit.map((s: string, i: number) => (<span key={s}>{i > 0 && <span className="ar"> → </span>}{s}</span>))
+                  : <span className="reg">no legs yet</span>}
+              </div>
+            ),
+          },
+          {
+            key: "departs", label: "Departs",
+            render: (f) => (<><div className="eta mono">{fmt.hhmm(f.departTime)}</div><div className="cd">{f.base} base</div></>),
+          },
+          {
+            key: "manifest", label: "Manifest",
+            render: (f) => f.legCount
+              ? (<><div className="flt">{f.legCount} guests · {f.pax} pax</div><div className="reg">{f.mixed && <span className="tag">in + out</span>}{f.pax} / {f.seats} seats</div></>)
+              : (<span className="reg">empty</span>),
+          },
+          {
+            key: "acks", label: "Lodge acks",
+            render: (f) => {
+              if (!f.legCount) return <span className="reg">—</span>;
+              const ackTone: PillTone = f.escalated ? "risk" : f.ackCount === f.legCount ? "ok" : "warn";
+              const ackIcon = f.escalated ? "ph-warning" : f.ackCount === f.legCount ? "ph-check" : "ph-bell-ringing";
+              return <Pill tone={ackTone} icon={ackIcon}>{f.ackCount} / {f.legCount} acked</Pill>;
+            },
+          },
+          {
+            key: "status", label: "Status",
+            render: (f) => { const [tone, icon, label] = flightStatusPill(f.status); return <Pill tone={tone} icon={icon}>{label}</Pill>; },
+          },
+          {
+            key: "act", label: "", align: "right",
+            render: (f) => (
+              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                <Btn icon="ph-list-bullets" onClick={() => setManifestFor(f)}>Manifest</Btn>
+                {f.status === "planned" && (
+                  <button className="ackbtn" onClick={async () => { await dispatch({ flightId: f._id }); toast(`${f.aircraftReg} dispatched`, "ph-airplane-takeoff"); }}>
+                    <i className="ph ph-airplane-takeoff" />Dispatch
+                  </button>
+                )}
+                {f.status === "in_flight" && (
+                  <Btn icon="ph-flag-checkered" onClick={async () => { await land({ flightId: f._id }); toast(`${f.aircraftReg} landed`, "ph-flag-checkered"); }}>Land</Btn>
+                )}
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {manifestFor && <ManifestModal flight={manifestFor} onClose={() => setManifestFor(null)} />}
     </>
@@ -287,39 +276,35 @@ function RequestsView({ requests, flights }: { requests: any[]; flights: any[] }
           <p className="page-subtitle">Movements awaiting a flight — schedule them onto an aircraft</p>
         </div>
       </div>
-      <Panel title="Awaiting flight" desc="Each becomes a confirmed transfer on the lodge board the moment you schedule it">
-        {requests.length === 0 ? (
-          <EmptyState icon="ph-tray">Queue is clear.</EmptyState>
-        ) : (
-          <table>
-            <thead>
-              <tr><th>Guest</th><th>Lodge</th><th>Leg</th><th>Airstrip</th><th>Pax</th><th>Wanted</th><th className="act"></th></tr>
-            </thead>
-            <tbody>
-              {requests.map((m: any) => (
-                <tr key={m._id} className="attn">
-                  <td className="flt">{m.guestName}</td>
-                  <td>{m.lodgeName}</td>
-                  <td>
-                    <span className="route">
-                      <i className={`ph ${m.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} />
-                      {m.direction}
-                    </span>
-                  </td>
-                  <td>{m.airstrip}</td>
-                  <td>{m.pax}</td>
-                  <td className="mono">{fmt.hhmm(m.scheduledTime)}</td>
-                  <td className="act">
-                    <button className="ackbtn" onClick={() => setScheduleFor(m)}>
-                      <i className="ph ph-calendar-plus" />Schedule
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Panel>
+      <DataTable<any>
+        rows={requests}
+        noun="request"
+        getRowKey={(m) => m._id}
+        searchText={(m) => `${m.guestName} ${m.lodgeName} ${m.airstrip} ${m.direction}`}
+        searchPlaceholder="Search guest, lodge, airstrip…"
+        onRowClick={(m) => setScheduleFor(m)}
+        rowClassName={() => "attn"}
+        empty={{ icon: "ph-tray", title: "Queue is clear." }}
+        columns={[
+          { key: "guest", label: "Guest", render: (m) => <span className="flt">{m.guestName}</span> },
+          { key: "lodge", label: "Lodge", render: (m) => m.lodgeName },
+          {
+            key: "leg", label: "Leg",
+            render: (m) => (<span className="route"><i className={`ph ${m.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} />{m.direction}</span>),
+          },
+          { key: "strip", label: "Airstrip", render: (m) => m.airstrip },
+          { key: "pax", label: "Pax", align: "right", render: (m) => <span className="mono">{m.pax}</span> },
+          { key: "wanted", label: "Wanted", align: "right", render: (m) => <span className="mono">{fmt.hhmm(m.scheduledTime)}</span> },
+          {
+            key: "act", label: "", align: "right",
+            render: (m) => (
+              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                <button className="ackbtn" onClick={() => setScheduleFor(m)}><i className="ph ph-calendar-plus" />Schedule</button>
+              </div>
+            ),
+          },
+        ]}
+      />
       {scheduleFor && (
         <ScheduleModal movement={scheduleFor} flights={flights} onClose={() => setScheduleFor(null)} />
       )}
