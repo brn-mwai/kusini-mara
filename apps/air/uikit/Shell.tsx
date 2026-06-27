@@ -45,7 +45,6 @@ export function Shell({
   const [collapsed, setCollapsed] = useState(false);
   const [popup, setPopup] = useState(false);
   const [palette, setPalette] = useState(false);
-  const [navOpen, setNavOpen] = useState(false);
 
   // ⌘K / Ctrl-K opens the command palette.
   useEffect(() => {
@@ -61,7 +60,17 @@ export function Shell({
 
   const nav = (key: string) => {
     onNavigate(key);
-    setNavOpen(false);
+    document.body.classList.remove("nav-open");
+  };
+
+  // Adaptive: on wide screens the button collapses the sidebar to zero width;
+  // on narrow screens it opens the off-canvas drawer.
+  const toggleSidebar = () => {
+    if (typeof window !== "undefined" && window.innerWidth <= 820) {
+      document.body.classList.toggle("nav-open");
+    } else {
+      setCollapsed((c) => !c);
+    }
   };
 
   return (
@@ -73,13 +82,6 @@ export function Shell({
             <span className="nm">{appName}</span>
             <i className="ph ph-caret-up-down ca" />
           </div>
-          <button
-            className="sb-srch"
-            aria-label="Search"
-            onClick={() => setPalette(true)}
-          >
-            <i className="ph ph-magnifying-glass" />
-          </button>
         </div>
 
         <button className="sb-create" onClick={() => (onPrint ? onPrint() : window.print())}>
@@ -185,7 +187,7 @@ export function Shell({
           <button
             className="collapse-btn"
             aria-label="Toggle sidebar"
-            onClick={() => setCollapsed((c) => !c)}
+            onClick={toggleSidebar}
           >
             <i className="ph ph-sidebar-simple" />
           </button>

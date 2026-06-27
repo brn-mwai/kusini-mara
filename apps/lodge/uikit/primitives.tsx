@@ -67,15 +67,15 @@ export function Stat({
   sub?: ReactNode;
 }) {
   return (
-    <div className="stat">
-      <div className="stat-header">
-        <div className={`stat-icon ${tone}`}>
-          <i className={`ph ${icon}`} />
-        </div>
-        <div className="stat-label">{label}</div>
+    <div className="kpi">
+      <div className="kpi-head">
+        <i className={`ph ${icon} ${tone}`} />
+        {label}
       </div>
-      <div className="stat-value">{value}</div>
-      {sub && <div className="stat-sub">{sub}</div>}
+      <div className="kpi-body">
+        <div className="kpi-value">{value}</div>
+        {sub && <div className="kpi-sub">{sub}</div>}
+      </div>
     </div>
   );
 }

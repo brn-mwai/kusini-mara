@@ -25,7 +25,8 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 p{margin:0}
 :focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:4px}
 .dashboard{display:grid;grid-template-columns:var(--sb) 1fr;min-height:100vh;height:100vh;background:var(--sidebar);transition:grid-template-columns .18s}
-.dashboard.collapsed{--sb:62px}
+.dashboard.collapsed{--sb:0px}
+.dashboard.collapsed .sidebar{border-right:0}
 
 /* ── sidebar ── */
 .sidebar{background:transparent;height:100vh;position:sticky;top:0;
@@ -169,16 +170,17 @@ p{margin:0}
 .filter-spacer{flex:1}
 .fcount{font-size:12.5px;color:var(--text-3)}
 
-/* ── stats ── */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 15px;box-shadow:var(--shadow)}
-.stat-header{display:flex;align-items:center;gap:8px;margin-bottom:11px}
-.stat-icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none;font-size:16px}
-.stat-icon.amber{background:var(--warn-bg);color:var(--warn-fg)} .stat-icon.red{background:var(--risk-bg);color:var(--risk-fg)}
-.stat-icon.blue{background:var(--info-bg);color:var(--info-fg)} .stat-icon.green{background:var(--ok-bg);color:var(--ok-fg)}
-.stat-label{font-size:12.5px;color:var(--text-2);font-weight:500}
-.stat-value{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1}
-.stat-sub{font-size:11.5px;color:var(--text-3);margin-top:5px}
+/* ── KPI cards (KTP nested-card: tinted outer, white inner, mono value) ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px}
+.kpi{background:var(--mut-bg);border:1px solid var(--border);border-radius:var(--r);padding:6px}
+html[data-theme="dark"] .kpi{background:rgba(255,255,255,.04)}
+.kpi-head{display:flex;align-items:center;gap:6px;padding:5px 7px 7px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3)}
+.kpi-head i{font-size:13px}
+.kpi-head i.amber{color:var(--warn-fg)} .kpi-head i.red{color:var(--risk-fg)}
+.kpi-head i.blue{color:var(--info-fg)} .kpi-head i.green{color:var(--ok-fg)}
+.kpi-body{background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:13px 14px}
+.kpi-value{font-family:var(--mono);font-feature-settings:"tnum";font-size:23px;font-weight:500;line-height:1.1;letter-spacing:-.01em;color:var(--text-1)}
+.kpi-sub{font-size:11.5px;color:var(--text-3);margin-top:6px}
 
 /* ── panel + table ── */
 .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
@@ -187,8 +189,8 @@ p{margin:0}
 .panel-title{font-size:14px;font-weight:600}
 .panel-desc{font-size:12px;color:var(--text-3)}
 table{width:100%;border-collapse:collapse}
-thead th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);
-  padding:10px 16px;border-bottom:1px solid var(--border);white-space:nowrap;user-select:none}
+thead th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);
+  padding:11px 16px;border-bottom:1px solid var(--border);white-space:nowrap;user-select:none;background:color-mix(in srgb,var(--mut-bg) 45%,transparent)}
 thead th .th-in{display:inline-flex;align-items:center;gap:5px}
 thead th .th-dots{opacity:0;color:var(--text-3);font-size:14px;border-radius:4px;line-height:0;padding:2px;cursor:pointer;transition:opacity .12s,background .12s}
 thead th:hover .th-dots{opacity:.55}
