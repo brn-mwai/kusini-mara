@@ -1,0 +1,13 @@
+{
+  "name": "Kusini Air — Operations",
+  "short_name": "Kusini Air",
+  "description": "Build flights, schedule transfers, watch lodges acknowledge live.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFCF1",
+  "theme_color": "#1C3319",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

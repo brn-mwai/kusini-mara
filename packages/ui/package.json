@@ -1,0 +1,23 @@
+{
+  "name": "@kusini/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./styles/tokens.css"
+  },
+  "dependencies": {
+    "@phosphor-icons/web": "^2.1.1",
+    "@fontsource/hanken-grotesk": "^5.1.0",
+    "@fontsource/ibm-plex-mono": "^5.1.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.2"
+  }
+}

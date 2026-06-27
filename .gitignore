@@ -1,0 +1,33 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# build
+.next/
+out/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# convex
+.convex/
+
+# env — NEVER commit secrets
+.env
+.env.local
+.env*.local
+!.env.example
+
+# editor / os
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# vercel
+.vercel
