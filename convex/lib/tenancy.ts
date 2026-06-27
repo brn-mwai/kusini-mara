@@ -1,11 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Centralized tenancy / auth wrapper.
+// DEMO tenancy. Clerk auth is removed for the demo; each app acts as a fixed
+// seed organization — the Lodge app is Riverbend, the Air app is Mara Wings.
+// The wrappers inject that org as `ctx.org` (+ a representative `ctx.user`) so
+// the rest of the function code is unchanged. Cross-tenant guards still apply:
+// the Lodge app only sees its own org's movements.
 //
-// There is NO row-level security. Isolation is enforced here, in code: every
-// public query and mutation is built from one of these wrappers, which resolve
-// the caller's organization from the verified Clerk identity and inject it as
-// `ctx.org` + `ctx.user`. A client-supplied tenant id is never trusted; cross-
-// tenant access is rejected by the `require*` guards below.
+// NOTE: this is a demo posture. Production would resolve the org from a verified
+// identity (the previous Clerk-based wrapper) rather than picking the seed org.
 // ─────────────────────────────────────────────────────────────────────────────
 import {
   customCtx,
@@ -17,62 +18,56 @@ import type { Doc, Id } from "../_generated/dataModel";
 
 export type Caller = { user: Doc<"users">; org: Doc<"organizations"> };
 
-async function resolveCaller(ctx: QueryCtx): Promise<Caller> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Unauthenticated");
+async function demoCaller(
+  ctx: QueryCtx,
+  type: Doc<"organizations">["type"],
+): Promise<Caller> {
+  const org = await ctx.db
+    .query("organizations")
+    .withIndex("by_type", (q) => q.eq("type", type))
+    .first();
+  if (!org) throw new Error(`No demo ${type} organization — run the seed`);
   const user = await ctx.db
     .query("users")
-    .withIndex("by_token", (q) =>
-      q.eq("tokenIdentifier", identity.tokenIdentifier),
-    )
-    .unique();
-  if (!user) throw new Error("No Kusini account is linked to this identity");
-  const org = await ctx.db.get(user.orgId);
-  if (!org) throw new Error("Account organization is missing");
+    .withIndex("by_org", (q) => q.eq("orgId", org._id))
+    .first();
+  if (!user) throw new Error(`No demo ${type} user — run the seed`);
   return { user, org };
 }
 
-function assertType(caller: Caller, type: Doc<"organizations">["type"]): Caller {
-  if (caller.org.type !== type) {
-    throw new Error(`This action requires a ${type} account`);
-  }
-  return caller;
-}
-
-// Any authenticated org (lodge or airline).
-export const orgQuery = customQuery(
-  query,
-  customCtx(async (ctx) => await resolveCaller(ctx)),
-);
-export const orgMutation = customMutation(
-  mutation,
-  customCtx(async (ctx) => await resolveCaller(ctx)),
-);
-
-// Lodge-only surface.
 export const lodgeQuery = customQuery(
   query,
-  customCtx(async (ctx) => assertType(await resolveCaller(ctx), "lodge")),
+  customCtx(async (ctx) => await demoCaller(ctx, "lodge")),
 );
 export const lodgeMutation = customMutation(
   mutation,
-  customCtx(async (ctx) => assertType(await resolveCaller(ctx), "lodge")),
+  customCtx(async (ctx) => await demoCaller(ctx, "lodge")),
 );
-
-// Airline-only surface.
 export const airlineQuery = customQuery(
   query,
-  customCtx(async (ctx) => assertType(await resolveCaller(ctx), "airline")),
+  customCtx(async (ctx) => await demoCaller(ctx, "airline")),
 );
 export const airlineMutation = customMutation(
   mutation,
-  customCtx(async (ctx) => assertType(await resolveCaller(ctx), "airline")),
+  customCtx(async (ctx) => await demoCaller(ctx, "airline")),
 );
 
-// ── cross-tenant guards ──────────────────────────────────────────────────────
-// Every resource fetch by id goes through one of these. They throw an identical
-// "not found" for both missing rows and wrong-tenant rows so callers cannot
-// probe another org's id space.
+// Resolve the first seed org of a type — used by app-agnostic reads that take an
+// explicit `app` argument (notifications, audit).
+export async function orgByApp(
+  ctx: QueryCtx,
+  app: "lodge" | "air",
+): Promise<Doc<"organizations">> {
+  const type = app === "air" ? "airline" : "lodge";
+  const org = await ctx.db
+    .query("organizations")
+    .withIndex("by_type", (q) => q.eq("type", type))
+    .first();
+  if (!org) throw new Error(`No demo ${type} organization — run the seed`);
+  return org;
+}
+
+// ── cross-tenant guards (unchanged) ──────────────────────────────────────────
 type DbCtx = { db: QueryCtx["db"] };
 
 export async function requireLodgeMovement(
@@ -125,8 +120,6 @@ export async function requireLodgeBooking(
   return b;
 }
 
-// Verify an airline is contracted to a lodge before it can schedule that lodge's
-// movements onto its flights.
 export async function assertLinked(
   ctx: DbCtx,
   airlineId: Id<"organizations">,

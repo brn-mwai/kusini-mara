@@ -8,7 +8,6 @@
  * @module
  */
 
-import type * as audit from "../audit.js";
 import type * as bookings from "../bookings.js";
 import type * as crons from "../crons.js";
 import type * as duties from "../duties.js";
@@ -23,7 +22,6 @@ import type * as movements from "../movements.js";
 import type * as notifications from "../notifications.js";
 import type * as seed from "../seed.js";
 import type * as staff from "../staff.js";
-import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -32,7 +30,6 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  audit: typeof audit;
   bookings: typeof bookings;
   crons: typeof crons;
   duties: typeof duties;
@@ -47,7 +44,6 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   seed: typeof seed;
   staff: typeof staff;
-  users: typeof users;
 }>;
 
 /**

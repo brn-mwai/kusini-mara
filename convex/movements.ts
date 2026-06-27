@@ -2,7 +2,6 @@ import { v } from "convex/values";
 import {
   lodgeMutation,
   lodgeQuery,
-  orgQuery,
   requireLodgeMovement,
 } from "./lib/tenancy";
 import { recordEvent } from "./lib/events";
@@ -42,23 +41,6 @@ export const board = lodgeQuery({
       : rows;
     filtered.sort((a, b) => a.scheduledTime - b.scheduledTime);
     return await Promise.all(filtered.map((m) => enrich(ctx, m)));
-  },
-});
-
-// Single movement detail (either tenant on the row may read it).
-export const get = orgQuery({
-  args: { movementId: v.id("movements") },
-  returns: v.union(v.any(), v.null()),
-  handler: async (ctx, args) => {
-    const m = await ctx.db.get(args.movementId);
-    if (!m) return null;
-    if (m.lodgeId !== ctx.org._id && m.airlineId !== ctx.org._id) return null;
-    const events = await ctx.db
-      .query("transferEvents")
-      .withIndex("by_movement", (q) => q.eq("movementId", m._id))
-      .order("desc")
-      .collect();
-    return { ...(await enrich(ctx, m)), events };
   },
 });
 

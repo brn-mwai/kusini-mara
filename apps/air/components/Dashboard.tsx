@@ -20,10 +20,9 @@ import {
 } from "@/uikit";
 
 type Me = {
-  userId: Id<"users">;
   name: string;
   role: string;
-  org: { id: Id<"organizations">; name: string; type: "airline" | "lodge"; shortCode: string };
+  org: { name: string; type: "airline" | "lodge"; shortCode: string };
 };
 
 const NAV: NavSection[] = [
@@ -66,7 +65,7 @@ export function Dashboard({ me }: { me: Me }) {
   const [view, setView] = useState("flights");
   const flights = useQuery(api.flights.board, {}) ?? [];
   const requests = useQuery(api.flights.requests, {}) ?? [];
-  const notifs = useQuery(api.notifications.list, {}) ?? [];
+  const notifs = useQuery(api.notifications.list, { app: "air" }) ?? [];
 
   const escalated = flights.filter((f: any) => f.escalated).length;
 

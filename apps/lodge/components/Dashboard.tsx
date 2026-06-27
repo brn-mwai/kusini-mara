@@ -20,10 +20,9 @@ import {
 } from "@/uikit";
 
 type Me = {
-  userId: Id<"users">;
   name: string;
   role: string;
-  org: { id: Id<"organizations">; name: string; type: "airline" | "lodge"; shortCode: string };
+  org: { name: string; type: "airline" | "lodge"; shortCode: string };
 };
 
 const NAV: NavSection[] = [
@@ -81,7 +80,7 @@ function canAck(m: any): boolean {
 export function Dashboard({ me }: { me: Me }) {
   const [view, setView] = useState("today");
   const board = useQuery(api.movements.board, {}) ?? [];
-  const notifs = useQuery(api.notifications.list, {}) ?? [];
+  const notifs = useQuery(api.notifications.list, { app: "lodge" }) ?? [];
 
   const today = board.filter((m: any) => fmt.isToday(m.scheduledTime));
   const needAck = today.filter((m: any) => canAck(m)).length;

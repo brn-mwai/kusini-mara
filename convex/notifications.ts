@@ -3,26 +3,28 @@ import {
   internalAction,
   internalMutation,
   internalQuery,
+  query,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { orgQuery } from "./lib/tenancy";
+import { orgByApp } from "./lib/tenancy";
 import { notifyChannel } from "./schema";
 import { sendSms, sendWhatsApp } from "./lib/providers";
 import type { Id } from "./_generated/dataModel";
 
-// Read the notifications log for the caller's org (either tenant key matches).
-export const list = orgQuery({
-  args: {},
+// Read the notifications log for the acting app's demo org.
+export const list = query({
+  args: { app: v.union(v.literal("lodge"), v.literal("air")) },
   returns: v.array(v.any()),
-  handler: async (ctx) => {
-    const isLodge = ctx.org.type === "lodge";
+  handler: async (ctx, args) => {
+    const org = await orgByApp(ctx, args.app);
+    const isLodge = args.app === "lodge";
     const rows = await ctx.db
       .query("notifications")
       .withIndex("by_at")
       .order("desc")
       .take(100);
     return rows.filter((n) =>
-      isLodge ? n.lodgeId === ctx.org._id : n.airlineId === ctx.org._id,
+      isLodge ? n.lodgeId === org._id : n.airlineId === org._id,
     );
   },
 });
