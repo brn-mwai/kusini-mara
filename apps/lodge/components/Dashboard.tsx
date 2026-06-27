@@ -440,99 +440,163 @@ function DutiesView() {
   );
 }
 
-// ── Leave planner ─────────────────────────────────────────────────────────────
+// ── Leave planner (month calendar + per-day availability roster) ──────────────
+const DAY_MS = 86400000;
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MIN_COVERAGE = 3;
+
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
 function LeaveView() {
-  const startDate = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  }, []);
-  const data = useQuery(api.leave.grid, { startDate, days: 30, minCoverage: 3 });
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [selected, setSelected] = useState<number>(today.getTime());
+
+  // First cell of the calendar = the Sunday on/before the 1st of the shown month.
+  const { gridStart, monthIndex, monthLabel } = useMemo(() => {
+    const first = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+    const gs = new Date(first);
+    gs.setDate(1 - first.getDay());
+    gs.setHours(0, 0, 0, 0);
+    return {
+      gridStart: gs.getTime(),
+      monthIndex: first.getMonth(),
+      monthLabel: first.toLocaleString(undefined, { month: "long", year: "numeric" }),
+    };
+  }, [today, monthOffset]);
+
+  const data = useQuery(api.leave.grid, {
+    startDate: gridStart,
+    days: 42,
+    minCoverage: MIN_COVERAGE,
+  });
   const toggle = useMutation(api.leave.toggle);
   const toast = useToast();
 
-  if (!data) {
-    return (
-      <>
-        <div className="page-header-row">
-          <div>
-            <h1 className="page-title">Leave planner</h1>
-            <p className="page-subtitle">Loading…</p>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const goMonth = (delta: number) => {
+    const next = monthOffset + delta;
+    const first = new Date(today.getFullYear(), today.getMonth() + next, 1);
+    setMonthOffset(next);
+    setSelected(startOfDay(first).getTime());
+  };
 
-  const onToggle = async (staffId: Id<"staff">, ms: number) => {
+  const onToggle = async (staffId: Id<"staff">) => {
     try {
-      const r = await toggle({ staffId, date: ms });
-      toast(r.onLeave ? "Leave added" : "Leave removed", "ph-calendar-dots");
+      const r = await toggle({ staffId, date: selected });
+      toast(r.onLeave ? "Marked on leave" : "Leave cleared", "ph-calendar-dots");
     } catch (e: any) {
       toast(e.message ?? "Failed", "ph-warning");
     }
   };
 
-  const rangeEnd = new Date(startDate + 29 * 86400000);
+  const selIdx = Math.round((selected - gridStart) / DAY_MS);
+  const rows: any[] = data?.rows ?? [];
+  const available = rows.filter((r) => !r.leave.includes(selIdx));
+  const onLeave = rows.filter((r) => r.leave.includes(selIdx));
+
   return (
     <>
       <div className="page-header-row">
         <div>
           <h1 className="page-title">Leave planner</h1>
           <p className="page-subtitle">
-            {data.staffCount} staff · next 30 days · click a cell to toggle leave
+            {data ? `${data.staffCount} staff` : "Loading…"} · pick a day to see who’s available
           </p>
         </div>
       </div>
 
+      <div className="cal-bar">
+        <div className="cal-title">{monthLabel}</div>
+        <div className="cal-nav">
+          <Btn icon="ph-caret-left" onClick={() => goMonth(-1)}>Prev</Btn>
+          <Btn onClick={() => { setMonthOffset(0); setSelected(today.getTime()); }}>Today</Btn>
+          <Btn icon="ph-caret-right" onClick={() => goMonth(1)}>Next</Btn>
+        </div>
+      </div>
+
+      <div className="cal">
+        <div className="cal-head">
+          {WEEKDAYS.map((w) => <div key={w}>{w}</div>)}
+        </div>
+        <div className="cal-grid">
+          {Array.from({ length: 42 }, (_, i) => {
+            const ms = gridStart + i * DAY_MS;
+            const date = new Date(ms);
+            const inMonth = date.getMonth() === monthIndex;
+            const isToday = ms === today.getTime();
+            const isSel = ms === selected;
+            const cov = data?.coverage?.[i];
+            const cls = [
+              "cal-cell",
+              inMonth ? "" : "out",
+              isToday ? "today" : "",
+              isSel ? "sel" : "",
+              cov?.short ? "short" : "",
+            ].filter(Boolean).join(" ");
+            return (
+              <div key={i} className={cls} onClick={() => setSelected(ms)}>
+                <div className="cal-date">{date.getDate()}</div>
+                {data && cov ? (
+                  <div className="cal-avail">
+                    <span className="cal-dot" />
+                    {cov.available} avail
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <Panel
-        title="Leave grid"
-        desc={`${new Date(startDate).toDateString()} → ${rangeEnd.toDateString()}`}
+        title={new Date(selected).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+        desc={`${available.length} available · ${onLeave.length} on leave · minimum ${MIN_COVERAGE}`}
       >
-        <div
-          className="banner"
-          style={
-            data.shortDays
-              ? { color: "var(--risk-fg)", background: "var(--risk-bg)" }
-              : undefined
-          }
-        >
-          <i className={`ph ${data.shortDays ? "ph-warning" : "ph-check-circle"}`} />
-          {data.shortDays
-            ? `${data.shortDays} day${data.shortDays === 1 ? "" : "s"} below minimum coverage (${data.minCoverage} staff)`
-            : `Coverage maintained — at least ${data.minCoverage} staff available every day`}
-        </div>
-
-        {data.rows.map((r: any) => (
-          <div className="lvrow" key={r.id}>
-            <div className="lvname">
-              <div className="n">{r.name}</div>
-              <div className="rl">{r.role}</div>
-            </div>
-            <div className="grid">
-              {data.days.map((d: any) => {
-                const onLeave = r.leave.includes(d.index);
-                const cls = onLeave ? "celld lv" : d.weekend ? "celld wk" : "celld";
-                return (
-                  <div
-                    key={d.index}
-                    className={cls}
-                    style={{ cursor: "pointer" }}
-                    title={`${new Date(d.ms).toDateString()}${onLeave ? " · on leave" : ""}`}
-                    onClick={() => onToggle(r.id, d.ms)}
-                  />
-                );
-              })}
-            </div>
-            <div className="lvbal">{r.leaveBalance}/{r.entitlementDays}</div>
+        {available.length < MIN_COVERAGE && (
+          <div className="banner" style={{ color: "var(--risk-fg)", background: "var(--risk-bg)" }}>
+            <i className="ph ph-warning" /> Below minimum coverage for this day
           </div>
-        ))}
-
-        <div className="legend">
-          <span><span className="sw" style={{ background: "var(--mut-bg)" }} /> Working</span>
-          <span><span className="sw" style={{ background: "#7FA86A" }} /> On leave</span>
-          <span><span className="sw" style={{ background: "color-mix(in srgb,var(--mut-bg) 60%,var(--border))" }} /> Weekend</span>
-        </div>
+        )}
+        {rows.length === 0 ? (
+          <EmptyState icon="ph-users">No staff on record.</EmptyState>
+        ) : (
+          <>
+            {available.map((r) => (
+              <div className="roster" key={r.id}>
+                <div className="who">
+                  <span className="av">{fmt.initials(r.name)}</span>
+                  <div>
+                    <div className="flt">{r.name}</div>
+                    <div className="reg">{r.role} · {r.leaveBalance}/{r.entitlementDays} days left</div>
+                  </div>
+                </div>
+                <div className="row-actions">
+                  <Pill tone="ok" icon="ph-check">Available</Pill>
+                  <Btn icon="ph-airplane-takeoff" onClick={() => onToggle(r.id)}>Mark leave</Btn>
+                </div>
+              </div>
+            ))}
+            {onLeave.map((r) => (
+              <div className="roster" key={r.id}>
+                <div className="who">
+                  <span className="av">{fmt.initials(r.name)}</span>
+                  <div>
+                    <div className="flt">{r.name}</div>
+                    <div className="reg">{r.role} · {r.leaveBalance}/{r.entitlementDays} days left</div>
+                  </div>
+                </div>
+                <div className="row-actions">
+                  <Pill tone="warn" icon="ph-airplane-takeoff">On leave</Pill>
+                  <Btn icon="ph-arrow-counter-clockwise" onClick={() => onToggle(r.id)}>Clear</Btn>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
       </Panel>
     </>
   );
