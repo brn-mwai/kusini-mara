@@ -10,10 +10,14 @@ airstrip. **The acknowledgment loop is the product.**
 Two real apps, **one shared Convex backend**. An action in one app shows up in the
 other **live**, with no polling.
 
-| App | URL (deploy target) | Audience | Posture |
+| App | Live (Vercel) | Audience | Posture |
 |---|---|---|---|
-| **Kusini Lodge** | `lodge.kusini.app` | lodge duty contact + team | offline-first PWA |
-| **Kusini Air** | `air.kusini.app` | charter operator ops | online-first PWA |
+| **Kusini Lodge** | `kusini-lodge-brn-mwais-projects.vercel.app` | lodge duty contact + team | offline-first PWA |
+| **Kusini Air** | `kusini-air-brn-mwais-projects.vercel.app` | charter operator ops | online-first PWA |
+
+> Both deployed to Vercel (team `brn-mwais-projects`) against one Convex prod
+> deployment (`judicious-giraffe-509`). To make them publicly reachable + auth’d,
+> two dashboard actions remain — see **Go-live checklist** at the bottom.
 
 ---
 
@@ -193,6 +197,26 @@ sidebar with project switcher, command palette (⌘K), light/dark/system theme s
 Tokens: primary `#1C3319`, page `#FAFCF1`, sidebar `#EDEFE4`, border `#DBDED4`.
 Operational data (tail numbers, ETAs, refs) in **IBM Plex Mono**; UI text in **Hanken
 Grotesk**; **Phosphor** icons (self-hosted for offline).
+
+## Go-live checklist (2 dashboard actions)
+
+Both apps are deployed to Vercel and built green; two settings make them a public,
+authenticated demo:
+
+1. **Make them public** — Vercel → each project (`kusini-lodge`, `kusini-air`) →
+   *Settings → Deployment Protection → Vercel Authentication → Disabled → Save.*
+   (New team projects gate every deployment behind Vercel login by default.)
+2. **Turn on auth** — set Clerk (see *Auth setup* above) on both Vercel projects
+   (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`) and on the Convex prod
+   deployment (`CLERK_JWT_ISSUER_DOMAIN`), then redeploy:
+   ```bash
+   # from repo root, per app:
+   printf '{ "version":2, "builds":[{ "src":"apps/lodge/package.json", "use":"@vercel/next" }] }' > vercel.json
+   vercel link --yes --project kusini-lodge --scope brn-mwais-projects
+   vercel deploy --prod --yes --scope brn-mwais-projects
+   # repeat with apps/air + kusini-air
+   ```
+   Until real Clerk keys are set, each app serves a “setup required” page (build-safe).
 
 ## License
 
