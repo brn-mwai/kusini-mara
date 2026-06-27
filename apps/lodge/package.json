@@ -14,7 +14,6 @@
     "@clerk/nextjs": "^6.9.6",
     "@fontsource/hanken-grotesk": "^5.1.0",
     "@fontsource/ibm-plex-mono": "^5.1.1",
-    "@kusini/ui": "workspace:*",
     "@phosphor-icons/web": "^2.1.1",
     "convex": "^1.17.4",
     "next": "^15.1.3",

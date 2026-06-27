@@ -51,9 +51,6 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: ^5.1.1
         version: 5.2.7
-      '@kusini/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       '@phosphor-icons/web':
         specifier: ^2.1.1
         version: 2.1.2
@@ -94,9 +91,6 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: ^5.1.1
         version: 5.2.7
-      '@kusini/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       '@phosphor-icons/web':
         specifier: ^2.1.1
         version: 2.1.2

@@ -17,7 +17,7 @@ import {
   type NavSection,
   type CmdItem,
   type PillTone,
-} from "@kusini/ui";
+} from "@/uikit";
 
 type Me = {
   userId: Id<"users">;

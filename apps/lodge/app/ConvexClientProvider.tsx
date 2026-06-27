@@ -3,7 +3,7 @@ import { ReactNode, useState } from "react";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useAuth } from "@clerk/nextjs";
-import { ThemeProvider, ToastProvider } from "@kusini/ui";
+import { ThemeProvider, ToastProvider } from "@/uikit";
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
   // Construct lazily inside the component so importing this module never throws

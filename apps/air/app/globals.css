@@ -13,4 +13,4 @@
 @import "@phosphor-icons/web/fill";
 
 /* Kusini design system (extracted verbatim from the prototype) */
-@import "@kusini/ui/styles.css";
+@import "../uikit/tokens.css";
