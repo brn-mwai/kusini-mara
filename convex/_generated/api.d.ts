@@ -22,6 +22,7 @@ import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as notifications from "../notifications.js";
 import type * as rooms from "../rooms.js";
 import type * as seed from "../seed.js";
+import type * as settings from "../settings.js";
 import type * as staff from "../staff.js";
 
 import type {
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   rooms: typeof rooms;
   seed: typeof seed;
+  settings: typeof settings;
   staff: typeof staff;
 }>;
 

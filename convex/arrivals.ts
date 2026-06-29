@@ -144,6 +144,65 @@ export const create = propertyMutation({
   },
 });
 
+// Full detail for one arrival — guests, transport detail, ground duties, room,
+// and the correlation-linked timeline. Powers the arrival drawer.
+export const get = propertyQuery({
+  args: { arrivalId: v.id("arrivalEvents") },
+  returns: v.union(v.any(), v.null()),
+  handler: async (ctx, args) => {
+    const a = await ctx.db.get(args.arrivalId);
+    if (!a || a.propertyId !== ctx.property._id) return null;
+    const flight = a.flightId ? await ctx.db.get(a.flightId) : null;
+    const guests = await ctx.db
+      .query("arrivalGuests")
+      .withIndex("by_arrival", (q) => q.eq("arrivalId", a._id))
+      .collect();
+    const events = await ctx.db
+      .query("transferEvents")
+      .withIndex("by_arrival", (q) => q.eq("arrivalId", a._id))
+      .order("asc")
+      .collect();
+    const duties = await ctx.db
+      .query("dutyAssignments")
+      .withIndex("by_arrival", (q) => q.eq("arrivalId", a._id))
+      .collect();
+    const dutyRows = await Promise.all(
+      duties.map(async (d) => {
+        const s = await ctx.db.get(d.staffId);
+        const veh = d.vehicleId ? await ctx.db.get(d.vehicleId) : null;
+        return { id: d._id, staff: s?.name ?? "—", role: s?.role ?? "", vehicle: veh?.name ?? null, dutyType: d.dutyType, status: d.status };
+      }),
+    );
+    const ra = await ctx.db
+      .query("roomAssignments")
+      .withIndex("by_arrival", (q) => q.eq("arrivalId", a._id))
+      .first();
+    const room = ra ? await ctx.db.get(ra.roomId) : null;
+    return {
+      ...a,
+      flight: flight ? { code: flight.code, reg: flight.aircraftReg, pilot: flight.pilotName, status: flight.status } : null,
+      guests, events, duties: dutyRows,
+      room: room ? { name: room.name, type: room.type } : null,
+    };
+  },
+});
+
+// Cancel an arrival (soft — keeps the audit trail).
+export const cancel = propertyMutation({
+  args: { arrivalId: v.id("arrivalEvents"), reason: v.optional(v.string()) },
+  returns: v.object({ ok: v.boolean() }),
+  handler: async (ctx, args) => {
+    const a = await requirePropertyArrival(ctx, ctx.property, args.arrivalId);
+    await ctx.db.patch(a._id, { status: "cancelled", cancelledAt: Date.now(), cancelReason: args.reason });
+    await recordEvent(ctx, {
+      correlationId: a.correlationId, propertyId: a.propertyId, airlineId: a.airlineId,
+      type: "arrival_cancelled", summary: `${ctx.user.name} cancelled ${a.guestName}${args.reason ? ` — ${args.reason}` : ""}`,
+      arrivalId: a._id, byUserId: ctx.user._id,
+    });
+    return { ok: true };
+  },
+});
+
 // Property acknowledges a scheduled arrival → closes the loop.
 export const acknowledge = propertyMutation({
   args: { arrivalId: v.id("arrivalEvents") },

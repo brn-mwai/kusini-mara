@@ -161,6 +161,7 @@ function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
   const acknowledge = useMutation(api.arrivals.acknowledge);
   const toast = useToast();
   const [assignFor, setAssignFor] = useState<any | null>(null);
+  const [detailFor, setDetailFor] = useState<any | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const confirmed = rows.filter((a) => a.status === "acknowledged").length;
@@ -197,7 +198,8 @@ function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
         getRowKey={(a) => a._id}
         searchText={(a) => `${a.guestName} ${a.destinationLabel} ${a.origin} ${a.mode} ${transportRef(a)}`}
         searchPlaceholder="Search guest, airstrip, mode…"
-        rowClassName={(a) => (a.status === "escalated" ? "esc" : canAck(a) ? "attn" : "")}
+        rowClassName={(a) => [detailFor?._id === a._id ? "sel" : "", a.status === "escalated" ? "esc" : canAck(a) ? "attn" : ""].filter(Boolean).join(" ")}
+        onRowClick={(a) => setDetailFor(a)}
         empty={{ icon: "ph-airplane", title: "No arrivals in this view." }}
         columns={[
           {
@@ -226,7 +228,7 @@ function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
           {
             key: "act", label: "", align: "right",
             render: (a) => (
-              <div className="row-actions">
+              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
                 {canAck(a) && (<button className="ackbtn" onClick={() => onAck(a)}><i className="ph ph-check" />{a.reconfirmRequested ? "Reconfirm" : "Acknowledge"}</button>)}
                 <Btn icon="ph-user-plus" onClick={() => setAssignFor(a)}>Assign</Btn>
               </div>
@@ -237,7 +239,130 @@ function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
 
       {assignFor && <AssignModal arrival={assignFor} onClose={() => setAssignFor(null)} />}
       {addOpen && <AddArrivalModal onClose={() => setAddOpen(false)} />}
+      {detailFor && <ArrivalDetailModal arrivalId={detailFor._id} onClose={() => setDetailFor(null)} />}
     </>
+  );
+}
+
+// ── Arrival detail drawer (everything about one arrival + actions) ────────────
+function ArrivalDetailModal({ arrivalId, onClose }: { arrivalId: Id<"arrivalEvents">; onClose: () => void }) {
+  const a = useQuery(api.arrivals.get, { arrivalId });
+  const acknowledge = useMutation(api.arrivals.acknowledge);
+  const cancel = useMutation(api.arrivals.cancel);
+  const toast = useToast();
+  const [assign, setAssign] = useState(false);
+  const [placeRoom, setPlaceRoom] = useState(false);
+
+  if (!a) {
+    return <Modal title="Arrival" onClose={onClose} footer={<Btn onClick={onClose}>Close</Btn>}><div className="reg">Loading…</div></Modal>;
+  }
+  const [tone, icon, label] = arrivalStatus(a);
+  const d = a.modeDetail ?? {};
+  const detailRows: Array<[string, string]> = [];
+  if (a.flight) detailRows.push(["Flight", `${a.flight.reg} · ${a.flight.code} · ${a.flight.pilot}`]);
+  if (d.carrier) detailRows.push(["Carrier", `${d.carrier} ${d.flightNumber ?? ""}`]);
+  if (d.connectionNotes) detailRows.push(["Connection", d.connectionNotes]);
+  if (d.operator) detailRows.push(["Operator", d.operator]);
+  if (d.vehicle) detailRows.push(["Vehicle", d.vehicle]);
+  if (d.driverName || d.driverContact) detailRows.push(["Driver", `${d.driverName ?? ""} ${d.driverContact ?? ""}`]);
+  if (d.guestVehicle) detailRows.push(["Guest vehicle", d.guestVehicle]);
+  if (d.landingPoint) detailRows.push(["Landing point", d.landingPoint]);
+  if (d.pilotContact) detailRows.push(["Pilot contact", d.pilotContact]);
+  if (d.routeNotes) detailRows.push(["Route", d.routeNotes]);
+
+  const onAck = async () => { try { await acknowledge({ arrivalId }); toast("Acknowledged", "ph-check-circle"); } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); } };
+  const onCancel = async () => { try { await cancel({ arrivalId }); toast("Arrival cancelled", "ph-x-circle"); onClose(); } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); } };
+
+  return (
+    <>
+      <Modal
+        title={`${a.guestName}`}
+        onClose={onClose}
+        footer={
+          <>
+            <Btn icon="ph-x-circle" onClick={onCancel}>Cancel arrival</Btn>
+            <div style={{ flex: 1 }} />
+            <Btn icon="ph-bed" onClick={() => setPlaceRoom(true)}>Place in room</Btn>
+            <Btn icon="ph-user-plus" onClick={() => setAssign(true)}>Assign ground</Btn>
+            {canAck(a) && <Btn variant="primary" icon="ph-check" onClick={onAck}>{a.reconfirmRequested ? "Reconfirm" : "Acknowledge"}</Btn>}
+          </>
+        }
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <Pill tone={tone} icon={icon}>{label}</Pill>
+          <span className="tag"><i className={`ph ${modeMeta(a.mode).icon}`} style={{ marginRight: 5 }} />{modeMeta(a.mode).label}</span>
+          {a.vip && <span className="tag">VIP</span>}
+        </div>
+
+        <DetailRow k="Route" v={`${a.origin} → ${a.destinationLabel}`} />
+        <DetailRow k="Time" v={`${fmt.hhmm(a.scheduledTime)} · ${new Date(a.scheduledTime).toDateString()}${a.timezone ? ` · ${a.timezone}` : ""}`} />
+        <DetailRow k="Party" v={`${a.pax} pax${a.leadGuestNationality ? ` · ${a.leadGuestNationality}` : ""}`} />
+        {a.special?.length ? <DetailRow k="Special" v={a.special.join(", ")} /> : null}
+        {a.luggage ? <DetailRow k="Luggage" v={a.luggage} /> : null}
+        {detailRows.map(([k, v]) => <DetailRow key={k} k={k} v={v} />)}
+        {a.room ? <DetailRow k="Room" v={`${a.room.name} · ${String(a.room.type).replace(/_/g, " ")}`} /> : null}
+
+        {a.guests?.length ? (
+          <div style={{ marginTop: 12 }}>
+            <div className="kpi-head" style={{ padding: "0 0 6px" }}>Guests</div>
+            {a.guests.map((g: any) => (<div key={g._id} className="reg" style={{ padding: "2px 0" }}>· {g.fullName}{g.type === "child" ? " (child)" : ""}{g.nationality ? ` — ${g.nationality}` : ""}</div>))}
+          </div>
+        ) : null}
+
+        <div style={{ marginTop: 12 }}>
+          <div className="kpi-head" style={{ padding: "0 0 6px" }}>Ground assignments</div>
+          {a.duties?.length ? a.duties.map((du: any) => (
+            <div key={du.id} className="reg" style={{ padding: "2px 0" }}>· {du.staff}{du.vehicle ? ` — ${du.vehicle}` : ""} ({String(du.dutyType).replace(/_/g, " ")}) · {du.status}</div>
+          )) : <div className="reg">None yet.</div>}
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <div className="kpi-head" style={{ padding: "0 0 6px" }}>Timeline</div>
+          <div className="feed" style={{ padding: 0 }}>
+            {a.events?.slice().reverse().map((e: any) => (
+              <div className="fitem" key={e._id} style={{ padding: "7px 0" }}>
+                <div className="fi" style={{ background: "var(--mut-bg)", color: "var(--text-2)" }}><i className="ph ph-circle" /></div>
+                <div className="ft">{e.summary}<div className="tm">{fmt.hhmm(e.at)} · {String(e.type).replace(/_/g, " ")}</div></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
+      {assign && <AssignModal arrival={a} onClose={() => setAssign(false)} />}
+      {placeRoom && <RoomPlaceModal arrival={a} onClose={() => setPlaceRoom(false)} />}
+    </>
+  );
+}
+
+function DetailRow({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="setrow" style={{ padding: "8px 0" }}>
+      <div className="setk" style={{ minWidth: 110, color: "var(--text-3)", fontWeight: 500 }}>{k}</div>
+      <div className="setv" style={{ marginTop: 0, textAlign: "right" }}>{v}</div>
+    </div>
+  );
+}
+
+function RoomPlaceModal({ arrival, onClose }: { arrival: any; onClose: () => void }) {
+  const rooms = useQuery(api.rooms.list, {}) ?? [];
+  const place = useMutation(api.rooms.assign);
+  const toast = useToast();
+  const [roomId, setRoomId] = useState("");
+  const submit = async () => {
+    if (!roomId) return;
+    try { await place({ arrivalId: arrival._id, roomId: roomId as Id<"rooms">, guest: arrival.guestName }); toast("Guest placed", "ph-bed"); onClose(); }
+    catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
+  };
+  return (
+    <Modal title={`Place ${arrival.guestName}`} onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-check" onClick={submit}>Place</Btn></>}>
+      <Field label="Room">
+        <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
+          <option value="">Select…</option>
+          {rooms.map((r: any) => <option key={r._id} value={r._id}>{r.name} — {String(r.type).replace(/_/g, " ")} ({r.capacity} pax)</option>)}
+        </select>
+      </Field>
+    </Modal>
   );
 }
 
@@ -354,6 +479,9 @@ function AddArrivalModal({ onClose }: { onClose: () => void }) {
 // ── Duties ────────────────────────────────────────────────────────────────────
 function DutiesView() {
   const duties = useQuery(api.duties.list, {}) ?? [];
+  const confirm = useMutation(api.duties.confirm);
+  const remove = useMutation(api.duties.remove);
+  const toast = useToast();
   return (
     <>
       <div className="page-header-row"><div><h1 className="page-title">Duties</h1><p className="page-subtitle">Ground assignments across today’s arrivals</p></div></div>
@@ -367,7 +495,16 @@ function DutiesView() {
           { key: "type", label: "Duty", render: (d) => <span className="tag">{String(d.dutyType).replace(/_/g, " ")}</span> },
           { key: "vehicle", label: "Vehicle", render: (d) => d.vehicleName ?? <span className="reg">—</span> },
           { key: "time", label: "Time", align: "right", render: (d) => <span className="mono">{d.scheduledTime ? fmt.hhmm(d.scheduledTime) : "—"}</span> },
-          { key: "status", label: "Status", render: (d) => <Pill tone="info" icon="ph-user-check">{d.status}</Pill> },
+          { key: "status", label: "Status", render: (d) => <Pill tone={d.status === "accepted" || d.status === "completed" ? "ok" : "info"} icon="ph-user-check">{d.status}</Pill> },
+          {
+            key: "act", label: "", align: "right",
+            render: (d) => (
+              <div className="row-actions">
+                {d.status === "assigned" && <Btn icon="ph-check" onClick={async () => { await confirm({ dutyId: d._id }); toast("Duty confirmed", "ph-check"); }}>Confirm</Btn>}
+                <Btn icon="ph-trash" onClick={async () => { await remove({ dutyId: d._id }); toast("Duty removed", "ph-trash"); }}>Remove</Btn>
+              </div>
+            ),
+          },
         ]}
       />
     </>
@@ -562,14 +699,35 @@ function NotificationsView({ notifs }: { notifs: any[] }) {
 }
 
 function SettingsView({ me }: { me: Me }) {
+  const s = useQuery(api.settings.get, {});
   return (
     <>
-      <div className="page-header-row"><div><h1 className="page-title">Settings</h1><p className="page-subtitle">Property & account</p></div></div>
-      <Panel title="Organization">
-        <div className="setrow"><div><div className="setk">Property</div><div className="setv">{me.org.name}</div></div></div>
-        <div className="setrow"><div><div className="setk">Your role</div><div className="setv">{me.role}</div></div></div>
-        <div className="setrow"><div><div className="setk">Tenant isolation</div><div className="setv">Enforced in code — you only see {me.org.name}’s arrivals and staff.</div></div></div>
-      </Panel>
+      <div className="page-header-row"><div><h1 className="page-title">Settings</h1><p className="page-subtitle">Property configuration</p></div></div>
+      {!s ? <Panel title="Loading…"><div className="reg" style={{ padding: 16 }}>Loading…</div></Panel> : (
+        <>
+          <div className="stats">
+            <Stat icon="ph-users-three" tone="blue" label="Staff" value={s.counts.staff} />
+            <Stat icon="ph-van" tone="green" label="Vehicles" value={s.counts.vehicles} />
+            <Stat icon="ph-bed" tone="amber" label="Rooms" value={s.counts.rooms} />
+            <Stat icon="ph-path" tone="red" label="Arrivals on record" value={s.counts.arrivals} />
+          </div>
+          <Panel title="Property">
+            <div className="setrow"><div><div className="setk">Operator</div><div className="setv">{s.operator?.name} ({s.operator?.shortCode})</div></div></div>
+            <div className="setrow"><div><div className="setk">Property</div><div className="setv">{s.property.name} · {s.property.region}</div></div></div>
+            <div className="setrow"><div><div className="setk">Timezone</div><div className="setv mono">{s.property.timezone}</div></div></div>
+            <div className="setrow"><div><div className="setk">Leave carry-over</div><div className="setv">{String(s.property.carryOverPolicy).replace(/_/g, " ")}{s.property.carryOverCapDays ? ` · up to ${s.property.carryOverCapDays} days` : ""}</div></div></div>
+          </Panel>
+          <Panel title="Contacts">
+            {s.dutyContact && <div className="setrow"><div><div className="setk">Duty contact</div><div className="setv">{s.dutyContact.name} · <span className="mono">{s.dutyContact.phone}</span></div></div></div>}
+            {s.backupContact && <div className="setrow"><div><div className="setk">Backup contact</div><div className="setv">{s.backupContact.name} · <span className="mono">{s.backupContact.phone}</span></div></div></div>}
+          </Panel>
+          <Panel title="Coverage rules" desc="Minimum staff per role — drives leave coverage warnings">
+            {s.coverage.map((c: any) => (
+              <div className="setrow" key={c.role}><div><div className="setk">{String(c.role).replace(/_/g, " ")}</div></div><div className="mono">min {c.minStaff} · peak {c.peakMinStaff}</div></div>
+            ))}
+          </Panel>
+        </>
+      )}
     </>
   );
 }

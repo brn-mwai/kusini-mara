@@ -92,6 +92,24 @@ export const assign = propertyMutation({
   },
 });
 
+export const confirm = propertyMutation({
+  args: { dutyId: v.id("dutyAssignments") },
+  returns: v.object({ ok: v.boolean() }),
+  handler: async (ctx, args) => {
+    const duty = await ctx.db.get(args.dutyId);
+    if (!duty || duty.propertyId !== ctx.property._id) throw new Error("Duty not found");
+    const arrival = await ctx.db.get(duty.arrivalId);
+    await ctx.db.patch(duty._id, { status: "accepted", confirmedAt: Date.now() });
+    if (arrival) {
+      await recordEvent(ctx, {
+        correlationId: arrival.correlationId, propertyId: ctx.property._id, airlineId: arrival.airlineId,
+        type: "duty_accepted", summary: `Duty accepted for ${arrival.guestName}`, arrivalId: arrival._id, byUserId: ctx.user._id,
+      });
+    }
+    return { ok: true };
+  },
+});
+
 export const remove = propertyMutation({
   args: { dutyId: v.id("dutyAssignments") },
   returns: v.object({ ok: v.boolean() }),
