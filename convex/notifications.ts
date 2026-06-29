@@ -7,40 +7,36 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { orgByApp } from "./lib/tenancy";
-import { notifyChannel } from "./schema";
+import { notifyChannel, notifyKind } from "./schema";
 import { sendSms, sendWhatsApp } from "./lib/providers";
-import type { Id } from "./_generated/dataModel";
 
-// Read the notifications log for the acting app's demo org.
 export const list = query({
   args: { app: v.union(v.literal("lodge"), v.literal("air")) },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const org = await orgByApp(ctx, args.app);
-    const isLodge = args.app === "lodge";
     const rows = await ctx.db
       .query("notifications")
       .withIndex("by_at")
       .order("desc")
       .take(100);
     return rows.filter((n) =>
-      isLodge ? n.lodgeId === org._id : n.airlineId === org._id,
+      args.app === "lodge"
+        ? n.propertyId === org.propertyId
+        : n.airlineId === org.airlineId,
     );
   },
 });
 
-// Enqueue a notification (outbox row in `pending`) and schedule delivery. Called
-// from mutations (e.g. escalation) — mutations can't do network I/O, so the
-// actual send happens in the scheduled action.
 export const enqueue = internalMutation({
   args: {
     channel: notifyChannel,
     toPhone: v.optional(v.string()),
     toUserId: v.optional(v.id("users")),
-    movementId: v.optional(v.id("movements")),
-    lodgeId: v.optional(v.id("organizations")),
-    airlineId: v.optional(v.id("organizations")),
-    kind: v.string(),
+    arrivalId: v.optional(v.id("arrivalEvents")),
+    propertyId: v.optional(v.id("properties")),
+    airlineId: v.optional(v.id("airlines")),
+    kind: notifyKind,
     body: v.string(),
     correlationId: v.optional(v.string()),
   },
@@ -52,8 +48,8 @@ export const enqueue = internalMutation({
       status: "pending",
       toPhone: args.toPhone,
       toUserId: args.toUserId,
-      movementId: args.movementId,
-      lodgeId: args.lodgeId,
+      arrivalId: args.arrivalId,
+      propertyId: args.propertyId,
       airlineId: args.airlineId,
       kind: args.kind,
       body: args.body,
@@ -95,8 +91,6 @@ export const _mark = internalMutation({
   },
 });
 
-// Deliver a queued notification over its channel. Falls back to a recorded mock
-// when provider creds are absent — the escalation stays auditable either way.
 export const deliver = internalAction({
   args: { id: v.id("notifications") },
   returns: v.null(),

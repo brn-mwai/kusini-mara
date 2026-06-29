@@ -4,17 +4,14 @@ import { internal } from "./_generated/api";
 import { recordEvent } from "./lib/events";
 import type { Id } from "./_generated/dataModel";
 
-// Create an outbox notification row transactionally, then schedule its network
-// delivery. Keeping the row inline (not behind another scheduled mutation) means
-// the escalation and its audit trail commit together.
 async function queueNotification(
   ctx: MutationCtx,
   args: {
     toPhone: string;
     toUserId?: Id<"users">;
-    movementId: Id<"movements">;
-    lodgeId: Id<"organizations">;
-    airlineId: Id<"organizations">;
+    arrivalId: Id<"arrivalEvents">;
+    propertyId: Id<"properties">;
+    airlineId?: Id<"airlines">;
     body: string;
     correlationId: string;
   },
@@ -25,8 +22,8 @@ async function queueNotification(
     status: "pending",
     toPhone: args.toPhone,
     toUserId: args.toUserId,
-    movementId: args.movementId,
-    lodgeId: args.lodgeId,
+    arrivalId: args.arrivalId,
+    propertyId: args.propertyId,
     airlineId: args.airlineId,
     kind: "escalation",
     body: args.body,
@@ -37,66 +34,59 @@ async function queueNotification(
   await ctx.scheduler.runAfter(0, internal.notifications.deliver, { id });
 }
 
-// Scheduler sweep. Any movement that is `scheduled` (flight assigned, not yet
-// acknowledged) and has crossed its escalation deadline is escalated: status →
-// escalated, an event is written, and SMS goes to the lodge backup contact + the
-// airline ops line. Both boards reflect it live off the status change.
-//
-// Predicate: status == "scheduled" AND escalationDeadline <= now. Runs every
-// minute via crons; idempotent (already-escalated rows leave the `scheduled`
-// bucket so they are not re-fired).
+// Sweep: any arrival that is `scheduled` (firm, not yet acknowledged) and past
+// its escalation deadline is escalated, with SMS to the property backup contact
+// and the airline ops desk. Runs every minute via crons; idempotent.
 export const sweep = internalMutation({
   args: {},
   returns: v.object({ escalated: v.number() }),
   handler: async (ctx) => {
     const now = Date.now();
     const due = await ctx.db
-      .query("movements")
+      .query("arrivalEvents")
       .withIndex("by_status_deadline", (q) =>
         q.eq("status", "scheduled").lte("escalationDeadline", now),
       )
       .collect();
 
     let escalated = 0;
-    for (const m of due) {
-      await ctx.db.patch(m._id, { status: "escalated", escalatedAt: now });
+    for (const a of due) {
+      await ctx.db.patch(a._id, { status: "escalated", escalatedAt: now });
       await recordEvent(ctx, {
-        correlationId: m.correlationId,
-        lodgeId: m.lodgeId,
-        airlineId: m.airlineId,
+        correlationId: a.correlationId,
+        propertyId: a.propertyId,
+        airlineId: a.airlineId,
         type: "escalation_fired",
-        summary: `Unacknowledged within window — escalated for ${m.guestName} (${m.direction}) at ${m.airstrip}`,
-        movementId: m._id,
+        summary: `Unacknowledged within window — escalated for ${a.guestName} (${a.mode} ${a.direction}) to ${a.destinationLabel}`,
+        arrivalId: a._id,
       });
 
-      const lodge = await ctx.db.get(m.lodgeId);
-      const airline = await ctx.db.get(m.airlineId);
-      const body = `KUSINI ESCALATION: ${m.guestName} (${m.pax} pax) ${m.direction} at ${m.airstrip} is unacknowledged and inside the transfer window. Please confirm pickup now.`;
+      const property = await ctx.db.get(a.propertyId);
+      const airline = a.airlineId ? await ctx.db.get(a.airlineId) : null;
+      const body = `KUSINI ESCALATION: ${a.guestName} (${a.pax} pax) ${a.direction} via ${a.mode} to ${a.destinationLabel} is unacknowledged and inside the transfer window. Please confirm now.`;
 
-      // Lodge backup contact.
-      const backupId = lodge?.backupContactId;
+      const backupId = property?.backupContactId;
       const backup = backupId ? await ctx.db.get(backupId) : null;
-      if (backup?.phone) {
+      if (backup?.phoneE164) {
         await queueNotification(ctx, {
-          toPhone: backup.phone,
+          toPhone: backup.phoneE164,
           toUserId: backup._id,
-          movementId: m._id,
-          lodgeId: m.lodgeId,
-          airlineId: m.airlineId,
+          arrivalId: a._id,
+          propertyId: a.propertyId,
+          airlineId: a.airlineId,
           body,
-          correlationId: m.correlationId,
+          correlationId: a.correlationId,
         });
       }
-      // Airline ops line.
-      const opsPhone = airline?.opsPhone ?? process.env.ESCALATION_AIRLINE_OPS_PHONE;
+      const opsPhone = airline?.opsPhone ?? property?.opsPhone ?? process.env.ESCALATION_AIRLINE_OPS_PHONE;
       if (opsPhone) {
         await queueNotification(ctx, {
           toPhone: opsPhone,
-          movementId: m._id,
-          lodgeId: m.lodgeId,
-          airlineId: m.airlineId,
+          arrivalId: a._id,
+          propertyId: a.propertyId,
+          airlineId: a.airlineId,
           body,
-          correlationId: m.correlationId,
+          correlationId: a.correlationId,
         });
       }
       escalated++;

@@ -33,7 +33,6 @@ const NAV: NavSection[] = [
       { key: "today", label: "Today", icon: "ph-house" },
       { key: "arrivals", label: "Arrivals", icon: "ph-airplane-landing" },
       { key: "departures", label: "Departures", icon: "ph-airplane-takeoff" },
-      { key: "bookings", label: "Bookings", icon: "ph-calendar-check" },
     ],
   },
   {
@@ -44,6 +43,10 @@ const NAV: NavSection[] = [
       { key: "staff", label: "Staff", icon: "ph-users-three" },
     ],
   },
+  {
+    sec: "Property",
+    items: [{ key: "rooms", label: "Rooms", icon: "ph-bed" }],
+  },
   { sec: "Insights", items: [{ key: "reports", label: "Reports", icon: "ph-chart-bar" }] },
 ];
 
@@ -51,77 +54,82 @@ const TITLES: Record<string, string> = {
   today: "Today",
   arrivals: "Arrivals",
   departures: "Departures",
-  bookings: "Bookings",
   duties: "Duties",
   leave: "Leave planner",
   staff: "Staff",
+  rooms: "Rooms",
   reports: "Reports",
   notifications: "Notifications",
   settings: "Settings",
 };
 
-function moveStatus(m: any): [PillTone, string, string] {
-  if (m.status === "requested") return ["mut", "ph-clock-countdown", "Awaiting flight"];
-  if (m.status === "completed" || m.status === "landed") return ["mut", "ph-check", "Completed"];
-  if (m.status === "in_flight") return ["info", "ph-airplane-in-flight", "In flight"];
-  if (m.status === "escalated") return ["risk", "ph-warning", "Escalated"];
-  if (m.status === "acknowledged")
-    return m.reconfirmRequested
-      ? ["warn", "ph-arrows-clockwise", "Reconfirm"]
-      : ["ok", "ph-check", "Confirmed"];
-  if (m.status === "scheduled")
-    return m.reconfirmRequested
-      ? ["warn", "ph-arrows-clockwise", "Reconfirm"]
-      : ["warn", "ph-bell-ringing", "Awaiting ack"];
-  return ["mut", "ph-question", m.status];
-}
+const MODES = [
+  { key: "charter", label: "Charter", icon: "ph-airplane-tilt" },
+  { key: "scheduled", label: "Scheduled", icon: "ph-airplane-in-flight" },
+  { key: "helicopter", label: "Helicopter", icon: "ph-fan" },
+  { key: "road", label: "Road transfer", icon: "ph-van" },
+  { key: "self_drive", label: "Self-drive", icon: "ph-car" },
+  { key: "self_fly", label: "Self-fly", icon: "ph-airplane-takeoff" },
+] as const;
+const modeMeta = (m: string) => MODES.find((x) => x.key === m) ?? MODES[0];
 
-function canAck(m: any): boolean {
-  return (m.status === "scheduled" || m.status === "escalated") && !!m.flightId;
+function arrivalStatus(a: any): [PillTone, string, string] {
+  switch (a.status) {
+    case "requested": return ["mut", "ph-clock-countdown", "Awaiting transport"];
+    case "completed": case "arrived": return ["mut", "ph-check", "Completed"];
+    case "in_transit": return ["info", "ph-airplane-in-flight", "In transit"];
+    case "escalated": return ["risk", "ph-warning", "Escalated"];
+    case "cancelled": return ["mut", "ph-x", "Cancelled"];
+    case "no_show": return ["risk", "ph-user-minus", "No-show"];
+    case "acknowledged":
+      return a.reconfirmRequested ? ["warn", "ph-arrows-clockwise", "Reconfirm"] : ["ok", "ph-check", "Confirmed"];
+    case "scheduled":
+      return a.reconfirmRequested ? ["warn", "ph-arrows-clockwise", "Reconfirm"] : ["warn", "ph-bell-ringing", "Awaiting ack"];
+    default: return ["mut", "ph-question", a.status];
+  }
+}
+const canAck = (a: any) => a.status === "scheduled" || a.status === "escalated";
+
+function transportRef(a: any): string {
+  const d = a.modeDetail ?? {};
+  if (a.mode === "charter") return a.flight?.reg ? `${a.flight.reg} · ${a.flight.code}` : "awaiting flight";
+  if (a.mode === "scheduled") return [d.carrier, d.flightNumber].filter(Boolean).join(" ") || "scheduled flight";
+  if (a.mode === "road") return [d.operator, d.vehicle].filter(Boolean).join(" · ") || "road transfer";
+  if (a.mode === "self_drive") return d.guestVehicle || "guest vehicle";
+  if (a.mode === "helicopter") return d.operator || "helicopter";
+  if (a.mode === "self_fly") return d.aircraftReg || "private aircraft";
+  return "";
 }
 
 export function Dashboard({ me }: { me: Me }) {
   const [view, setView] = useState("today");
-  const board = useQuery(api.movements.board, {}) ?? [];
+  const board = useQuery(api.arrivals.board, {}) ?? [];
   const notifs = useQuery(api.notifications.list, { app: "lodge" }) ?? [];
 
-  const today = board.filter((m: any) => fmt.isToday(m.scheduledTime));
-  const needAck = today.filter((m: any) => canAck(m)).length;
-  const escal = board.filter((m: any) => m.status === "escalated").length;
+  const today = board.filter((a: any) => fmt.isToday(a.scheduledTime));
+  const needAck = today.filter((a: any) => canAck(a)).length;
+  const escal = board.filter((a: any) => a.status === "escalated").length;
 
   const paletteItems: CmdItem[] = useMemo(() => {
-    const navCmds: CmdItem[] = Object.keys(TITLES).map((k) => ({
-      id: "nav-" + k,
-      label: TITLES[k] ?? k,
+    const nav: CmdItem[] = Object.keys(TITLES).map((k) => ({
+      id: "nav-" + k, label: TITLES[k] ?? k,
       icon: NAV.flatMap((s) => s.items).find((i) => i.key === k)?.icon ?? "ph-arrow-right",
-      section: "Navigate",
-      run: () => setView(k),
+      section: "Navigate", run: () => setView(k),
     }));
-    const moveCmds: CmdItem[] = board.map((m: any) => ({
-      id: "mv-" + m._id,
-      label: `${m.guestName} · ${m.direction} · ${m.airstrip}`,
-      icon: m.direction === "arrival" ? "ph-airplane-landing" : "ph-airplane-takeoff",
-      section: "Transfers",
-      sub: m.flight?.reg ?? "no flight",
-      run: () => setView(m.direction === "arrival" ? "arrivals" : "departures"),
+    const arr: CmdItem[] = board.map((a: any) => ({
+      id: "a-" + a._id, label: `${a.guestName} · ${modeMeta(a.mode).label} · ${a.destinationLabel}`,
+      icon: modeMeta(a.mode).icon, section: "Arrivals", sub: transportRef(a),
+      run: () => setView(a.direction === "arrival" ? "arrivals" : "departures"),
     }));
-    return [...navCmds, ...moveCmds];
+    return [...nav, ...arr];
   }, [board]);
 
   return (
     <Shell
       appName="Kusini Lodge"
       shortCode={me.org.shortCode}
-      navSections={NAV.map((s) => ({
-        ...s,
-        items: s.items.map((i) =>
-          i.key === "today" && needAck ? { ...i, badge: needAck } : i,
-        ),
-      }))}
-      recents={[
-        { code: "5Y-BMF", label: "Ol Kiombo" },
-        { code: "5Y-CAC", label: "Keekorok" },
-      ]}
+      navSections={NAV.map((s) => ({ ...s, items: s.items.map((i) => i.key === "today" && needAck ? { ...i, badge: needAck } : i) }))}
+      recents={[{ code: "5Y-BMF", label: "Ol Kiombo" }, { code: "5Y-CAC", label: "Keekorok" }]}
       activePage={view}
       crumbPage={TITLES[view] ?? "Today"}
       onNavigate={setView}
@@ -133,18 +141,14 @@ export function Dashboard({ me }: { me: Me }) {
       {(view === "today" || view === "arrivals" || view === "departures") && (
         <BoardView
           view={view}
-          rows={
-            view === "today"
-              ? today
-              : board.filter((m: any) => m.direction === (view === "arrivals" ? "arrival" : "departure"))
-          }
+          rows={view === "today" ? today : board.filter((a: any) => a.direction === (view === "arrivals" ? "arrival" : "departure"))}
           me={me}
         />
       )}
-      {view === "bookings" && <BookingsView />}
       {view === "duties" && <DutiesView />}
       {view === "leave" && <LeaveView />}
       {view === "staff" && <StaffView />}
+      {view === "rooms" && <RoomsView />}
       {view === "reports" && <ReportsView board={board} />}
       {view === "notifications" && <NotificationsView notifs={notifs} />}
       {view === "settings" && <SettingsView me={me} />}
@@ -152,23 +156,20 @@ export function Dashboard({ me }: { me: Me }) {
   );
 }
 
-// ── Board (Today / Arrivals / Departures) ─────────────────────────────────────
+// ── Board ─────────────────────────────────────────────────────────────────────
 function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
-  const acknowledge = useMutation(api.movements.acknowledge);
+  const acknowledge = useMutation(api.arrivals.acknowledge);
   const toast = useToast();
   const [assignFor, setAssignFor] = useState<any | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
-  const confirmed = rows.filter((m) => m.status === "acknowledged").length;
-  const awaiting = rows.filter((m) => canAck(m)).length;
-  const escalated = rows.filter((m) => m.status === "escalated").length;
+  const confirmed = rows.filter((a) => a.status === "acknowledged").length;
+  const awaiting = rows.filter((a) => canAck(a)).length;
+  const escalated = rows.filter((a) => a.status === "escalated").length;
 
-  const onAck = async (m: any) => {
-    try {
-      await acknowledge({ movementId: m._id });
-      toast(`Acknowledged ${m.guestName}`, "ph-check-circle");
-    } catch (e: any) {
-      toast(e.message ?? "Failed", "ph-warning");
-    }
+  const onAck = async (a: any) => {
+    try { await acknowledge({ arrivalId: a._id }); toast(`Acknowledged ${a.guestName}`, "ph-check-circle"); }
+    catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
   };
 
   return (
@@ -176,228 +177,176 @@ function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
       <div className="page-header-row">
         <div>
           <h1 className="page-title">{TITLES[view]}</h1>
-          <p className="page-subtitle">
-            {me.org.name} · <span className="clock">{rows.length} movements</span>
-          </p>
+          <p className="page-subtitle">{me.org.name} · <span className="clock">{rows.length} arrivals</span></p>
+        </div>
+        <div className="header-actions">
+          <Btn variant="primary" icon="ph-plus" onClick={() => setAddOpen(true)}>Add arrival</Btn>
         </div>
       </div>
 
       <div className="stats">
         <Stat icon="ph-bell-ringing" tone="amber" label="Awaiting acknowledgment" value={awaiting} sub="confirm to close the loop" />
-        <Stat icon="ph-check-circle" tone="green" label="Confirmed" value={confirmed} sub="lodge acknowledged" />
+        <Stat icon="ph-check-circle" tone="green" label="Confirmed" value={confirmed} sub="property acknowledged" />
         <Stat icon="ph-warning" tone="red" label="Escalated" value={escalated} sub="unacknowledged in window" />
-        <Stat icon="ph-airplane" tone="blue" label="Total today" value={rows.length} sub="arrivals + departures" />
+        <Stat icon="ph-path" tone="blue" label="Total" value={rows.length} sub="all transport modes" />
       </div>
 
       <DataTable<any>
         rows={rows}
-        noun="movement"
-        getRowKey={(m) => m._id}
-        searchText={(m) => `${m.guestName} ${m.airstrip} ${m.flight?.reg ?? ""} ${m.flight?.code ?? ""}`}
-        searchPlaceholder="Search guest, airstrip, tail…"
-        rowClassName={(m) => (m.status === "escalated" ? "esc" : canAck(m) ? "attn" : "")}
-        empty={{ icon: "ph-airplane", title: "No movements in this view." }}
+        noun="arrival"
+        getRowKey={(a) => a._id}
+        searchText={(a) => `${a.guestName} ${a.destinationLabel} ${a.origin} ${a.mode} ${transportRef(a)}`}
+        searchPlaceholder="Search guest, airstrip, mode…"
+        rowClassName={(a) => (a.status === "escalated" ? "esc" : canAck(a) ? "attn" : "")}
+        empty={{ icon: "ph-airplane", title: "No arrivals in this view." }}
         columns={[
           {
-            key: "flight", label: "Flight",
-            render: (m) => (<><div className="flt mono">{m.flight?.reg ?? "—"}</div><div className="reg">{m.flight?.code ?? "awaiting flight"}</div></>),
+            key: "transport", label: "Transport",
+            render: (a) => (<><div className="flt"><i className={`ph ${modeMeta(a.mode).icon}`} style={{ marginRight: 6, color: "var(--text-2)" }} />{modeMeta(a.mode).label}</div><div className="reg mono">{transportRef(a)}</div></>),
           },
           {
             key: "route", label: "Route",
-            render: (m) => (<div className="route"><i className={`ph ${m.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} /><span>{m.airstrip}</span></div>),
+            render: (a) => (<div className="route"><i className={`ph ${a.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} /><span>{a.origin} → {a.destinationLabel}</span></div>),
           },
           {
             key: "guest", label: "Guest",
-            render: (m) => (<><div className="flt">{m.guestName}</div><div className="reg">{m.pax} pax</div></>),
+            render: (a) => (<><div className="flt">{a.guestName}{a.vip ? <span className="tag" style={{ marginLeft: 6 }}>VIP</span> : null}</div><div className="reg">{a.pax} pax</div></>),
           },
           {
             key: "time", label: "Time",
-            render: (m) => { const cd = fmt.countdown(m.scheduledTime); return (<><div className="eta mono">{fmt.hhmm(m.scheduledTime)}</div><div className={`cd ${cd.overdue ? "risk" : ""}`}>{cd.text}</div></>); },
+            render: (a) => { const cd = fmt.countdown(a.scheduledTime); return (<><div className="eta mono">{fmt.hhmm(a.scheduledTime)}</div><div className={`cd ${cd.overdue ? "risk" : ""}`}>{cd.text}</div></>); },
           },
-          {
-            key: "status", label: "Status",
-            render: (m) => { const [tone, icon, label] = moveStatus(m); return <Pill tone={tone} icon={icon}>{label}</Pill>; },
-          },
+          { key: "status", label: "Status", render: (a) => { const [t, i, l] = arrivalStatus(a); return <Pill tone={t} icon={i}>{l}</Pill>; } },
           {
             key: "ground", label: "Ground",
-            render: (m) => m.assignedStaff
-              ? (<div className="assign"><span className="av">{fmt.initials(m.assignedStaff.name)}</span>{m.assignedStaff.name}</div>)
+            render: (a) => a.assigned?.length
+              ? (<div className="assign"><span className="av">{fmt.initials(a.assigned[0].name)}</span>{a.assigned[0].name}{a.assigned.length > 1 ? ` +${a.assigned.length - 1}` : ""}</div>)
               : (<span className="reg">unassigned</span>),
           },
           {
             key: "act", label: "", align: "right",
-            render: (m) => (
+            render: (a) => (
               <div className="row-actions">
-                {canAck(m) && (
-                  <button className="ackbtn" onClick={() => onAck(m)}>
-                    <i className="ph ph-check" />{m.reconfirmRequested ? "Reconfirm" : "Acknowledge"}
-                  </button>
-                )}
-                <Btn icon="ph-user-plus" onClick={() => setAssignFor(m)}>Assign</Btn>
+                {canAck(a) && (<button className="ackbtn" onClick={() => onAck(a)}><i className="ph ph-check" />{a.reconfirmRequested ? "Reconfirm" : "Acknowledge"}</button>)}
+                <Btn icon="ph-user-plus" onClick={() => setAssignFor(a)}>Assign</Btn>
               </div>
             ),
           },
         ]}
       />
 
-      {assignFor && <AssignModal movement={assignFor} onClose={() => setAssignFor(null)} />}
+      {assignFor && <AssignModal arrival={assignFor} onClose={() => setAssignFor(null)} />}
+      {addOpen && <AddArrivalModal onClose={() => setAddOpen(false)} />}
     </>
   );
 }
 
-function AssignModal({ movement, onClose }: { movement: any; onClose: () => void }) {
+function AssignModal({ arrival, onClose }: { arrival: any; onClose: () => void }) {
   const staff = useQuery(api.staff.list, {}) ?? [];
+  const vehicles = useQuery(api.staff.vehicles, {}) ?? [];
   const assign = useMutation(api.duties.assign);
   const toast = useToast();
-  const [staffId, setStaffId] = useState<string>("");
+  const [staffId, setStaffId] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
+
+  const vehicle = vehicles.find((v: any) => v._id === vehicleId);
+  const capacityShort = vehicle && vehicle.seats < arrival.pax;
 
   const submit = async () => {
     if (!staffId) return;
-    await assign({ movementId: movement._id, staffId: staffId as Id<"staff"> });
-    toast(`Assigned to ${movement.guestName}`, "ph-user-check");
-    onClose();
+    try {
+      await assign({
+        arrivalId: arrival._id, staffId: staffId as Id<"staff">,
+        vehicleId: vehicleId ? (vehicleId as Id<"vehicles">) : undefined,
+        seatsCovered: vehicle?.seats,
+      });
+      toast(`Assigned to ${arrival.guestName}`, "ph-user-check");
+      onClose();
+    } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
   };
 
   return (
-    <Modal
-      title={`Assign ground staff · ${movement.guestName}`}
-      onClose={onClose}
-      footer={
-        <>
-          <Btn onClick={onClose}>Cancel</Btn>
-          <Btn variant="primary" icon="ph-check" onClick={submit}>Assign</Btn>
-        </>
-      }
-    >
+    <Modal title={`Assign ground · ${arrival.guestName}`} onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-check" onClick={submit}>Assign</Btn></>}>
       <Field label="Staff member">
         <select value={staffId} onChange={(e) => setStaffId(e.target.value)}>
           <option value="">Select…</option>
-          {staff.map((s: any) => (
-            <option key={s._id} value={s._id}>
-              {s.name} — {s.role}
-            </option>
-          ))}
+          {staff.map((s: any) => <option key={s._id} value={s._id}>{s.name} — {s.role}</option>)}
         </select>
       </Field>
-      <p className="reg" style={{ marginTop: 8 }}>
-        {movement.direction === "arrival" ? "Pickup" : "Drop-off"} at {movement.airstrip} ·{" "}
-        {fmt.hhmm(movement.scheduledTime)}
+      <Field label="Vehicle (optional)">
+        <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+          <option value="">None</option>
+          {vehicles.map((v: any) => <option key={v._id} value={v._id}>{v.name} — {v.seats} seats</option>)}
+        </select>
+      </Field>
+      <p className="reg" style={{ marginTop: 4 }}>
+        {arrival.pax} pax · {arrival.direction === "arrival" ? "pickup" : "drop-off"} at {arrival.destinationLabel}
       </p>
+      {capacityShort && (
+        <div className="banner" style={{ color: "var(--risk-fg)", background: "var(--risk-bg)", marginTop: 10 }}>
+          <i className="ph ph-warning" /> {arrival.pax} guests, {vehicle.name} seats {vehicle.seats} — add a second vehicle.
+        </div>
+      )}
     </Modal>
   );
 }
 
-// ── Bookings ──────────────────────────────────────────────────────────────────
-function BookingsView() {
-  const bookings = useQuery(api.bookings.list, {}) ?? [];
-  const create = useMutation(api.bookings.create);
+function AddArrivalModal({ onClose }: { onClose: () => void }) {
+  const create = useMutation(api.arrivals.create);
   const toast = useToast();
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">Bookings</h1>
-          <p className="page-subtitle">Each booking spawns an arrival and a departure movement</p>
-        </div>
-        <div className="header-actions">
-          <Btn variant="primary" icon="ph-plus" onClick={() => setOpen(true)}>Add booking</Btn>
-        </div>
-      </div>
-      <Panel title="Bookings" desc="Thin references from the PMS">
-        {bookings.length === 0 ? (
-          <EmptyState icon="ph-calendar-x">No bookings yet.</EmptyState>
-        ) : (
-          <table>
-            <thead>
-              <tr><th>Ref</th><th>Guest</th><th>Pax</th><th>Arrival</th><th>Departure</th></tr>
-            </thead>
-            <tbody>
-              {bookings.map((b: any) => (
-                <tr key={b._id}>
-                  <td className="mono">{b.externalRef}</td>
-                  <td className="flt">{b.guest}</td>
-                  <td>{b.pax}</td>
-                  <td>{b.arrivalAirstrip} · {fmt.dayLabel(b.arrivalDate)}</td>
-                  <td>{b.departureAirstrip} · {fmt.dayLabel(b.departureDate)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Panel>
-      {open && (
-        <AddBookingModal
-          onClose={() => setOpen(false)}
-          onCreate={async (vals) => {
-            await create(vals);
-            toast("Booking added — two movements created", "ph-calendar-check");
-            setOpen(false);
-          }}
-        />
-      )}
-    </>
-  );
-}
-
-function AddBookingModal({
-  onClose,
-  onCreate,
-}: {
-  onClose: () => void;
-  onCreate: (v: any) => Promise<void>;
-}) {
+  const [mode, setMode] = useState("charter");
+  const [dir, setDir] = useState<"arrival" | "departure">("arrival");
   const [guest, setGuest] = useState("");
   const [pax, setPax] = useState(2);
-  const [ref, setRef] = useState("");
-  const [arrStrip, setArrStrip] = useState("Ol Kiombo");
-  const [depStrip, setDepStrip] = useState("Ol Kiombo");
-  const day = 86400000;
-  const now = Date.now();
+  const [origin, setOrigin] = useState("Wilson");
+  const [dest, setDest] = useState("Ol Kiombo");
+  const [hh, setHh] = useState("14");
+  const [mm, setMm] = useState("00");
+  const strips = ["Ol Kiombo", "Keekorok", "Musiara", "Mara North", "Main gate", "Helipad"];
 
-  const submit = () =>
-    onCreate({
-      guest,
-      pax,
-      externalRef: ref || `BK-${Math.floor(now / 1000) % 100000}`,
-      arrivalDate: now + day,
-      departureDate: now + 4 * day,
-      arrivalAirstrip: arrStrip,
-      departureAirstrip: depStrip,
-    });
+  const submit = async () => {
+    if (!guest) { toast("Enter a guest name", "ph-warning"); return; }
+    const t = new Date(); t.setHours(Number(hh), Number(mm), 0, 0);
+    const airMode = ["charter", "scheduled", "helicopter", "self_fly"].includes(mode);
+    try {
+      await create({
+        mode: mode as any, direction: dir, origin, destinationLabel: dest,
+        guestName: guest, pax, scheduledTime: t.getTime(),
+        airstripName: airMode ? dest : undefined,
+      });
+      toast("Arrival added", "ph-calendar-check");
+      onClose();
+    } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
+  };
 
-  const strips = ["Ol Kiombo", "Keekorok", "Musiara", "Wilson", "Mara North"];
   return (
-    <Modal
-      title="Add booking"
-      onClose={onClose}
-      footer={
-        <>
-          <Btn onClick={onClose}>Cancel</Btn>
-          <Btn variant="primary" icon="ph-check" onClick={submit}>Create</Btn>
-        </>
-      }
-    >
-      <Field label="Guest name">
-        <input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="e.g. Okafor" />
-      </Field>
-      <Field label="Pax">
-        <input type="number" min={1} value={pax} onChange={(e) => setPax(Number(e.target.value))} />
-      </Field>
-      <Field label="PMS reference">
-        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="RR-88300" />
-      </Field>
-      <Field label="Arrival airstrip">
-        <select value={arrStrip} onChange={(e) => setArrStrip(e.target.value)}>
-          {strips.map((s) => <option key={s}>{s}</option>)}
+    <Modal title="Add arrival" onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-check" onClick={submit}>Create</Btn></>}>
+      <Field label="Transport mode">
+        <select value={mode} onChange={(e) => setMode(e.target.value)}>
+          {MODES.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
         </select>
       </Field>
-      <Field label="Departure airstrip">
-        <select value={depStrip} onChange={(e) => setDepStrip(e.target.value)}>
-          {strips.map((s) => <option key={s}>{s}</option>)}
+      <Field label="Direction">
+        <select value={dir} onChange={(e) => setDir(e.target.value as any)}>
+          <option value="arrival">Arrival</option>
+          <option value="departure">Departure</option>
         </select>
       </Field>
+      <Field label="Guest / party"><input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="e.g. Okafor" /></Field>
+      <Field label="Pax"><input type="number" min={1} value={pax} onChange={(e) => setPax(Number(e.target.value))} /></Field>
+      <Field label="Origin"><input value={origin} onChange={(e) => setOrigin(e.target.value)} /></Field>
+      <Field label="Destination (airstrip / gate)">
+        <select value={dest} onChange={(e) => setDest(e.target.value)}>{strips.map((s) => <option key={s}>{s}</option>)}</select>
+      </Field>
+      <Field label="Time (HH:MM)">
+        <div style={{ display: "flex", gap: 8 }}>
+          <input value={hh} onChange={(e) => setHh(e.target.value)} style={{ width: 70 }} />
+          <input value={mm} onChange={(e) => setMm(e.target.value)} style={{ width: 70 }} />
+        </div>
+      </Field>
+      <p className="reg" style={{ marginTop: 4 }}>Charter arrivals go to the airline’s queue to be put on a flight. Other modes are confirmed directly.</p>
     </Modal>
   );
 }
@@ -407,197 +356,20 @@ function DutiesView() {
   const duties = useQuery(api.duties.list, {}) ?? [];
   return (
     <>
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">Duties</h1>
-          <p className="page-subtitle">Ground assignments for today’s transfers</p>
-        </div>
-      </div>
-      <Panel title="Duty assignments">
-        {duties.length === 0 ? (
-          <EmptyState icon="ph-clipboard">No duties assigned yet.</EmptyState>
-        ) : (
-          <table>
-            <thead>
-              <tr><th>Staff</th><th>Guest</th><th>Airstrip</th><th>Type</th><th>Time</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {duties.map((d: any) => (
-                <tr key={d._id}>
-                  <td><div className="assign"><span className="av">{fmt.initials(d.staffName)}</span>{d.staffName}</div></td>
-                  <td className="flt">{d.guestName}</td>
-                  <td>{d.airstrip}</td>
-                  <td><span className="tag">{d.dutyType}</span></td>
-                  <td className="mono">{d.scheduledTime ? fmt.hhmm(d.scheduledTime) : "—"}</td>
-                  <td><Pill tone="info" icon="ph-user-check">{d.status}</Pill></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Panel>
-    </>
-  );
-}
-
-// ── Leave planner (month calendar + per-day availability roster) ──────────────
-const DAY_MS = 86400000;
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MIN_COVERAGE = 3;
-
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function LeaveView() {
-  const today = useMemo(() => startOfDay(new Date()), []);
-  const [monthOffset, setMonthOffset] = useState(0);
-  const [selected, setSelected] = useState<number>(today.getTime());
-
-  // First cell of the calendar = the Sunday on/before the 1st of the shown month.
-  const { gridStart, monthIndex, monthLabel } = useMemo(() => {
-    const first = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
-    const gs = new Date(first);
-    gs.setDate(1 - first.getDay());
-    gs.setHours(0, 0, 0, 0);
-    return {
-      gridStart: gs.getTime(),
-      monthIndex: first.getMonth(),
-      monthLabel: first.toLocaleString(undefined, { month: "long", year: "numeric" }),
-    };
-  }, [today, monthOffset]);
-
-  const data = useQuery(api.leave.grid, {
-    startDate: gridStart,
-    days: 42,
-    minCoverage: MIN_COVERAGE,
-  });
-  const toggle = useMutation(api.leave.toggle);
-  const toast = useToast();
-
-  const goMonth = (delta: number) => {
-    const next = monthOffset + delta;
-    const first = new Date(today.getFullYear(), today.getMonth() + next, 1);
-    setMonthOffset(next);
-    setSelected(startOfDay(first).getTime());
-  };
-
-  const onToggle = async (staffId: Id<"staff">) => {
-    try {
-      const r = await toggle({ staffId, date: selected });
-      toast(r.onLeave ? "Marked on leave" : "Leave cleared", "ph-calendar-dots");
-    } catch (e: any) {
-      toast(e.message ?? "Failed", "ph-warning");
-    }
-  };
-
-  const selIdx = Math.round((selected - gridStart) / DAY_MS);
-  const rows: any[] = data?.rows ?? [];
-  const available = rows.filter((r) => !r.leave.includes(selIdx));
-  const onLeave = rows.filter((r) => r.leave.includes(selIdx));
-
-  return (
-    <>
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">Leave planner</h1>
-          <p className="page-subtitle">
-            {data ? `${data.staffCount} staff` : "Loading…"} · pick a day to see who’s available
-          </p>
-        </div>
-      </div>
-
-      <div className="cal-bar">
-        <div className="cal-title">{monthLabel}</div>
-        <div className="cal-nav">
-          <Btn icon="ph-caret-left" onClick={() => goMonth(-1)}>Prev</Btn>
-          <Btn onClick={() => { setMonthOffset(0); setSelected(today.getTime()); }}>Today</Btn>
-          <Btn icon="ph-caret-right" onClick={() => goMonth(1)}>Next</Btn>
-        </div>
-      </div>
-
-      <div className="cal">
-        <div className="cal-head">
-          {WEEKDAYS.map((w) => <div key={w}>{w}</div>)}
-        </div>
-        <div className="cal-grid">
-          {Array.from({ length: 42 }, (_, i) => {
-            const ms = gridStart + i * DAY_MS;
-            const date = new Date(ms);
-            const inMonth = date.getMonth() === monthIndex;
-            const isToday = ms === today.getTime();
-            const isSel = ms === selected;
-            const cov = data?.coverage?.[i];
-            const cls = [
-              "cal-cell",
-              inMonth ? "" : "out",
-              isToday ? "today" : "",
-              isSel ? "sel" : "",
-              cov?.short ? "short" : "",
-            ].filter(Boolean).join(" ");
-            return (
-              <div key={i} className={cls} onClick={() => setSelected(ms)}>
-                <div className="cal-date">{date.getDate()}</div>
-                {data && cov ? (
-                  <div className="cal-avail">
-                    <span className="cal-dot" />
-                    {cov.available} avail
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <Panel
-        title={new Date(selected).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
-        desc={`${available.length} available · ${onLeave.length} on leave · minimum ${MIN_COVERAGE}`}
-      >
-        {available.length < MIN_COVERAGE && (
-          <div className="banner" style={{ color: "var(--risk-fg)", background: "var(--risk-bg)" }}>
-            <i className="ph ph-warning" /> Below minimum coverage for this day
-          </div>
-        )}
-        {rows.length === 0 ? (
-          <EmptyState icon="ph-users">No staff on record.</EmptyState>
-        ) : (
-          <>
-            {available.map((r) => (
-              <div className="roster" key={r.id}>
-                <div className="who">
-                  <span className="av">{fmt.initials(r.name)}</span>
-                  <div>
-                    <div className="flt">{r.name}</div>
-                    <div className="reg">{r.role} · {r.leaveBalance}/{r.entitlementDays} days left</div>
-                  </div>
-                </div>
-                <div className="row-actions">
-                  <Pill tone="ok" icon="ph-check">Available</Pill>
-                  <Btn icon="ph-airplane-takeoff" onClick={() => onToggle(r.id)}>Mark leave</Btn>
-                </div>
-              </div>
-            ))}
-            {onLeave.map((r) => (
-              <div className="roster" key={r.id}>
-                <div className="who">
-                  <span className="av">{fmt.initials(r.name)}</span>
-                  <div>
-                    <div className="flt">{r.name}</div>
-                    <div className="reg">{r.role} · {r.leaveBalance}/{r.entitlementDays} days left</div>
-                  </div>
-                </div>
-                <div className="row-actions">
-                  <Pill tone="warn" icon="ph-airplane-takeoff">On leave</Pill>
-                  <Btn icon="ph-arrow-counter-clockwise" onClick={() => onToggle(r.id)}>Clear</Btn>
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-      </Panel>
+      <div className="page-header-row"><div><h1 className="page-title">Duties</h1><p className="page-subtitle">Ground assignments across today’s arrivals</p></div></div>
+      <DataTable<any>
+        rows={duties} noun="duty" getRowKey={(d) => d._id}
+        searchText={(d) => `${d.staffName} ${d.guestName} ${d.airstrip}`}
+        empty={{ icon: "ph-clipboard", title: "No duties assigned yet." }}
+        columns={[
+          { key: "staff", label: "Staff", render: (d) => (<div className="assign"><span className="av">{fmt.initials(d.staffName)}</span>{d.staffName}</div>) },
+          { key: "guest", label: "Guest", render: (d) => <span className="flt">{d.guestName}</span> },
+          { key: "type", label: "Duty", render: (d) => <span className="tag">{String(d.dutyType).replace(/_/g, " ")}</span> },
+          { key: "vehicle", label: "Vehicle", render: (d) => d.vehicleName ?? <span className="reg">—</span> },
+          { key: "time", label: "Time", align: "right", render: (d) => <span className="mono">{d.scheduledTime ? fmt.hhmm(d.scheduledTime) : "—"}</span> },
+          { key: "status", label: "Status", render: (d) => <Pill tone="info" icon="ph-user-check">{d.status}</Pill> },
+        ]}
+      />
     </>
   );
 }
@@ -607,84 +379,179 @@ function StaffView() {
   const staff = useQuery(api.staff.list, {}) ?? [];
   return (
     <>
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">Staff</h1>
-          <p className="page-subtitle">Lodge workforce register</p>
+      <div className="page-header-row"><div><h1 className="page-title">Staff</h1><p className="page-subtitle">Property workforce register</p></div></div>
+      <DataTable<any>
+        rows={staff} noun="staff member" getRowKey={(s) => s._id}
+        searchText={(s) => `${s.name} ${s.role}`}
+        empty={{ icon: "ph-users", title: "No staff on record." }}
+        columns={[
+          { key: "name", label: "Name", render: (s) => <span className="flt">{s.name}</span> },
+          { key: "role", label: "Role", render: (s) => String(s.role).replace(/_/g, " ") },
+          { key: "phone", label: "Phone", render: (s) => <span className="mono">{s.phoneE164 ?? "—"}</span> },
+          { key: "lang", label: "Languages", render: (s) => s.languages.map((l: string) => <span className="tag" key={l}>{l}</span>) },
+          { key: "leave", label: "Leave left", align: "right", render: (s) => <span className="mono">{s.remaining}/{s.allowedDays}</span> },
+        ]}
+      />
+    </>
+  );
+}
+
+// ── Rooms ─────────────────────────────────────────────────────────────────────
+function RoomsView() {
+  const rooms = useQuery(api.rooms.list, {}) ?? [];
+  const assignments = useQuery(api.rooms.assignments, {}) ?? [];
+  return (
+    <>
+      <div className="page-header-row"><div><h1 className="page-title">Rooms</h1><p className="page-subtitle">Inventory and guest placement for arrival prep</p></div></div>
+      <DataTable<any>
+        rows={rooms} noun="room" getRowKey={(r) => r._id}
+        searchText={(r) => `${r.name} ${r.type}`}
+        empty={{ icon: "ph-bed", title: "No rooms defined." }}
+        columns={[
+          { key: "name", label: "Room", render: (r) => <span className="flt">{r.name}</span> },
+          { key: "type", label: "Type", render: (r) => String(r.type).replace(/_/g, " ") },
+          { key: "cap", label: "Capacity", align: "right", render: (r) => <span className="mono">{r.capacity}</span> },
+          { key: "status", label: "Status", render: (r) => <Pill tone={r.status === "available" ? "ok" : "mut"} icon="ph-circle">{r.status ?? "available"}</Pill> },
+        ]}
+      />
+      {assignments.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <Panel title="Guest placements">
+            {assignments.map((a: any) => (
+              <div className="roster" key={a._id}>
+                <div className="who"><span className="av">{fmt.initials(a.guestName)}</span><div><div className="flt">{a.guestName}</div><div className="reg">{a.roomName} · {String(a.roomType).replace(/_/g, " ")}</div></div></div>
+              </div>
+            ))}
+          </Panel>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── Leave planner (month calendar + per-day availability) ─────────────────────
+const DAY_MS = 86400000;
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MIN_COVERAGE = 3;
+function startOfDay(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+
+function LeaveView() {
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [selected, setSelected] = useState<number>(today.getTime());
+
+  const { gridStart, monthIndex, monthLabel } = useMemo(() => {
+    const first = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+    const gs = new Date(first); gs.setDate(1 - first.getDay()); gs.setHours(0, 0, 0, 0);
+    return { gridStart: gs.getTime(), monthIndex: first.getMonth(), monthLabel: first.toLocaleString(undefined, { month: "long", year: "numeric" }) };
+  }, [today, monthOffset]);
+
+  const data = useQuery(api.leave.grid, { startDate: gridStart, days: 42, minCoverage: MIN_COVERAGE });
+  const toggle = useMutation(api.leave.toggle);
+  const toast = useToast();
+
+  const goMonth = (delta: number) => {
+    const next = monthOffset + delta;
+    const first = new Date(today.getFullYear(), today.getMonth() + next, 1);
+    setMonthOffset(next); setSelected(startOfDay(first).getTime());
+  };
+  const onToggle = async (staffId: Id<"staff">) => {
+    try { const r = await toggle({ staffId, date: selected }); toast(r.onLeave ? "Marked on leave" : "Leave cleared", "ph-calendar-dots"); }
+    catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
+  };
+
+  const selIdx = Math.round((selected - gridStart) / DAY_MS);
+  const rows: any[] = data?.rows ?? [];
+  const available = rows.filter((r) => !r.leave.includes(selIdx));
+  const onLeave = rows.filter((r) => r.leave.includes(selIdx));
+
+  return (
+    <>
+      <div className="page-header-row"><div><h1 className="page-title">Leave planner</h1><p className="page-subtitle">{data ? `${data.staffCount} staff` : "Loading…"} · pick a day to see who’s available</p></div></div>
+      <div className="cal-bar">
+        <div className="cal-title">{monthLabel}</div>
+        <div className="cal-nav">
+          <Btn icon="ph-caret-left" onClick={() => goMonth(-1)}>Prev</Btn>
+          <Btn onClick={() => { setMonthOffset(0); setSelected(today.getTime()); }}>Today</Btn>
+          <Btn icon="ph-caret-right" onClick={() => goMonth(1)}>Next</Btn>
         </div>
       </div>
-      <Panel title="Team">
-        <table>
-          <thead>
-            <tr><th>Name</th><th>Role</th><th>Phone</th><th>Languages</th><th>Leave balance</th></tr>
-          </thead>
-          <tbody>
-            {staff.map((s: any) => (
-              <tr key={s._id}>
-                <td className="flt">{s.name}</td>
-                <td>{s.role}</td>
-                <td className="mono">{s.phone}</td>
-                <td>{s.languages.map((l: string) => <span className="tag" key={l}>{l}</span>)}</td>
-                <td className="mono">{s.leaveBalance}/{s.entitlementDays}</td>
-              </tr>
+      <div className="cal">
+        <div className="cal-head">{WEEKDAYS.map((w) => <div key={w}>{w}</div>)}</div>
+        <div className="cal-grid">
+          {Array.from({ length: 42 }, (_, i) => {
+            const ms = gridStart + i * DAY_MS; const date = new Date(ms);
+            const inMonth = date.getMonth() === monthIndex; const isToday = ms === today.getTime(); const isSel = ms === selected;
+            const cov = data?.coverage?.[i];
+            const cls = ["cal-cell", inMonth ? "" : "out", isToday ? "today" : "", isSel ? "sel" : "", cov?.short ? "short" : ""].filter(Boolean).join(" ");
+            return (
+              <div key={i} className={cls} onClick={() => setSelected(ms)}>
+                <div className="cal-date">{date.getDate()}</div>
+                {data && cov ? <div className="cal-avail"><span className="cal-dot" />{cov.available} avail</div> : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <Panel title={new Date(selected).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })} desc={`${available.length} available · ${onLeave.length} on leave · minimum ${MIN_COVERAGE}`}>
+        {available.length < MIN_COVERAGE && (<div className="banner" style={{ color: "var(--risk-fg)", background: "var(--risk-bg)" }}><i className="ph ph-warning" /> Below minimum coverage for this day</div>)}
+        {rows.length === 0 ? <EmptyState icon="ph-users">No staff on record.</EmptyState> : (
+          <>
+            {available.map((r) => (
+              <div className="roster" key={r.id}>
+                <div className="who"><span className="av">{fmt.initials(r.name)}</span><div><div className="flt">{r.name}</div><div className="reg">{String(r.role).replace(/_/g, " ")} · {r.remaining}/{r.allowedDays} days left</div></div></div>
+                <div className="row-actions"><Pill tone="ok" icon="ph-check">Available</Pill><Btn icon="ph-airplane-takeoff" onClick={() => onToggle(r.id)}>Mark leave</Btn></div>
+              </div>
             ))}
-          </tbody>
-        </table>
+            {onLeave.map((r) => (
+              <div className="roster" key={r.id}>
+                <div className="who"><span className="av">{fmt.initials(r.name)}</span><div><div className="flt">{r.name}</div><div className="reg">{String(r.role).replace(/_/g, " ")} · {r.remaining}/{r.allowedDays} days left</div></div></div>
+                <div className="row-actions"><Pill tone="warn" icon="ph-airplane-takeoff">On leave</Pill><Btn icon="ph-arrow-counter-clockwise" onClick={() => onToggle(r.id)}>Clear</Btn></div>
+              </div>
+            ))}
+          </>
+        )}
       </Panel>
     </>
   );
 }
 
-// ── Reports ───────────────────────────────────────────────────────────────────
+// ── Reports / Notifications / Settings ────────────────────────────────────────
 function ReportsView({ board }: { board: any[] }) {
   const total = board.length;
-  const acked = board.filter((m) => m.status === "acknowledged" || m.status === "completed").length;
-  const esc = board.filter((m) => m.status === "escalated").length;
+  const acked = board.filter((a) => a.status === "acknowledged" || a.status === "completed").length;
+  const esc = board.filter((a) => a.status === "escalated").length;
   const rate = total ? Math.round((acked / total) * 100) : 0;
+  const byMode = MODES.map((m) => ({ ...m, n: board.filter((a) => a.mode === m.key).length })).filter((m) => m.n);
   return (
     <>
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">Reports</h1>
-          <p className="page-subtitle">Acknowledgment performance</p>
-        </div>
-      </div>
+      <div className="page-header-row"><div><h1 className="page-title">Reports</h1><p className="page-subtitle">Acknowledgment performance</p></div></div>
       <div className="stats">
         <Stat icon="ph-check-circle" tone="green" label="Acknowledgment rate" value={`${rate}%`} />
-        <Stat icon="ph-airplane" tone="blue" label="Movements" value={total} />
+        <Stat icon="ph-path" tone="blue" label="Arrivals" value={total} />
         <Stat icon="ph-warning" tone="red" label="Escalations" value={esc} />
-        <Stat icon="ph-clock" tone="amber" label="Open" value={board.filter((m) => canAck(m)).length} />
+        <Stat icon="ph-clock" tone="amber" label="Open" value={board.filter((a) => canAck(a)).length} />
       </div>
+      <Panel title="By transport mode">
+        {byMode.map((m) => (
+          <div className="setrow" key={m.key}><div className="setk"><i className={`ph ${m.icon}`} style={{ marginRight: 8, color: "var(--text-2)" }} />{m.label}</div><div className="mono">{m.n}</div></div>
+        ))}
+      </Panel>
     </>
   );
 }
 
-// ── Notifications ─────────────────────────────────────────────────────────────
 function NotificationsView({ notifs }: { notifs: any[] }) {
   return (
     <>
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">Notifications</h1>
-          <p className="page-subtitle">Escalations and nudges — SMS backbone</p>
-        </div>
-      </div>
+      <div className="page-header-row"><div><h1 className="page-title">Notifications</h1><p className="page-subtitle">Escalations and nudges — SMS backbone</p></div></div>
       <Panel title="Notification log">
-        {notifs.length === 0 ? (
-          <EmptyState icon="ph-bell-slash">No notifications.</EmptyState>
-        ) : (
+        {notifs.length === 0 ? <EmptyState icon="ph-bell-slash">No notifications.</EmptyState> : (
           <div className="feed">
             {notifs.map((n: any) => (
               <div className="fitem" key={n._id}>
-                <div className="fi" style={{ background: "var(--risk-bg)", color: "var(--risk-fg)" }}>
-                  <i className="ph ph-warning" />
-                </div>
-                <div className="ft">
-                  {n.body}
-                  <div className="tm">
-                    {fmt.hhmm(n.at)} · {n.channel} · {n.delivered ? "delivered" : "logged (mock)"} · to {n.toPhone ?? "—"}
-                  </div>
-                </div>
+                <div className="fi" style={{ background: "var(--risk-bg)", color: "var(--risk-fg)" }}><i className="ph ph-warning" /></div>
+                <div className="ft">{n.body}<div className="tm">{fmt.hhmm(n.at)} · {n.channel} · {n.delivered ? "delivered" : "logged (mock)"} · to {n.toPhone ?? "—"}</div></div>
               </div>
             ))}
           </div>
@@ -694,20 +561,14 @@ function NotificationsView({ notifs }: { notifs: any[] }) {
   );
 }
 
-// ── Settings ──────────────────────────────────────────────────────────────────
 function SettingsView({ me }: { me: Me }) {
   return (
     <>
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">Settings</h1>
-          <p className="page-subtitle">Organization & account</p>
-        </div>
-      </div>
+      <div className="page-header-row"><div><h1 className="page-title">Settings</h1><p className="page-subtitle">Property & account</p></div></div>
       <Panel title="Organization">
-        <div className="setrow"><div><div className="setk">Lodge</div><div className="setv">{me.org.name}</div></div></div>
+        <div className="setrow"><div><div className="setk">Property</div><div className="setv">{me.org.name}</div></div></div>
         <div className="setrow"><div><div className="setk">Your role</div><div className="setv">{me.role}</div></div></div>
-        <div className="setrow"><div><div className="setk">Tenant isolation</div><div className="setv">Enforced in code — you can only see {me.org.name}’s data.</div></div></div>
+        <div className="setrow"><div><div className="setk">Tenant isolation</div><div className="setv">Enforced in code — you only see {me.org.name}’s arrivals and staff.</div></div></div>
       </Panel>
     </>
   );

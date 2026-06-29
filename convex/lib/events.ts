@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// Audit spine. Every state change calls recordEvent, which appends one row to
-// transferEvents carrying the movement's correlation_id. The event log — not
-// any single mutable row — is the source of truth for what happened and when.
-// ─────────────────────────────────────────────────────────────────────────────
 import type { MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import type { Infer } from "convex/values";
@@ -18,19 +13,19 @@ export async function recordEvent(
   ctx: MutationCtx,
   args: {
     correlationId: string;
-    lodgeId: Id<"organizations">;
-    airlineId: Id<"organizations">;
+    propertyId: Id<"properties">;
+    airlineId?: Id<"airlines">;
     type: EventType;
     summary: string;
-    movementId?: Id<"movements">;
+    arrivalId?: Id<"arrivalEvents">;
     byUserId?: Id<"users">;
     meta?: unknown;
   },
 ): Promise<void> {
   await ctx.db.insert("transferEvents", {
     correlationId: args.correlationId,
-    movementId: args.movementId,
-    lodgeId: args.lodgeId,
+    arrivalId: args.arrivalId,
+    propertyId: args.propertyId,
     airlineId: args.airlineId,
     type: args.type,
     at: Date.now(),

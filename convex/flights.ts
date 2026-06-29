@@ -3,17 +3,18 @@ import {
   airlineMutation,
   airlineQuery,
   assertLinked,
+  requireAirlineArrival,
   requireAirlineFlight,
-  requireAirlineMovement,
 } from "./lib/tenancy";
-import { recordEvent } from "./lib/events";
+import { newCorrelationId, recordEvent } from "./lib/events";
 import { escalationWindowMs } from "./lib/constants";
+import { direction } from "./schema";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
 async function legsFor(ctx: QueryCtx, flightId: Doc<"flights">["_id"]) {
   return await ctx.db
-    .query("movements")
+    .query("arrivalEvents")
     .withIndex("by_flight", (q) => q.eq("flightId", flightId))
     .collect();
 }
@@ -24,12 +25,12 @@ async function enrichFlight(ctx: QueryCtx, f: Doc<"flights">) {
     .query("aircraft")
     .withIndex("by_reg", (q) => q.eq("reg", f.aircraftReg))
     .first();
-  const acked = legs.filter((m) => m.status === "acknowledged" || m.status === "in_flight").length;
+  const acked = legs.filter((m) => m.status === "acknowledged" || m.status === "in_transit").length;
   const escalated = legs.some((m) => m.status === "escalated");
   const pax = legs.reduce((s, m) => s + m.pax, 0);
   const circuit: string[] = [];
   for (const m of legs.slice().sort((a, b) => a.scheduledTime - b.scheduledTime)) {
-    if (!circuit.includes(m.airstrip)) circuit.push(m.airstrip);
+    if (!circuit.includes(m.destinationLabel)) circuit.push(m.destinationLabel);
   }
   const mixed =
     legs.some((m) => m.direction === "arrival") &&
@@ -40,9 +41,9 @@ async function enrichFlight(ctx: QueryCtx, f: Doc<"flights">) {
     legs: legs.map((m) => ({
       id: m._id,
       guestName: m.guestName,
-      lodgeId: m.lodgeId,
+      propertyId: m.propertyId,
       direction: m.direction,
-      airstrip: m.airstrip,
+      airstrip: m.destinationLabel,
       pax: m.pax,
       status: m.status,
       scheduledTime: m.scheduledTime,
@@ -56,43 +57,39 @@ async function enrichFlight(ctx: QueryCtx, f: Doc<"flights">) {
   };
 }
 
-// Airline flights board — every flight the caller's airline owns, enriched with
-// its manifest, lodge-ack count, and circuit.
 export const board = airlineQuery({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
     const flights = await ctx.db
       .query("flights")
-      .withIndex("by_airline", (q) => q.eq("airlineId", ctx.org._id))
+      .withIndex("by_airline", (q) => q.eq("airlineId", ctx.airline._id))
       .collect();
     return await Promise.all(flights.map((f) => enrichFlight(ctx, f)));
   },
 });
 
-// Requests queue — movements awaiting a flight (the airline's inbox).
+// Charter arrivals awaiting a flight (the airline's inbox).
 export const requests = airlineQuery({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
     const rows = await ctx.db
-      .query("movements")
+      .query("arrivalEvents")
       .withIndex("by_airline_status", (q) =>
-        q.eq("airlineId", ctx.org._id).eq("status", "requested"),
+        q.eq("airlineId", ctx.airline._id).eq("status", "requested"),
       )
       .collect();
     rows.sort((a, b) => a.scheduledTime - b.scheduledTime);
     return await Promise.all(
       rows.map(async (m) => {
-        const lodge = await ctx.db.get(m.lodgeId);
-        return { ...m, lodgeName: lodge?.name ?? "—" };
+        const prop = await ctx.db.get(m.propertyId);
+        return { ...m, propertyName: prop?.name ?? "—" };
       }),
     );
   },
 });
 
-// Build a new flight (aircraft + pilot + departure). Returns its id so the
-// caller can immediately schedule movements onto it.
 export const buildFlight = airlineMutation({
   args: {
     code: v.string(),
@@ -104,7 +101,7 @@ export const buildFlight = airlineMutation({
   returns: v.id("flights"),
   handler: async (ctx, args) => {
     return await ctx.db.insert("flights", {
-      airlineId: ctx.org._id,
+      airlineId: ctx.airline._id,
       code: args.code,
       aircraftReg: args.aircraftReg,
       pilotName: args.pilotName,
@@ -115,53 +112,49 @@ export const buildFlight = airlineMutation({
   },
 });
 
-// THE schedule action. Attach a queued movement to a flight → status becomes
-// `scheduled` and it surfaces on the lodge board as a confirmed transfer
-// awaiting acknowledgment. If the movement was already acknowledged and the time
-// moves, the prior ack is invalidated (reconfirmRequested).
-export const scheduleMovement = airlineMutation({
+// Attach a queued charter arrival to a flight → scheduled (shows on the property
+// board awaiting acknowledgment).
+export const scheduleArrival = airlineMutation({
   args: {
-    movementId: v.id("movements"),
+    arrivalId: v.id("arrivalEvents"),
     flightId: v.id("flights"),
     scheduledTime: v.optional(v.number()),
   },
   returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, args) => {
-    const m = await requireAirlineMovement(ctx, ctx.org, args.movementId);
-    const flight = await requireAirlineFlight(ctx, ctx.org, args.flightId);
-    await assertLinked(ctx, ctx.org._id, m.lodgeId);
+    const a = await requireAirlineArrival(ctx, ctx.airline, args.arrivalId);
+    const flight = await requireAirlineFlight(ctx, ctx.airline, args.flightId);
+    await assertLinked(ctx, ctx.airline._id, a.propertyId);
 
-    const newTime = args.scheduledTime ?? m.scheduledTime;
-    const timeChanged = newTime !== m.scheduledTime;
-    const wasAcked = m.status === "acknowledged";
-    const deadline = newTime - escalationWindowMs();
+    const newTime = args.scheduledTime ?? a.scheduledTime;
+    const timeChanged = newTime !== a.scheduledTime;
+    const wasAcked = a.status === "acknowledged";
 
-    await ctx.db.patch(m._id, {
+    await ctx.db.patch(a._id, {
       flightId: flight._id,
       scheduledTime: newTime,
-      escalationDeadline: deadline,
+      escalationDeadline: newTime - escalationWindowMs(),
       status: "scheduled",
-      reconfirmRequested: wasAcked && timeChanged ? true : m.reconfirmRequested,
+      reconfirmRequested: wasAcked && timeChanged ? true : a.reconfirmRequested,
     });
-
     await recordEvent(ctx, {
-      correlationId: m.correlationId,
-      lodgeId: m.lodgeId,
-      airlineId: m.airlineId,
-      type: wasAcked && timeChanged ? "movement_rescheduled" : "movement_scheduled",
-      summary: `${m.guestName} (${m.direction}) scheduled on ${flight.aircraftReg} at ${m.airstrip}`,
-      movementId: m._id,
+      correlationId: a.correlationId,
+      propertyId: a.propertyId,
+      airlineId: a.airlineId,
+      type: wasAcked && timeChanged ? "arrival_rescheduled" : "arrival_scheduled",
+      summary: `${a.guestName} (${a.direction}) scheduled on ${flight.aircraftReg}`,
+      arrivalId: a._id,
       byUserId: ctx.user._id,
       meta: { flightCode: flight.code, scheduledTime: newTime },
     });
     if (wasAcked && timeChanged) {
       await recordEvent(ctx, {
-        correlationId: m.correlationId,
-        lodgeId: m.lodgeId,
-        airlineId: m.airlineId,
-        type: "movement_reconfirm_requested",
-        summary: `Time changed after acknowledgment — reconfirm required`,
-        movementId: m._id,
+        correlationId: a.correlationId,
+        propertyId: a.propertyId,
+        airlineId: a.airlineId,
+        type: "arrival_reconfirm_requested",
+        summary: "Time changed after acknowledgment — reconfirm required",
+        arrivalId: a._id,
         byUserId: ctx.user._id,
       });
     }
@@ -169,25 +162,72 @@ export const scheduleMovement = airlineMutation({
   },
 });
 
-// Dispatch a planned flight → in_flight. Acknowledged legs go in_flight with it.
+// Airline-side dual entry: create a charter arrival directly (claimed by airline).
+export const createCharter = airlineMutation({
+  args: {
+    propertyId: v.id("properties"),
+    direction,
+    origin: v.string(),
+    airstripName: v.string(),
+    guestName: v.string(),
+    pax: v.number(),
+    scheduledTime: v.number(),
+  },
+  returns: v.object({ arrivalId: v.id("arrivalEvents") }),
+  handler: async (ctx, args) => {
+    await assertLinked(ctx, ctx.airline._id, args.propertyId);
+    const strip = await ctx.db
+      .query("airstrips")
+      .withIndex("by_name", (q) => q.eq("name", args.airstripName))
+      .first();
+    const correlationId = newCorrelationId();
+    const arrivalId = await ctx.db.insert("arrivalEvents", {
+      mode: "charter",
+      direction: args.direction,
+      propertyId: args.propertyId,
+      airlineId: ctx.airline._id,
+      airstripId: strip?._id,
+      origin: args.origin,
+      destinationLabel: args.airstripName,
+      guestName: args.guestName,
+      pax: args.pax,
+      special: [],
+      scheduledTime: args.scheduledTime,
+      status: "requested",
+      createdBy: "airline",
+      claimedByAirline: true,
+      reconfirmRequested: false,
+      correlationId,
+    });
+    await recordEvent(ctx, {
+      correlationId,
+      propertyId: args.propertyId,
+      airlineId: ctx.airline._id,
+      type: "arrival_created",
+      summary: `Charter ${args.direction} created by airline for ${args.guestName}`,
+      arrivalId,
+      byUserId: ctx.user._id,
+    });
+    return { arrivalId };
+  },
+});
+
 export const dispatch = airlineMutation({
   args: { flightId: v.id("flights") },
   returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, args) => {
-    const flight = await requireAirlineFlight(ctx, ctx.org, args.flightId);
+    const flight = await requireAirlineFlight(ctx, ctx.airline, args.flightId);
     if (flight.status !== "planned" && flight.status !== "boarding") {
       throw new Error("Flight is not in a dispatchable state");
     }
     await ctx.db.patch(flight._id, { status: "in_flight" });
     const legs = await legsFor(ctx, flight._id);
     for (const m of legs) {
-      if (m.status === "acknowledged") {
-        await ctx.db.patch(m._id, { status: "in_flight" });
-      }
+      if (m.status === "acknowledged") await ctx.db.patch(m._id, { status: "in_transit" });
     }
     await recordEvent(ctx, {
       correlationId: legs[0]?.correlationId ?? flight.code,
-      lodgeId: legs[0]?.lodgeId ?? flight.airlineId,
+      propertyId: legs[0]?.propertyId ?? (await firstPropertyId(ctx)),
       airlineId: flight.airlineId,
       type: "flight_dispatched",
       summary: `${flight.aircraftReg} dispatched from ${flight.base}`,
@@ -197,30 +237,29 @@ export const dispatch = airlineMutation({
   },
 });
 
-// Land a flight → completed. Its in-progress legs complete.
 export const land = airlineMutation({
   args: { flightId: v.id("flights") },
   returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, args) => {
-    const flight = await requireAirlineFlight(ctx, ctx.org, args.flightId);
+    const flight = await requireAirlineFlight(ctx, ctx.airline, args.flightId);
     await ctx.db.patch(flight._id, { status: "completed" });
     const legs = await legsFor(ctx, flight._id);
     for (const m of legs) {
-      if (m.status === "in_flight" || m.status === "acknowledged" || m.status === "scheduled") {
+      if (["in_transit", "acknowledged", "scheduled"].includes(m.status)) {
         await ctx.db.patch(m._id, { status: "completed" });
         await recordEvent(ctx, {
           correlationId: m.correlationId,
-          lodgeId: m.lodgeId,
+          propertyId: m.propertyId,
           airlineId: m.airlineId,
-          type: "movement_completed",
+          type: "arrival_completed",
           summary: `${m.guestName} (${m.direction}) completed`,
-          movementId: m._id,
+          arrivalId: m._id,
         });
       }
     }
     await recordEvent(ctx, {
       correlationId: legs[0]?.correlationId ?? flight.code,
-      lodgeId: legs[0]?.lodgeId ?? flight.airlineId,
+      propertyId: legs[0]?.propertyId ?? (await firstPropertyId(ctx)),
       airlineId: flight.airlineId,
       type: "flight_landed",
       summary: `${flight.aircraftReg} completed its circuit`,
@@ -229,3 +268,9 @@ export const land = airlineMutation({
     return { ok: true };
   },
 });
+
+async function firstPropertyId(ctx: QueryCtx) {
+  const p = await ctx.db.query("properties").first();
+  if (!p) throw new Error("No property");
+  return p._id;
+}

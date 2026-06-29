@@ -280,19 +280,19 @@ function RequestsView({ requests, flights }: { requests: any[]; flights: any[] }
         rows={requests}
         noun="request"
         getRowKey={(m) => m._id}
-        searchText={(m) => `${m.guestName} ${m.lodgeName} ${m.airstrip} ${m.direction}`}
+        searchText={(m) => `${m.guestName} ${m.propertyName} ${m.destinationLabel} ${m.direction}`}
         searchPlaceholder="Search guest, lodge, airstrip…"
         onRowClick={(m) => setScheduleFor(m)}
         rowClassName={() => "attn"}
         empty={{ icon: "ph-tray", title: "Queue is clear." }}
         columns={[
           { key: "guest", label: "Guest", render: (m) => <span className="flt">{m.guestName}</span> },
-          { key: "lodge", label: "Lodge", render: (m) => m.lodgeName },
+          { key: "lodge", label: "Property", render: (m) => m.propertyName },
           {
             key: "leg", label: "Leg",
             render: (m) => (<span className="route"><i className={`ph ${m.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} />{m.direction}</span>),
           },
-          { key: "strip", label: "Airstrip", render: (m) => m.airstrip },
+          { key: "strip", label: "Airstrip", render: (m) => m.destinationLabel },
           { key: "pax", label: "Pax", align: "right", render: (m) => <span className="mono">{m.pax}</span> },
           { key: "wanted", label: "Wanted", align: "right", render: (m) => <span className="mono">{fmt.hhmm(m.scheduledTime)}</span> },
           {
@@ -313,7 +313,7 @@ function RequestsView({ requests, flights }: { requests: any[]; flights: any[] }
 }
 
 function ScheduleModal({ movement, flights, onClose }: { movement: any; flights: any[]; onClose: () => void }) {
-  const schedule = useMutation(api.flights.scheduleMovement);
+  const schedule = useMutation(api.flights.scheduleArrival);
   const build = useMutation(api.flights.buildFlight);
   const aircraft = useQuery(api.fleet.aircraft, {}) ?? [];
   const pilots = useQuery(api.fleet.pilots, {}) ?? [];
@@ -336,7 +336,7 @@ function ScheduleModal({ movement, flights, onClose }: { movement: any; flights:
         midnight.setHours(Number(hh), Number(mm), 0, 0);
         fid = await build({ code, aircraftReg: reg, pilotName: pilot, departTime: midnight.getTime() });
       }
-      await schedule({ movementId: movement._id, flightId: fid });
+      await schedule({ arrivalId: movement._id, flightId: fid });
       toast(`${movement.guestName} scheduled`, "ph-calendar-check");
       onClose();
     } catch (e: any) {
@@ -387,7 +387,7 @@ function ScheduleModal({ movement, flights, onClose }: { movement: any; flights:
         </>
       )}
       <p className="reg" style={{ marginTop: 8 }}>
-        {movement.lodgeName} · {movement.airstrip} · {movement.pax} pax
+        {movement.propertyName} · {movement.destinationLabel} · {movement.pax} pax
       </p>
     </Modal>
   );

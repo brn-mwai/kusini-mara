@@ -7,7 +7,7 @@ export const aircraft = airlineQuery({
   handler: async (ctx) => {
     return await ctx.db
       .query("aircraft")
-      .withIndex("by_airline", (q) => q.eq("airlineId", ctx.org._id))
+      .withIndex("by_airline", (q) => q.eq("airlineId", ctx.airline._id))
       .collect();
   },
 });
@@ -18,7 +18,7 @@ export const pilots = airlineQuery({
   handler: async (ctx) => {
     return await ctx.db
       .query("pilots")
-      .withIndex("by_airline", (q) => q.eq("airlineId", ctx.org._id))
+      .withIndex("by_airline", (q) => q.eq("airlineId", ctx.airline._id))
       .collect();
   },
 });
