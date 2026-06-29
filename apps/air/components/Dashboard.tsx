@@ -13,6 +13,8 @@ import {
   Field,
   EmptyState,
   DataTable,
+  Select,
+  TimeField,
   useToast,
   fmt,
   type NavSection,
@@ -359,30 +361,22 @@ function ScheduleModal({ movement, flights, onClose }: { movement: any; flights:
 
       {mode === "existing" ? (
         <Field label="Flight">
-          <select value={flightId} onChange={(e) => setFlightId(e.target.value)}>
-            {openFlights.map((f) => (
-              <option key={f._id} value={f._id}>{f.aircraftReg} · {f.code} · {fmt.hhmm(f.departTime)} ({f.legCount} legs)</option>
-            ))}
-          </select>
+          <Select value={flightId} onChange={setFlightId} placeholder="Select flight…"
+            options={openFlights.map((f) => ({ value: f._id, label: `${f.aircraftReg} · ${f.code} · ${fmt.hhmm(f.departTime)} (${f.legCount} legs)` }))} />
         </Field>
       ) : (
         <>
           <Field label="Flight code"><input value={code} onChange={(e) => setCode(e.target.value)} /></Field>
           <Field label="Aircraft">
-            <select value={reg} onChange={(e) => setReg(e.target.value)}>
-              {aircraft.map((a: any) => <option key={a._id} value={a.reg}>{a.reg} — {a.type} ({a.seats} seats)</option>)}
-            </select>
+            <Select value={reg} onChange={setReg} placeholder="Select aircraft…"
+              options={aircraft.map((a: any) => ({ value: a.reg, label: `${a.reg} — ${a.type} (${a.seats} seats)` }))} />
           </Field>
           <Field label="Pilot">
-            <select value={pilot} onChange={(e) => setPilot(e.target.value)}>
-              {pilots.map((p: any) => <option key={p._id} value={p.name}>{p.name} — {p.license}</option>)}
-            </select>
+            <Select value={pilot} onChange={setPilot} placeholder="Select pilot…"
+              options={pilots.map((p: any) => ({ value: p.name, label: `${p.name} — ${p.license}` }))} />
           </Field>
-          <Field label="Departure (HH:MM)">
-            <div style={{ display: "flex", gap: 8 }}>
-              <input value={hh} onChange={(e) => setHh(e.target.value)} style={{ width: 70 }} />
-              <input value={mm} onChange={(e) => setMm(e.target.value)} style={{ width: 70 }} />
-            </div>
+          <Field label="Departure">
+            <TimeField hour={hh} minute={mm} onChange={(h, m) => { setHh(h); setMm(m); }} />
           </Field>
         </>
       )}

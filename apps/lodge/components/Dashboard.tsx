@@ -13,6 +13,8 @@ import {
   Field,
   EmptyState,
   DataTable,
+  Select,
+  TimeField,
   useToast,
   fmt,
   type NavSection,
@@ -278,6 +280,7 @@ function ArrivalDetailModal({ arrivalId, onClose }: { arrivalId: Id<"arrivalEven
       <Modal
         title={`${a.guestName}`}
         onClose={onClose}
+        wide
         footer={
           <>
             <Btn icon="ph-x-circle" onClick={onCancel}>Cancel arrival</Btn>
@@ -357,10 +360,8 @@ function RoomPlaceModal({ arrival, onClose }: { arrival: any; onClose: () => voi
     <Modal title={`Place ${arrival.guestName}`} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-check" onClick={submit}>Place</Btn></>}>
       <Field label="Room">
-        <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
-          <option value="">Select…</option>
-          {rooms.map((r: any) => <option key={r._id} value={r._id}>{r.name} — {String(r.type).replace(/_/g, " ")} ({r.capacity} pax)</option>)}
-        </select>
+        <Select value={roomId} onChange={setRoomId} placeholder="Select room…"
+          options={rooms.map((r: any) => ({ value: r._id, label: `${r.name} — ${String(r.type).replace(/_/g, " ")} (${r.capacity} pax)` }))} />
       </Field>
     </Modal>
   );
@@ -394,16 +395,12 @@ function AssignModal({ arrival, onClose }: { arrival: any; onClose: () => void }
     <Modal title={`Assign ground · ${arrival.guestName}`} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-check" onClick={submit}>Assign</Btn></>}>
       <Field label="Staff member">
-        <select value={staffId} onChange={(e) => setStaffId(e.target.value)}>
-          <option value="">Select…</option>
-          {staff.map((s: any) => <option key={s._id} value={s._id}>{s.name} — {s.role}</option>)}
-        </select>
+        <Select value={staffId} onChange={setStaffId} placeholder="Select staff…"
+          options={staff.map((s: any) => ({ value: s._id, label: `${s.name} — ${String(s.role).replace(/_/g, " ")}` }))} />
       </Field>
       <Field label="Vehicle (optional)">
-        <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
-          <option value="">None</option>
-          {vehicles.map((v: any) => <option key={v._id} value={v._id}>{v.name} — {v.seats} seats</option>)}
-        </select>
+        <Select value={vehicleId} onChange={setVehicleId} placeholder="None"
+          options={[{ value: "", label: "None" }, ...vehicles.map((v: any) => ({ value: v._id, label: `${v.name} — ${v.seats} seats` }))]} />
       </Field>
       <p className="reg" style={{ marginTop: 4 }}>
         {arrival.pax} pax · {arrival.direction === "arrival" ? "pickup" : "drop-off"} at {arrival.destinationLabel}
@@ -449,27 +446,19 @@ function AddArrivalModal({ onClose }: { onClose: () => void }) {
     <Modal title="Add arrival" onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-check" onClick={submit}>Create</Btn></>}>
       <Field label="Transport mode">
-        <select value={mode} onChange={(e) => setMode(e.target.value)}>
-          {MODES.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
-        </select>
+        <Select value={mode} onChange={setMode} options={MODES.map((m) => ({ value: m.key, label: m.label }))} />
       </Field>
       <Field label="Direction">
-        <select value={dir} onChange={(e) => setDir(e.target.value as any)}>
-          <option value="arrival">Arrival</option>
-          <option value="departure">Departure</option>
-        </select>
+        <Select value={dir} onChange={(v) => setDir(v as any)} options={[{ value: "arrival", label: "Arrival" }, { value: "departure", label: "Departure" }]} />
       </Field>
       <Field label="Guest / party"><input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="e.g. Okafor" /></Field>
       <Field label="Pax"><input type="number" min={1} value={pax} onChange={(e) => setPax(Number(e.target.value))} /></Field>
       <Field label="Origin"><input value={origin} onChange={(e) => setOrigin(e.target.value)} /></Field>
       <Field label="Destination (airstrip / gate)">
-        <select value={dest} onChange={(e) => setDest(e.target.value)}>{strips.map((s) => <option key={s}>{s}</option>)}</select>
+        <Select value={dest} onChange={setDest} options={strips.map((s) => ({ value: s, label: s }))} />
       </Field>
-      <Field label="Time (HH:MM)">
-        <div style={{ display: "flex", gap: 8 }}>
-          <input value={hh} onChange={(e) => setHh(e.target.value)} style={{ width: 70 }} />
-          <input value={mm} onChange={(e) => setMm(e.target.value)} style={{ width: 70 }} />
-        </div>
+      <Field label="Time">
+        <TimeField hour={hh} minute={mm} onChange={(h, m) => { setHh(h); setMm(m); }} />
       </Field>
       <p className="reg" style={{ marginTop: 4 }}>Charter arrivals go to the airline’s queue to be put on a flight. Other modes are confirmed directly.</p>
     </Modal>
