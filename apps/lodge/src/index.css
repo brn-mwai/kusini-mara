@@ -1,0 +1,22 @@
+/* Mirrors twenty-front/src/index.css — Twenty's global scale. 13px root drives
+   every rem-based --t- token to Twenty's exact sizes. */
+body {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--t-background-tertiary);
+  color: var(--t-font-color-primary);
+}
+
+html {
+  font-size: 13px;
+}
+
+button {
+  font-size: 13px;
+}
+
+form {
+  display: contents;
+}

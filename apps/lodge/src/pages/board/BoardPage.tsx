@@ -6,6 +6,7 @@ import {
   IconCalendarTime,
   IconCheck,
   IconChecklist,
+  IconDownload,
   IconLayoutDashboard,
   IconList,
   IconPlaneTilt,
@@ -24,6 +25,7 @@ import { Button } from "@ui/input/Button/Button";
 
 import { PageHeader } from "@/components/page/PageHeader";
 import { ViewBar } from "@/components/view/ViewBar";
+import { exportCsv } from "@/lib/exportCsv";
 import {
   RecordTable,
   type BulkAction,
@@ -185,6 +187,7 @@ export const BoardPage = () => {
       label: "Carrier",
       Icon: IconBuildingSkyscraper,
       width: 180,
+      isEmpty: (r) => r.carrier === null,
       render: (r) =>
         r.carrier ? (
           <Chip label={r.carrier} variant={ChipVariant.Static} />
@@ -254,6 +257,26 @@ export const BoardPage = () => {
             onClick={() => setIsNewOpen(true)}
           />
         }
+        menuItems={[
+          {
+            label: "Export CSV",
+            Icon: IconDownload,
+            onClick: () =>
+              exportCsv(
+                "kusini-board.csv",
+                ["Guest", "Pax", "Direction", "Mode", "Carrier", "Time", "Status"],
+                rows.map((r) => [
+                  r.guest,
+                  r.partySize,
+                  r.direction,
+                  r.mode,
+                  r.carrier,
+                  timeOf(r.scheduledTime),
+                  r.status,
+                ]),
+              ),
+          },
+        ]}
       />
       <ViewBar
         views={VIEWS}
@@ -285,7 +308,6 @@ export const BoardPage = () => {
         rows={rows}
         rowKey={(r) => r.id}
         rowClassName={(r) => (r.needsAck ? styles.needsAck : undefined)}
-        countLabel="Count all"
         onAddNew={() => setIsNewOpen(true)}
         bulkActions={bulkActions}
         emptyText="No movements match."

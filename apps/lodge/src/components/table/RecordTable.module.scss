@@ -73,11 +73,57 @@
 .footerContent {
   color: var(--t-font-color-tertiary);
   font-size: var(--t-font-size-sm);
+  white-space: nowrap;
 
   strong {
     color: var(--t-font-color-secondary);
     font-weight: var(--t-font-weight-medium);
   }
+}
+
+.addColumnCell {
+  width: 40px;
+  border-right: none !important;
+}
+
+.addColumnButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--t-spacing-1);
+  background: none;
+  border: none;
+  border-radius: var(--t-border-radius-sm);
+  color: var(--t-font-color-tertiary);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--t-background-transparent-light);
+    color: var(--t-font-color-secondary);
+  }
+}
+
+.calculateButton {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.calculateHint {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  color: var(--t-font-color-light);
+  font-size: var(--t-font-size-xs);
+}
+
+tfoot tr:hover .calculateHint {
+  display: inline-flex;
 }
 
 .empty {

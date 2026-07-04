@@ -1,9 +1,13 @@
-import { useState, type ReactNode } from "react";
-import { IconPlus } from "@tabler/icons-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { IconChevronDown, IconPlus } from "@tabler/icons-react";
 
 import { Button } from "@ui/input/Button/Button";
 import { Checkbox } from "@ui/input/Checkbox/Checkbox";
+import { MenuItemMultiSelect } from "@ui/navigation/MenuItemMultiSelect/MenuItemMultiSelect";
+import { MenuItemSelect } from "@ui/navigation/MenuItemSelect/MenuItemSelect";
 import { type IconComponent } from "@ui/icon/types/IconComponent";
+
+import { Dropdown } from "@/components/dropdown/Dropdown";
 
 import styles from "./RecordTable.module.scss";
 
@@ -13,6 +17,7 @@ export type RecordColumn<Row> = {
   Icon?: IconComponent;
   width?: number;
   render: (row: Row) => ReactNode;
+  isEmpty?: (row: Row) => boolean;
 };
 
 export type BulkAction = {
@@ -22,12 +27,20 @@ export type BulkAction = {
   onClick: (selectedKeys: string[]) => void | Promise<void>;
 };
 
+type Aggregate = "count" | "empty" | "not_empty" | "percent_empty";
+
+const AGGREGATE_LABEL: Record<Aggregate, string> = {
+  count: "Count all",
+  empty: "Empty",
+  not_empty: "Not empty",
+  percent_empty: "Empty %",
+};
+
 type RecordTableProps<Row> = {
   columns: RecordColumn<Row>[];
   rows: Row[];
   rowKey: (row: Row) => string;
   rowClassName?: (row: Row) => string | undefined;
-  countLabel?: string;
   onAddNew?: () => void;
   bulkActions?: BulkAction[];
   emptyText?: string;
@@ -38,12 +51,18 @@ export const RecordTable = <Row,>({
   rows,
   rowKey,
   rowClassName,
-  countLabel = "Count all",
   onAddNew,
   bulkActions = [],
   emptyText = "No records.",
 }: RecordTableProps<Row>) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [aggregates, setAggregates] = useState<Record<string, Aggregate>>({});
+
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => !hiddenColumns.has(c.key)),
+    [columns, hiddenColumns],
+  );
 
   const allSelected = rows.length > 0 && selected.size === rows.length;
 
@@ -61,6 +80,28 @@ export const RecordTable = <Row,>({
       return next;
     });
 
+  const toggleColumn = (key: string) =>
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+
+  const aggregateValue = (col: RecordColumn<Row>): string | null => {
+    const kind = aggregates[col.key];
+    if (!kind) return null;
+    if (kind === "count") return String(rows.length);
+    if (!col.isEmpty) return String(rows.length);
+    const empty = rows.filter((r) => col.isEmpty!(r)).length;
+    if (kind === "empty") return String(empty);
+    if (kind === "not_empty") return String(rows.length - empty);
+    return rows.length === 0 ? "0%" : `${Math.round((empty / rows.length) * 100)}%`;
+  };
+
   return (
     <div className={styles.wrap}>
       <table className={styles.table}>
@@ -69,7 +110,7 @@ export const RecordTable = <Row,>({
             <th className={styles.checkboxCell}>
               <Checkbox checked={allSelected} onChange={toggleAll} />
             </th>
-            {columns.map(({ key, label, Icon, width }) => (
+            {visibleColumns.map(({ key, label, Icon, width }) => (
               <th key={key} style={width ? { width } : undefined}>
                 <span className={styles.headerContent}>
                   {Icon && <Icon size={14} />}
@@ -77,7 +118,27 @@ export const RecordTable = <Row,>({
                 </span>
               </th>
             ))}
-            <th className={styles.fillerCell}></th>
+            <th className={styles.addColumnCell}>
+              <Dropdown
+                align="right"
+                width={200}
+                trigger={
+                  <button type="button" className={styles.addColumnButton} aria-label="Columns">
+                    <IconPlus size={14} />
+                  </button>
+                }
+              >
+                {columns.map((col) => (
+                  <MenuItemMultiSelect
+                    key={col.key}
+                    className=""
+                    text={col.label || col.key}
+                    selected={!hiddenColumns.has(col.key)}
+                    onSelectChange={() => toggleColumn(col.key)}
+                  />
+                ))}
+              </Dropdown>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -91,7 +152,7 @@ export const RecordTable = <Row,>({
                     onChange={() => toggleOne(key)}
                   />
                 </td>
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <td key={col.key}>{col.render(row)}</td>
                 ))}
                 <td className={styles.fillerCell}></td>
@@ -100,7 +161,7 @@ export const RecordTable = <Row,>({
           })}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={columns.length + 2} className={styles.empty}>
+              <td colSpan={visibleColumns.length + 2} className={styles.empty}>
                 {emptyText}
               </td>
             </tr>
@@ -108,7 +169,7 @@ export const RecordTable = <Row,>({
           {onAddNew && (
             <tr className={styles.addNewRow}>
               <td className={styles.checkboxCell}></td>
-              <td colSpan={columns.length + 1}>
+              <td colSpan={visibleColumns.length + 1}>
                 <button
                   type="button"
                   className={styles.addNewButton}
@@ -124,11 +185,62 @@ export const RecordTable = <Row,>({
         <tfoot>
           <tr>
             <td className={styles.checkboxCell}></td>
-            <td colSpan={columns.length + 1}>
-              <span className={styles.footerContent}>
-                {countLabel} <strong>{rows.length}</strong>
-              </span>
-            </td>
+            {visibleColumns.map((col, index) => (
+              <td key={col.key}>
+                <Dropdown
+                  width={170}
+                  trigger={
+                    <button type="button" className={styles.calculateButton}>
+                      {aggregates[col.key] ? (
+                        <span className={styles.footerContent}>
+                          {AGGREGATE_LABEL[aggregates[col.key]]}{" "}
+                          <strong>{aggregateValue(col)}</strong>
+                        </span>
+                      ) : index === 0 ? (
+                        <span className={styles.footerContent}>
+                          Count all <strong>{rows.length}</strong>
+                        </span>
+                      ) : (
+                        <span className={styles.calculateHint}>
+                          Calculate <IconChevronDown size={10} />
+                        </span>
+                      )}
+                    </button>
+                  }
+                >
+                  {(close) => (
+                    <>
+                      {(["count", "empty", "not_empty", "percent_empty"] as Aggregate[]).map(
+                        (kind) => (
+                          <MenuItemSelect
+                            key={kind}
+                            text={AGGREGATE_LABEL[kind]}
+                            selected={aggregates[col.key] === kind}
+                            onClick={() => {
+                              setAggregates((prev) => ({ ...prev, [col.key]: kind }));
+                              close();
+                            }}
+                          />
+                        ),
+                      )}
+                      <MenuItemSelect
+                        text="None"
+                        selected={aggregates[col.key] === undefined}
+                        onClick={() => {
+                          setAggregates((prev) => {
+                            const next = { ...prev };
+                            delete next[col.key];
+                            return next;
+                          });
+                          close();
+                        }}
+                      />
+                    </>
+                  )}
+                </Dropdown>
+              </td>
+            ))}
+            <td className={styles.fillerCell}></td>
           </tr>
         </tfoot>
       </table>

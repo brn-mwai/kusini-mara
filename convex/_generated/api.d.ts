@@ -10,6 +10,7 @@
 
 import type * as ack from "../ack.js";
 import type * as board from "../board.js";
+import type * as duties from "../duties.js";
 import type * as lib_base from "../lib/base.js";
 import type * as lib_ids from "../lib/ids.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
@@ -25,6 +26,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   ack: typeof ack;
   board: typeof board;
+  duties: typeof duties;
   "lib/base": typeof lib_base;
   "lib/ids": typeof lib_ids;
   "lib/tenancy": typeof lib_tenancy;

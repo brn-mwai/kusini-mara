@@ -5,6 +5,7 @@ import { ConvexProvider, ConvexReactClient } from "convex/react";
 
 import "@ui/theme-constants/theme-light.css";
 import "@ui/theme-constants/theme-dark.css";
+import "./index.css";
 import { ThemeProvider } from "@ui/theme-constants/ThemeProvider";
 
 import { App } from "./App";

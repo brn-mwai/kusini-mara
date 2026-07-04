@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { Shell } from "./shell/Shell";
 import { BoardPage } from "./pages/board/BoardPage";
+import { DutiesPage } from "./pages/duties/DutiesPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 export const App = () => (
@@ -13,7 +14,7 @@ export const App = () => (
       <Route path="/guests" element={<PlaceholderPage title="Guests" />} />
       <Route path="/rooms" element={<PlaceholderPage title="Rooms" />} />
       <Route path="/checkin" element={<PlaceholderPage title="Check-in" />} />
-      <Route path="/duties" element={<PlaceholderPage title="Duties" />} />
+      <Route path="/duties" element={<DutiesPage />} />
       <Route path="/staff" element={<PlaceholderPage title="Staff" />} />
       <Route path="/leave" element={<PlaceholderPage title="Leave" />} />
       <Route path="/calendar" element={<PlaceholderPage title="Calendar" />} />

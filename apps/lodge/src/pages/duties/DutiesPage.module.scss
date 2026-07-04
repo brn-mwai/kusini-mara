@@ -1,0 +1,65 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--t-font-color-tertiary);
+}
+
+.recordChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--t-spacing-2);
+}
+
+.recordName {
+  font-weight: var(--t-font-weight-medium);
+  color: var(--t-font-color-primary);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--t-font-color-tertiary);
+}
+
+.placeholder {
+  color: var(--t-font-color-light);
+}
+
+.cellSelect {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--t-spacing-1);
+  width: 100%;
+  padding: var(--t-spacing-1);
+  background: none;
+  border: none;
+  border-radius: var(--t-border-radius-sm);
+  color: var(--t-font-color-primary);
+  font-family: inherit;
+  font-size: var(--t-font-size-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--t-background-transparent-light);
+  }
+}
+
+.shortfall td {
+  background: var(--t-background-transparent-danger);
+}
+
+.bannerText {
+  font-size: var(--t-font-size-sm);
+}
