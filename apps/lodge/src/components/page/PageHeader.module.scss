@@ -1,0 +1,30 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: var(--t-spacing-2) var(--t-spacing-3);
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-2);
+}
+
+.titleIcon {
+  display: flex;
+  align-items: center;
+  color: var(--t-font-color-secondary);
+}
+
+.title {
+  font-size: var(--t-font-size-md);
+  font-weight: var(--t-font-weight-medium);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-2);
+}

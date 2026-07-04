@@ -1,22 +1,32 @@
+import { useContext } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   IconBroadcast,
   IconBed,
   IconCalendarEvent,
+  IconChevronDown,
   IconClipboardList,
   IconDoorEnter,
   IconLayoutDashboard,
+  IconMoon,
   IconPlane,
   IconPrinter,
+  IconSearch,
   IconSettings,
+  IconLayoutSidebarLeftCollapse,
+  IconSun,
   IconSunOff,
   IconUsers,
   IconUsersGroup,
 } from "@tabler/icons-react";
 
+import { Avatar } from "@ui/data-display/Avatar/Avatar";
+import { LightIconButton } from "@ui/input/LightIconButton/LightIconButton";
 import { MenuItem } from "@ui/navigation/MenuItem/MenuItem";
-import { H3Title } from "@ui/typography/H3Title/H3Title";
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+import { ColorSchemeContext } from "./ColorSchemeContext";
 import styles from "./Shell.module.scss";
 
 const NAV = [
@@ -37,13 +47,28 @@ const NAV = [
 export const Shell = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { colorScheme, setColorScheme } = useContext(ColorSchemeContext);
 
   return (
     <div className={styles.layout}>
       <aside className={styles.drawer}>
-        <div className={styles.brand}>
-          <H3Title title="Kusini Lodge" />
+        <div className={styles.workspaceRow}>
+          <button type="button" className={styles.workspaceChip}>
+            <Avatar placeholder="Kusini" size="sm" type="squared" />
+            <span className={styles.workspaceName}>Kusini Lodge</span>
+            <IconChevronDown size={14} className={styles.workspaceChevron} />
+          </button>
+          <div className={styles.workspaceActions}>
+            <LightIconButton Icon={IconSearch} size="small" accent="tertiary" />
+            <LightIconButton
+              Icon={IconLayoutSidebarLeftCollapse}
+              size="small"
+              accent="tertiary"
+            />
+          </div>
         </div>
+
+        <div className={styles.sectionLabel}>Workspace</div>
         <nav className={styles.nav}>
           {NAV.map(({ path, label, Icon }) => (
             <MenuItem
@@ -55,9 +80,22 @@ export const Shell = () => {
             />
           ))}
         </nav>
+
+        <div className={styles.drawerFooter}>
+          <MenuItem
+            text={colorScheme === "dark" ? "Light mode" : "Dark mode"}
+            LeftIcon={colorScheme === "dark" ? IconSun : IconMoon}
+            onClick={() =>
+              setColorScheme(colorScheme === "dark" ? "light" : "dark")
+            }
+          />
+        </div>
       </aside>
+
       <main className={styles.main}>
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );

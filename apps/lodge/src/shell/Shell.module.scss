@@ -10,23 +10,69 @@
 .drawer {
   display: flex;
   flex-direction: column;
-  width: 236px;
-  min-width: 236px;
-  padding: var(--t-spacing-2);
-  gap: var(--t-spacing-2);
+  width: 220px;
+  min-width: 220px;
+  padding: var(--t-spacing-3) var(--t-spacing-2) var(--t-spacing-2);
+  gap: var(--t-spacing-1);
 }
 
-.brand {
+.workspaceRow {
   display: flex;
   align-items: center;
-  min-height: 32px;
-  padding: 0 var(--t-spacing-1);
+  justify-content: space-between;
+  gap: var(--t-spacing-1);
+  padding-bottom: var(--t-spacing-3);
+}
+
+.workspaceChip {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-2);
+  padding: var(--t-spacing-1);
+  background: none;
+  border: none;
+  border-radius: var(--t-border-radius-sm);
+  color: var(--t-font-color-primary);
+  font-family: inherit;
+  font-size: var(--t-font-size-md);
+  font-weight: var(--t-font-weight-medium);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--t-background-transparent-light);
+  }
+}
+
+.workspaceName {
+  white-space: nowrap;
+}
+
+.workspaceChevron {
+  color: var(--t-font-color-tertiary);
+}
+
+.workspaceActions {
+  display: flex;
+  align-items: center;
+}
+
+.sectionLabel {
+  padding: var(--t-spacing-2) var(--t-spacing-1) var(--t-spacing-1);
+  font-size: var(--t-font-size-xs);
+  font-weight: var(--t-font-weight-medium);
+  color: var(--t-font-color-extra-light);
 }
 
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.drawerFooter {
+  padding-top: var(--t-spacing-2);
 }
 
 .main {
@@ -34,7 +80,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin: var(--t-spacing-3);
+  margin: var(--t-spacing-2);
   margin-left: 0;
   background: var(--t-background-primary);
   border: 1px solid var(--t-border-color-medium);
@@ -47,9 +93,15 @@
   }
   .drawer {
     flex-direction: row;
+    align-items: center;
     width: 100%;
     min-width: 0;
     overflow-x: auto;
+  }
+  .workspaceRow,
+  .sectionLabel,
+  .drawerFooter {
+    display: none;
   }
   .nav {
     flex-direction: row;

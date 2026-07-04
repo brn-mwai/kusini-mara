@@ -1,0 +1,66 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  padding: 0 var(--t-spacing-3);
+  border-bottom: 1px solid var(--t-border-color-light);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-2);
+}
+
+.viewButton {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-1);
+  padding: var(--t-spacing-1) var(--t-spacing-2);
+  background: none;
+  border: none;
+  border-radius: var(--t-border-radius-sm);
+  color: var(--t-font-color-secondary);
+  font-family: inherit;
+  font-size: var(--t-font-size-sm);
+  font-weight: var(--t-font-weight-medium);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--t-background-transparent-light);
+  }
+}
+
+.viewName {
+  color: var(--t-font-color-primary);
+}
+
+.count {
+  color: var(--t-font-color-tertiary);
+}
+
+.chevron {
+  color: var(--t-font-color-tertiary);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-1);
+}
+
+.textAction {
+  padding: var(--t-spacing-1) var(--t-spacing-2);
+  background: none;
+  border: none;
+  border-radius: var(--t-border-radius-sm);
+  color: var(--t-font-color-secondary);
+  font-family: inherit;
+  font-size: var(--t-font-size-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--t-background-transparent-light);
+  }
+}

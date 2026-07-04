@@ -1,0 +1,87 @@
+.wrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-font-size-sm);
+
+  th,
+  td {
+    height: 32px;
+    padding: 0 var(--t-spacing-2);
+    border-bottom: 1px solid var(--t-border-color-light);
+    border-right: 1px solid var(--t-border-color-light);
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  th {
+    font-weight: var(--t-font-weight-regular);
+    color: var(--t-font-color-tertiary);
+    border-top: 1px solid var(--t-border-color-light);
+    user-select: none;
+  }
+
+  tbody tr:hover {
+    background: var(--t-background-transparent-light);
+  }
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-1);
+}
+
+.checkboxCell {
+  width: 32px;
+  min-width: 32px;
+  text-align: center;
+  border-right: none !important;
+}
+
+.fillerCell {
+  width: auto;
+  border-right: none !important;
+}
+
+.addNewRow td {
+  border-right: none;
+}
+
+.addNewButton {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-1);
+  padding: var(--t-spacing-1) 0;
+  background: none;
+  border: none;
+  color: var(--t-font-color-tertiary);
+  font-family: inherit;
+  font-size: var(--t-font-size-sm);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--t-font-color-secondary);
+  }
+}
+
+.footerContent {
+  color: var(--t-font-color-tertiary);
+  font-size: var(--t-font-size-sm);
+
+  strong {
+    color: var(--t-font-color-secondary);
+    font-weight: var(--t-font-weight-medium);
+  }
+}
+
+.empty {
+  text-align: center;
+  color: var(--t-font-color-tertiary);
+  padding: var(--t-spacing-8) 0 !important;
+}

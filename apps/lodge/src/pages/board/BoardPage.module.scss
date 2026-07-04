@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .loading {
@@ -13,96 +13,25 @@
   color: var(--t-font-color-tertiary);
 }
 
-.header {
-  padding: var(--t-spacing-4) var(--t-spacing-6) 0;
+.recordChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--t-spacing-2);
 }
 
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--t-spacing-3);
-  padding: var(--t-spacing-4) var(--t-spacing-6);
-}
-
-.kpi {
-  display: flex;
-  flex-direction: column;
-  gap: var(--t-spacing-1);
-  padding: var(--t-spacing-3);
-  background: var(--t-background-secondary);
-  border: 1px solid var(--t-border-color-medium);
-  border-radius: var(--t-border-radius-md);
-
-  &[data-tone="danger"] .kpiValue {
-    color: var(--t-color-red);
-  }
-}
-
-.kpiValue {
-  font-size: var(--t-font-size-xl);
-  font-weight: var(--t-font-weight-semi-bold);
-  font-variant-numeric: tabular-nums;
-}
-
-.kpiLabel {
-  font-size: var(--t-font-size-xs);
-  color: var(--t-font-color-tertiary);
-}
-
-.tableWrap {
-  padding: 0 var(--t-spacing-6) var(--t-spacing-6);
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--t-font-size-md);
-
-  th {
-    text-align: left;
-    font-size: var(--t-font-size-xs);
-    font-weight: var(--t-font-weight-medium);
-    color: var(--t-font-color-tertiary);
-    padding: var(--t-spacing-2);
-    border-bottom: 1px solid var(--t-border-color-light);
-  }
-
-  td {
-    padding: var(--t-spacing-2);
-    border-bottom: 1px solid var(--t-border-color-light);
-    vertical-align: middle;
-  }
-
-  tbody tr:hover {
-    background: var(--t-background-transparent-light);
-  }
-}
-
-.needsAck {
-  background: var(--t-background-transparent-danger);
-}
-
-.dirCell {
-  width: 32px;
-  color: var(--t-font-color-tertiary);
-}
-
-.guestCell {
+.recordName {
   font-weight: var(--t-font-weight-medium);
+  color: var(--t-font-color-primary);
 }
 
-.timeCell {
+.num {
   font-variant-numeric: tabular-nums;
 }
 
-.actionCell {
-  text-align: right;
-  width: 140px;
+.muted {
+  color: var(--t-font-color-tertiary);
 }
 
-.empty {
-  text-align: center;
-  color: var(--t-font-color-tertiary);
-  padding: var(--t-spacing-8);
+.needsAck td {
+  background: var(--t-background-transparent-danger);
 }

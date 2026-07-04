@@ -1,5 +1,5 @@
 import { query } from "./_generated/server";
-import { getDemoLodge } from "./lib/tenancy";
+import { getDemoLodgeOrNull } from "./lib/tenancy";
 import { NEEDS_ACK } from "./lib/base";
 
 // The Lodge board: today's movements, unacknowledged first. Renders into Twenty's
@@ -7,7 +7,9 @@ import { NEEDS_ACK } from "./lib/base";
 export const today = query({
   args: {},
   handler: async (ctx) => {
-    const { property } = await getDemoLodge(ctx);
+    const tenant = await getDemoLodgeOrNull(ctx);
+    if (!tenant) return null;
+    const { property } = tenant;
     const events = await ctx.db
       .query("arrivalEvents")
       .withIndex("by_property_and_date", (q) =>
