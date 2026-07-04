@@ -13,6 +13,7 @@ import type * as board from "../board.js";
 import type * as lib_base from "../lib/base.js";
 import type * as lib_ids from "../lib/ids.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
+import type * as movements from "../movements.js";
 import type * as seed from "../seed.js";
 
 import type {
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   "lib/base": typeof lib_base;
   "lib/ids": typeof lib_ids;
   "lib/tenancy": typeof lib_tenancy;
+  movements: typeof movements;
   seed: typeof seed;
 }>;
 

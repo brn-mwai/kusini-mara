@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { IconPlus } from "@tabler/icons-react";
 
+import { Button } from "@ui/input/Button/Button";
 import { Checkbox } from "@ui/input/Checkbox/Checkbox";
 import { type IconComponent } from "@ui/icon/types/IconComponent";
 
@@ -14,6 +15,13 @@ export type RecordColumn<Row> = {
   render: (row: Row) => ReactNode;
 };
 
+export type BulkAction = {
+  label: string;
+  Icon?: IconComponent;
+  accent?: "default" | "blue" | "danger";
+  onClick: (selectedKeys: string[]) => void | Promise<void>;
+};
+
 type RecordTableProps<Row> = {
   columns: RecordColumn<Row>[];
   rows: Row[];
@@ -21,6 +29,7 @@ type RecordTableProps<Row> = {
   rowClassName?: (row: Row) => string | undefined;
   countLabel?: string;
   onAddNew?: () => void;
+  bulkActions?: BulkAction[];
   emptyText?: string;
 };
 
@@ -31,6 +40,7 @@ export const RecordTable = <Row,>({
   rowClassName,
   countLabel = "Count all",
   onAddNew,
+  bulkActions = [],
   emptyText = "No records.",
 }: RecordTableProps<Row>) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -122,6 +132,27 @@ export const RecordTable = <Row,>({
           </tr>
         </tfoot>
       </table>
+
+      {selected.size > 0 && bulkActions.length > 0 && (
+        <div className={styles.actionBar}>
+          <span className={styles.actionBarCount}>{selected.size} selected</span>
+          {bulkActions.map((action) => (
+            <Button
+              key={action.label}
+              type="button"
+              title={action.label}
+              Icon={action.Icon}
+              variant="primary"
+              accent={action.accent ?? "blue"}
+              size="small"
+              onClick={() => {
+                void action.onClick([...selected]);
+                setSelected(new Set());
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

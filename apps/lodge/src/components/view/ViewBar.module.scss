@@ -51,6 +51,9 @@
 }
 
 .textAction {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-1);
   padding: var(--t-spacing-1) var(--t-spacing-2);
   background: none;
   border: none;
@@ -63,4 +66,28 @@
   &:hover {
     background: var(--t-background-transparent-light);
   }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 var(--t-spacing-1);
+  background: var(--t-color-blue);
+  border-radius: var(--t-border-radius-pill);
+  color: var(--t-font-color-inverted);
+  font-size: var(--t-font-size-xxs);
+  font-weight: var(--t-font-weight-medium);
+}
+
+.search {
+  width: 180px;
+}
+
+.divider {
+  height: 1px;
+  margin: var(--t-spacing-1) 0;
+  background: var(--t-border-color-light);
 }

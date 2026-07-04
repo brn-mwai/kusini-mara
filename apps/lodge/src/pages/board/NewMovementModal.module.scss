@@ -1,0 +1,26 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t-spacing-4);
+  padding: var(--t-spacing-4);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--t-spacing-3);
+}
+
+.error {
+  padding: var(--t-spacing-2);
+  background: var(--t-background-transparent-danger);
+  border-radius: var(--t-border-radius-sm);
+  color: var(--t-color-red);
+  font-size: var(--t-font-size-sm);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--t-spacing-2);
+}

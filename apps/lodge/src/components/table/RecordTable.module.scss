@@ -85,3 +85,27 @@
   color: var(--t-font-color-tertiary);
   padding: var(--t-spacing-8) 0 !important;
 }
+
+.wrap {
+  position: relative;
+}
+
+.actionBar {
+  position: sticky;
+  bottom: var(--t-spacing-3);
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-2);
+  width: fit-content;
+  margin: 0 auto;
+  padding: var(--t-spacing-2) var(--t-spacing-3);
+  background: var(--t-background-primary);
+  border: 1px solid var(--t-border-color-medium);
+  border-radius: var(--t-border-radius-md);
+  box-shadow: var(--t-box-shadow-strong);
+}
+
+.actionBarCount {
+  font-size: var(--t-font-size-sm);
+  color: var(--t-font-color-secondary);
+}
