@@ -8,22 +8,12 @@
  * @module
  */
 
-import type * as arrivals from "../arrivals.js";
-import type * as crons from "../crons.js";
-import type * as duties from "../duties.js";
-import type * as escalation from "../escalation.js";
-import type * as fleet from "../fleet.js";
-import type * as flights from "../flights.js";
-import type * as leave from "../leave.js";
-import type * as lib_constants from "../lib/constants.js";
-import type * as lib_events from "../lib/events.js";
-import type * as lib_providers from "../lib/providers.js";
+import type * as ack from "../ack.js";
+import type * as board from "../board.js";
+import type * as lib_base from "../lib/base.js";
+import type * as lib_ids from "../lib/ids.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
-import type * as notifications from "../notifications.js";
-import type * as rooms from "../rooms.js";
 import type * as seed from "../seed.js";
-import type * as settings from "../settings.js";
-import type * as staff from "../staff.js";
 
 import type {
   ApiFromModules,
@@ -32,22 +22,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  arrivals: typeof arrivals;
-  crons: typeof crons;
-  duties: typeof duties;
-  escalation: typeof escalation;
-  fleet: typeof fleet;
-  flights: typeof flights;
-  leave: typeof leave;
-  "lib/constants": typeof lib_constants;
-  "lib/events": typeof lib_events;
-  "lib/providers": typeof lib_providers;
+  ack: typeof ack;
+  board: typeof board;
+  "lib/base": typeof lib_base;
+  "lib/ids": typeof lib_ids;
   "lib/tenancy": typeof lib_tenancy;
-  notifications: typeof notifications;
-  rooms: typeof rooms;
   seed: typeof seed;
-  settings: typeof settings;
-  staff: typeof staff;
 }>;
 
 /**
