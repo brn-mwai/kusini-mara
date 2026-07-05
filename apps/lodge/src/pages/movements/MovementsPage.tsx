@@ -22,7 +22,12 @@ import { Button } from "@ui/input/Button/Button";
 import { KpiCards, type Kpi } from "@/components/kpi/KpiCards";
 import { PageTabs, type PageTab } from "@/components/tabs/PageTabs";
 import { PageHeader } from "@/components/page/PageHeader";
-import { RecordPanel, type PanelGroup } from "@/components/record/RecordPanel";
+import {
+  RecordPanel,
+  type PanelGroup,
+  type PanelRelatedSection,
+  type PanelTimelineItem,
+} from "@/components/record/RecordPanel";
 import { ViewBar } from "@/components/view/ViewBar";
 import { exportCsv } from "@/lib/exportCsv";
 import {
@@ -143,6 +148,10 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
 
   const selected = useQuery(
     api.movements.get,
+    selectedId === null ? "skip" : { id: selectedId },
+  );
+  const selectedTimeline = useQuery(
+    api.movements.timeline,
     selectedId === null ? "skip" : { id: selectedId },
   );
 
@@ -464,6 +473,45 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
       ]
     : [];
 
+  const TIMELINE_LABEL: Record<string, string> = {
+    posted: "posted this movement",
+    acknowledged: "acknowledged the movement",
+    duty_assigned: "assigned the ground duty",
+    arrival_reprotected: "re-protected the transfer",
+    escalation_fired: "escalated — no acknowledgment in time",
+  };
+  const timelineItems: PanelTimelineItem[] = (selectedTimeline?.items ?? []).map(
+    (item: { id: string; action: string; actor: string | null; at: number }) => ({
+      id: item.id,
+      label: TIMELINE_LABEL[item.action] ?? item.action.replace(/_/g, " "),
+      actor: item.actor,
+      at: item.at,
+    }),
+  );
+
+  const relatedSections: PanelRelatedSection[] = selected
+    ? [
+        {
+          label: "Guests",
+          items: selected.guestNames.map((name: string, i: number) => ({
+            id: `${i}`,
+            label: name,
+          })),
+        },
+        {
+          label: "Ground",
+          items: [
+            ...(selected.dutyStaffName
+              ? [{ id: "staff", label: selected.dutyStaffName }]
+              : []),
+            ...(selected.dutyVehicleName
+              ? [{ id: "vehicle", label: selected.dutyVehicleName }]
+              : []),
+          ],
+        },
+      ]
+    : [];
+
   return (
     <div className={styles.withPanel}>
     <div className={styles.page}>
@@ -543,6 +591,9 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
         avatarSeed={selected.id}
         subtitle="Movement"
         groups={panelGroups}
+        related={relatedSections}
+        timeline={timelineItems}
+        recordId={selected.id}
         onClose={() => setSelectedId(null)}
       />
     )}

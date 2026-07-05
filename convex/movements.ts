@@ -165,9 +165,32 @@ export const get = query({
       .withIndex("by_portable_id", (q) => q.eq("id", id))
       .first();
     if (!event || event.destinationPropertyId !== tenant.property.id) return null;
+
+    const duty = await ctx.db
+      .query("dutyAssignments")
+      .withIndex("by_event", (q) => q.eq("arrivalEventId", event.id))
+      .first();
+    let dutyStaffName: string | null = null;
+    let dutyVehicleName: string | null = null;
+    if (duty?.staffId) {
+      const staff = await ctx.db
+        .query("staff")
+        .withIndex("by_portable_id", (q) => q.eq("id", duty.staffId!))
+        .first();
+      dutyStaffName = staff ? `${staff.name.firstName} ${staff.name.lastName}` : null;
+    }
+    if (duty?.vehicleId) {
+      const vehicle = await ctx.db
+        .query("vehicles")
+        .withIndex("by_portable_id", (q) => q.eq("id", duty.vehicleId!))
+        .first();
+      dutyVehicleName = vehicle?.name ?? null;
+    }
+
     return {
       id: event.id,
       guestName: event.guestNames?.[0] ?? "",
+      guestNames: event.guestNames ?? [],
       partySize: event.partySize,
       direction: event.direction,
       mode: event.mode,
@@ -176,6 +199,44 @@ export const get = query({
       specialNeeds: event.specialNeeds ?? "",
       status: event.status,
       createdAt: event.createdAt,
+      dutyStaffName,
+      dutyVehicleName,
+    };
+  },
+});
+
+// The record's Timeline tab: audit-spine events, newest first, actor resolved.
+export const timeline = query({
+  args: { id: v.string() },
+  handler: async (ctx, { id }) => {
+    const tenant = await getDemoLodgeOrNull(ctx);
+    if (!tenant) return null;
+
+    const [events, users] = await Promise.all([
+      ctx.db
+        .query("transferEvents")
+        .withIndex("by_event", (q) => q.eq("arrivalEventId", id))
+        .collect(),
+      ctx.db
+        .query("users")
+        .withIndex("by_property", (q) => q.eq("propertyId", tenant.property.id))
+        .collect(),
+    ]);
+
+    return {
+      items: events
+        .map((e) => {
+          const actor = users.find((u) => u.id === e.actorUserId);
+          return {
+            id: e.id,
+            action: e.action,
+            fromStatus: e.fromStatus ?? null,
+            toStatus: e.toStatus ?? null,
+            actor: actor ? `${actor.name.firstName} ${actor.name.lastName}` : null,
+            at: e.at,
+          };
+        })
+        .sort((a, b) => b.at - a.at),
     };
   },
 });
