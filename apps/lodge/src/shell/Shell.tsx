@@ -29,12 +29,15 @@ import {
 } from "@tabler/icons-react";
 
 import { Avatar } from "@ui/data-display/Avatar/Avatar";
+import { TintedIconTile } from "@ui/data-display/TintedIconTile/TintedIconTile";
 import { SearchInput } from "@ui/input/SearchInput/SearchInput";
 import { LightIconButton } from "@ui/input/LightIconButton/LightIconButton";
 import { MenuItem } from "@ui/navigation/MenuItem/MenuItem";
 
 import { Dropdown } from "@/components/dropdown/Dropdown";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+import { getObjectDef, OBJECT_BY_PATH } from "@/objects/registry";
 
 import { ColorSchemeContext } from "./ColorSchemeContext";
 import styles from "./Shell.module.scss";
@@ -137,12 +140,38 @@ export const Shell = () => {
     <div className={styles.layout}>
       {collapsed ? (
         <div className={styles.collapsedRail}>
+          <button
+            type="button"
+            className={styles.railLogo}
+            onClick={() => setCollapsed(false)}
+            aria-label="Expand sidebar"
+          >
+            <img src="/kusini-mark.svg" alt="" className={styles.workspaceLogo} />
+          </button>
           <LightIconButton
             Icon={IconLayoutSidebarLeftExpand}
             size="small"
             accent="tertiary"
             onClick={() => setCollapsed(false)}
           />
+          <div className={styles.railTiles}>
+            {NAV.map(({ path, label, Icon }) => {
+              const objectName = OBJECT_BY_PATH[path];
+              const color = objectName ? getObjectDef(objectName).color : "gray";
+              return (
+                <button
+                  key={path}
+                  type="button"
+                  className={styles.railTile}
+                  data-active={pathname.startsWith(path) || undefined}
+                  aria-label={label}
+                  onClick={() => navigate(path)}
+                >
+                  <TintedIconTile Icon={Icon} color={color} size={16} />
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : (
         <aside className={styles.drawer}>
@@ -151,7 +180,7 @@ export const Shell = () => {
               width={220}
               trigger={
                 <button type="button" className={styles.workspaceChip}>
-                  <Avatar placeholder="Kusini" size="sm" type="squared" />
+                  <img src="/kusini-mark.svg" alt="" className={styles.workspaceLogo} />
                   <span className={styles.workspaceName}>Kusini Lodge</span>
                   <IconChevronDown size={14} className={styles.workspaceChevron} />
                 </button>
@@ -160,7 +189,7 @@ export const Shell = () => {
               {(close) => (
                 <>
                   <div className={styles.workspaceMenuHeader}>
-                    <Avatar placeholder="Kusini" size="md" type="squared" />
+                    <img src="/kusini-mark.svg" alt="" className={styles.workspaceLogoLg} />
                     <div>
                       <div className={styles.workspaceMenuName}>Kusini Lodge</div>
                       <div className={styles.workspaceMenuSub}>lodge.kusini.app</div>

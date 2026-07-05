@@ -1,0 +1,11 @@
+{
+  "name": "kusini-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Kusini Lodge object definitions in Twenty's application format (twenty-sdk defineObject). The metadata registry that drives the Lodge UI over Convex.",
+  "dependencies": {
+    "twenty-sdk": "workspace:*",
+    "twenty-shared": "workspace:*"
+  }
+}

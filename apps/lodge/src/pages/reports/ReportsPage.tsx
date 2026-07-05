@@ -6,7 +6,6 @@ import { api } from "@convex/api";
 import { Tag } from "@ui/data-display/Tag/Tag";
 import { H2Title } from "@ui/typography/H2Title/H2Title";
 
-import { KpiCards, type Kpi } from "@/components/kpi/KpiCards";
 import { PageHeader } from "@/components/page/PageHeader";
 import { PageLoading, PageUnseeded } from "@/components/PageState";
 import { PageTabs, type PageTab } from "@/components/tabs/PageTabs";
@@ -26,25 +25,9 @@ export const ReportsPage = () => {
   if (data === undefined) return <PageLoading label="Loading reports…" />;
   if (data === null) return <PageUnseeded />;
 
-  const kpis: Kpi[] = [
-    {
-      label: "Missed arrivals",
-      value: data.kpis.missedArrivals,
-      tone: data.kpis.missedArrivals > 0 ? "danger" : "success",
-    },
-    { label: "Acked ≥2h before ETA", value: `${data.kpis.ackedTwoHoursPlusPct}%` },
-    {
-      label: "Escalations",
-      value: data.kpis.escalations,
-      tone: data.kpis.escalations > 0 ? "danger" : "default",
-    },
-    { label: "On-platform", value: `${data.kpis.onPlatformPct}%`, tone: "success" },
-  ];
-
   return (
     <div className={pageStyles.page}>
       <PageHeader Icon={IconChartBar} title="Reports" />
-      <KpiCards kpis={kpis} />
       <PageTabs tabs={TABS} activeId={tabId} onChange={setTabId} />
       <div className={styles.scroll}>
         {tabId === "coordination" && (

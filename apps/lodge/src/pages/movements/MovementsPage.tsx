@@ -19,7 +19,6 @@ import { Chip, ChipVariant } from "@ui/data-display/Chip/Chip";
 import { Tag } from "@ui/data-display/Tag/Tag";
 import { Button } from "@ui/input/Button/Button";
 
-import { KpiCards, type Kpi } from "@/components/kpi/KpiCards";
 import { PageTabs, type PageTab } from "@/components/tabs/PageTabs";
 import { PageHeader } from "@/components/page/PageHeader";
 import {
@@ -93,7 +92,7 @@ const SORT_FIELDS = [
 ];
 
 const timeOf = (ms: number | null) => {
-  if (ms === null) return "—";
+  if (ms === null) return "â€”";
   const d = new Date(ms);
   return `${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
 };
@@ -196,77 +195,11 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
   }, [variantRows, tabId, filterIds, sortId, sortDirection]);
 
   if (board === undefined) {
-    return <div className={styles.loading}>Loading board…</div>;
+    return <div className={styles.loading}>Loading boardâ€¦</div>;
   }
   if (board === null) {
-    return <div className={styles.loading}>No property yet — seed the backend to begin.</div>;
+    return <div className={styles.loading}>No property yet â€” seed the backend to begin.</div>;
   }
-
-  const today = todayIso();
-  const scoped = {
-    needsAck: variantRows.filter((r) => r.needsAck).length,
-    confirmed: variantRows.filter((r) => r.status === "acknowledged").length,
-    escalated: variantRows.filter((r) => r.status === "escalated").length,
-    awaitingFlight: variantRows.filter((r) => r.awaitingFlight).length,
-    todayCount: variantRows.filter((r) => r.dateIso === today).length,
-    total: variantRows.length,
-  };
-  const goTab = (id: string) => () => setTabId(tabId === id ? TABS_BY_VARIANT[variant][0].id : id);
-
-  const kpiCards: Kpi[] =
-    variant === "today"
-      ? [
-          {
-            label: "Awaiting acknowledgment",
-            value: scoped.needsAck,
-            hint: "tap to filter",
-            tone: scoped.needsAck > 0 ? "danger" : "default",
-            onClick: goTab("needs_attention"),
-            active: tabId === "needs_attention",
-          },
-          { label: "Confirmed", value: scoped.confirmed, tone: "success" },
-          {
-            label: "Escalated",
-            value: scoped.escalated,
-            tone: scoped.escalated > 0 ? "danger" : "default",
-            onClick: goTab("needs_attention"),
-            active: tabId === "needs_attention",
-          },
-          {
-            label: "Awaiting flight",
-            value: scoped.awaitingFlight,
-            hint: "tap to filter",
-            onClick: goTab("awaiting_flight"),
-            active: tabId === "awaiting_flight",
-          },
-          { label: "Total", value: scoped.total },
-        ]
-      : [
-          {
-            label: variant === "arrivals" ? "Arriving today" : "Departing today",
-            value: scoped.todayCount,
-            hint: "tap to filter",
-            onClick: goTab("today"),
-            active: tabId === "today",
-          },
-          {
-            label: "Awaiting ack",
-            value: scoped.needsAck,
-            tone: scoped.needsAck > 0 ? "danger" : "default",
-          },
-          {
-            label: "Escalated",
-            value: scoped.escalated,
-            tone: scoped.escalated > 0 ? "danger" : "default",
-          },
-          {
-            label: "Unscheduled",
-            value: scoped.awaitingFlight,
-            hint: "tap to filter",
-            onClick: goTab("unscheduled"),
-            active: tabId === "unscheduled",
-          },
-        ];
 
   const columns: RecordColumn<BoardRow>[] = [
     {
@@ -290,7 +223,7 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
       label: "Pax",
       Icon: IconUsers,
       width: 60,
-      render: (r) => <span className={styles.num}>×{r.partySize}</span>,
+      render: (r) => <span className={styles.num}>Ã—{r.partySize}</span>,
     },
     {
       key: "mode",
@@ -300,7 +233,7 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
       render: (r) => (
         <Tag
           color={r.direction === "arrival" ? "blue" : "purple"}
-          text={`${r.direction === "arrival" ? "↓" : "↑"} ${r.mode.replace("_", " ")}`}
+          text={`${r.direction === "arrival" ? "â†“" : "â†‘"} ${r.mode.replace("_", " ")}`}
         />
       ),
     },
@@ -314,7 +247,7 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
         r.carrier ? (
           <Chip label={r.carrier} variant={ChipVariant.Static} />
         ) : (
-          <span className={styles.muted}>—</span>
+          <span className={styles.muted}>â€”</span>
         ),
     },
     {
@@ -478,7 +411,7 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
     acknowledged: "acknowledged the movement",
     duty_assigned: "assigned the ground duty",
     arrival_reprotected: "re-protected the transfer",
-    escalation_fired: "escalated — no acknowledgment in time",
+    escalation_fired: "escalated â€” no acknowledgment in time",
   };
   const timelineItems: PanelTimelineItem[] = (selectedTimeline?.items ?? []).map(
     (item: { id: string; action: string; actor: string | null; at: number }) => ({
@@ -552,7 +485,6 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
           },
         ]}
       />
-      <KpiCards kpis={kpiCards} />
       <PageTabs tabs={TABS_BY_VARIANT[variant]} activeId={tabId} onChange={setTabId} />
       <ViewBar
         views={[{ id: "default", label: TITLE_BY_VARIANT[variant] }]}

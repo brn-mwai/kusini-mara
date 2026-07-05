@@ -1,0 +1,32 @@
+{
+  "name": "twenty-shared",
+  "private": true,
+  "version": "1.7.0",
+  "license": "AGPL-3.0",
+  "type": "module",
+  "description": "Twenty shared types/utils, vendored from the fork. Consumed from source via aliases.",
+  "dependencies": {
+    "@dagrejs/dagre": "^1.1.4",
+    "@sniptt/guards": "^0.2.0",
+    "ai": "^4.0.0",
+    "class-validator": "^0.14.0",
+    "date-fns": "^4.1.0",
+    "expr-eval-fork": "^3.0.3",
+    "handlebars": "^4.7.8",
+    "libphonenumber-js": "^1.11.0",
+    "lodash.camelcase": "^4.3.0",
+    "lodash.escaperegexp": "^4.1.2",
+    "microdiff": "^1.3.2",
+    "qs": "^6.13.0",
+    "react-router-dom": "^6.28.0",
+    "temporal-polyfill": "^0.2.5",
+    "transliteration": "^2.3.5",
+    "uuid": "^11.0.0",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/lodash.camelcase": "^4.3.7",
+    "@types/lodash.escaperegexp": "^4.1.9",
+    "@types/qs": "6.9.16"
+  }
+}

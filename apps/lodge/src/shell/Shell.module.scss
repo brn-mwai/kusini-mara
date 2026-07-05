@@ -79,7 +79,52 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: var(--t-spacing-2);
   padding: var(--t-spacing-3) var(--t-spacing-1);
+  overflow-y: auto;
+}
+
+.railLogo {
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.railTiles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t-spacing-2);
+  padding-top: var(--t-spacing-2);
+}
+
+.railTile {
+  display: flex;
+  padding: 2px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--t-border-radius-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--t-background-transparent-light);
+  }
+
+  &[data-active] {
+    border-color: var(--t-border-color-strong);
+  }
+}
+
+.workspaceLogo {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--t-border-radius-xs);
+}
+
+.workspaceLogoLg {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--t-border-radius-sm);
 }
 
 .workspaceMenuHeader {
