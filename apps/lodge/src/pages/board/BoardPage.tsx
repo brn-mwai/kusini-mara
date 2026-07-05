@@ -19,11 +19,11 @@ import {
 import { api } from "@convex/api";
 import { Avatar } from "@ui/data-display/Avatar/Avatar";
 import { Chip, ChipVariant } from "@ui/data-display/Chip/Chip";
-import { Status } from "@ui/data-display/Status/Status";
 import { Tag } from "@ui/data-display/Tag/Tag";
 import { Button } from "@ui/input/Button/Button";
 
 import { PageHeader } from "@/components/page/PageHeader";
+import { RecordPanel, type PanelGroup } from "@/components/record/RecordPanel";
 import { ViewBar } from "@/components/view/ViewBar";
 import { exportCsv } from "@/lib/exportCsv";
 import {
@@ -32,7 +32,6 @@ import {
   type RecordColumn,
 } from "@/components/table/RecordTable";
 
-import { NewMovementModal } from "./NewMovementModal";
 import styles from "./BoardPage.module.scss";
 
 type BoardRow = {
@@ -102,13 +101,19 @@ export const BoardPage = () => {
   const board = useQuery(api.board.today);
   const ack = useMutation(api.ack.one);
   const ackMany = useMutation(api.ack.many);
+  const createDraft = useMutation(api.movements.createDraft);
+  const updateMovement = useMutation(api.movements.update);
 
   const [viewId, setViewId] = useState("today");
   const [filterIds, setFilterIds] = useState<string[]>([]);
   const [sortId, setSortId] = useState("time");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [search, setSearch] = useState("");
-  const [isNewOpen, setIsNewOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const selected = useQuery(
+    api.movements.get,
+    selectedId === null ? "skip" : { id: selectedId },
+  );
 
   const rows = useMemo(() => {
     if (!board) return [];
@@ -122,16 +127,6 @@ export const BoardPage = () => {
     if (dirFilters.length > 0) result = result.filter((r) => dirFilters.includes(r.direction));
     if (modeFilters.length > 0) result = result.filter((r) => modeFilters.includes(r.mode));
 
-    if (search.trim() !== "") {
-      const q = search.trim().toLowerCase();
-      result = result.filter(
-        (r) =>
-          r.guest.toLowerCase().includes(q) ||
-          (r.carrier ?? "").toLowerCase().includes(q) ||
-          r.mode.includes(q),
-      );
-    }
-
     const dir = sortDirection === "asc" ? 1 : -1;
     result.sort((a, b) => {
       if (sortId === "guest") return a.guest.localeCompare(b.guest) * dir;
@@ -139,7 +134,7 @@ export const BoardPage = () => {
       return ((a.scheduledTime ?? Infinity) - (b.scheduledTime ?? Infinity)) * dir;
     });
     return result;
-  }, [board, viewId, filterIds, sortId, sortDirection, search]);
+  }, [board, viewId, filterIds, sortId, sortDirection]);
 
   if (board === undefined) {
     return <div className={styles.loading}>Loading board…</div>;
@@ -157,10 +152,14 @@ export const BoardPage = () => {
       Icon: IconUser,
       width: 200,
       render: (r) => (
-        <span className={styles.recordChip}>
+        <button
+          type="button"
+          className={styles.recordButton}
+          onClick={() => setSelectedId(r.id)}
+        >
           <Avatar placeholder={r.guest} placeholderColorSeed={r.id} size="sm" type="squared" />
           <span className={styles.recordName}>{r.guest}</span>
-        </span>
+        </button>
       ),
     },
     {
@@ -208,7 +207,7 @@ export const BoardPage = () => {
       Icon: IconProgressCheck,
       width: 150,
       render: (r) => (
-        <Status color={STATUS_COLOR[r.status] ?? "gray"} text={STATUS_LABEL[r.status] ?? r.status} />
+        <Tag color={STATUS_COLOR[r.status] ?? "gray"} text={STATUS_LABEL[r.status] ?? r.status} />
       ),
     },
     {
@@ -241,7 +240,118 @@ export const BoardPage = () => {
     },
   ];
 
+  const toLocalInput = (ms: number | null) => {
+    if (ms === null) return "";
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const panelGroups: PanelGroup[] = selected
+    ? [
+        {
+          label: "General",
+          fields: [
+            {
+              kind: "number",
+              key: "pax",
+              label: "Pax",
+              Icon: IconUsers,
+              value: String(selected.partySize),
+              onCommit: (v) =>
+                void updateMovement({ id: selected.id, partySize: Number(v) || 1 }),
+            },
+            {
+              kind: "select",
+              key: "direction",
+              label: "Direction",
+              Icon: IconPlaneTilt,
+              value: selected.direction,
+              options: [
+                { id: "arrival", label: "Arrival (dropping)" },
+                { id: "departure", label: "Departure (picking)" },
+              ],
+              onCommit: (v) =>
+                void updateMovement({
+                  id: selected.id,
+                  direction: v as "arrival" | "departure",
+                }),
+            },
+            {
+              kind: "select",
+              key: "mode",
+              label: "Mode",
+              value: selected.mode,
+              options: [
+                { id: "charter", label: "Charter" },
+                { id: "scheduled_flight", label: "Scheduled flight" },
+                { id: "helicopter", label: "Helicopter" },
+                { id: "road_transfer", label: "Road transfer" },
+                { id: "self_drive", label: "Self drive" },
+                { id: "self_fly", label: "Self fly" },
+              ],
+              onCommit: (v) =>
+                void updateMovement({
+                  id: selected.id,
+                  mode: v as
+                    | "charter"
+                    | "scheduled_flight"
+                    | "helicopter"
+                    | "road_transfer"
+                    | "self_drive"
+                    | "self_fly",
+                }),
+            },
+          ],
+        },
+        {
+          label: "Transfer",
+          fields: [
+            {
+              kind: "text",
+              key: "carrier",
+              label: "Carrier",
+              Icon: IconBuildingSkyscraper,
+              value: selected.carrierName,
+              placeholder: "Safarilink",
+              onCommit: (v) => void updateMovement({ id: selected.id, carrierName: v }),
+            },
+            {
+              kind: "text",
+              key: "time",
+              label: "Time",
+              Icon: IconCalendarTime,
+              value: toLocalInput(selected.scheduledTime),
+              placeholder: "2026-07-05T11:00",
+              onCommit: (v) => {
+                const ms = new Date(v).getTime();
+                if (!Number.isNaN(ms)) void updateMovement({ id: selected.id, scheduledTime: ms });
+              },
+            },
+          ],
+        },
+        {
+          label: "System",
+          fields: [
+            {
+              kind: "readonly",
+              key: "status",
+              label: "Status",
+              Icon: IconProgressCheck,
+              content: (
+                <Tag
+                  color={STATUS_COLOR[selected.status] ?? "gray"}
+                  text={STATUS_LABEL[selected.status] ?? selected.status}
+                />
+              ),
+            },
+          ],
+        },
+      ]
+    : [];
+
   return (
+    <div className={styles.withPanel}>
     <div className={styles.page}>
       <PageHeader
         Icon={IconLayoutDashboard}
@@ -254,7 +364,9 @@ export const BoardPage = () => {
             variant="primary"
             accent="blue"
             size="small"
-            onClick={() => setIsNewOpen(true)}
+            onClick={() =>
+              void createDraft().then(({ id }) => setSelectedId(id))
+            }
           />
         }
         menuItems={[
@@ -297,8 +409,6 @@ export const BoardPage = () => {
           setSortId(id);
           setSortDirection(dir);
         }}
-        searchValue={search}
-        onSearchChange={setSearch}
         chips={
           kpis.needsAck > 0 ? <Tag color="red" text={`${kpis.needsAck} need ack`} /> : undefined
         }
@@ -308,13 +418,21 @@ export const BoardPage = () => {
         rows={rows}
         rowKey={(r) => r.id}
         rowClassName={(r) => (r.needsAck ? styles.needsAck : undefined)}
-        onAddNew={() => setIsNewOpen(true)}
+        onAddNew={() => void createDraft().then(({ id }) => setSelectedId(id))}
         bulkActions={bulkActions}
         emptyText="No movements match."
       />
-      {isNewOpen && (
-        <NewMovementModal isOpen onClose={() => setIsNewOpen(false)} />
-      )}
+    </div>
+    {selected && (
+      <RecordPanel
+        title={selected.guestName}
+        onTitleCommit={(v) => void updateMovement({ id: selected.id, guestName: v })}
+        avatarSeed={selected.id}
+        subtitle="Movement"
+        groups={panelGroups}
+        onClose={() => setSelectedId(null)}
+      />
+    )}
     </div>
   );
 };

@@ -1,0 +1,30 @@
+.lists {
+  display: flex;
+  gap: var(--t-spacing-2);
+  padding: 0 var(--t-spacing-3) var(--t-spacing-2);
+}
+
+.body {
+  display: inline-block;
+  max-width: 330px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--t-spacing-2);
+  background: var(--t-background-transparent-lighter);
+  border: 1px solid var(--t-border-color-medium);
+  border-radius: var(--t-border-radius-sm);
+  color: var(--t-font-color-primary);
+  font-family: var(--t-font-family);
+  font-size: var(--t-font-size-md);
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: var(--t-color-blue);
+  }
+}

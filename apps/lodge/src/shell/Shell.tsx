@@ -1,5 +1,8 @@
 import { useContext, useState } from "react";
+import { useQuery } from "convex/react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+
+import { api } from "@convex/api";
 import {
   IconBroadcast,
   IconBed,
@@ -46,6 +49,41 @@ const NAV = [
   { path: "/print", label: "Print", Icon: IconPrinter },
   { path: "/settings", label: "Settings", Icon: IconSettings },
 ];
+
+const GlobalSearch = ({
+  value,
+  onChange,
+  onNavigate,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onNavigate: (path: string) => void;
+}) => {
+  const results = useQuery(api.searchq.global, { q: value });
+  const pageHits = NAV.filter(
+    (n) => value.length >= 2 && n.label.toLowerCase().includes(value.toLowerCase()),
+  );
+
+  return (
+    <>
+      <SearchInput value={value} onChange={onChange} placeholder="Search records…" />
+      {pageHits.map(({ path, label, Icon }) => (
+        <MenuItem key={path} text={label} LeftIcon={Icon} onClick={() => onNavigate(path)} />
+      ))}
+      {(results?.hits ?? []).map((hit) => (
+        <MenuItem
+          key={`${hit.kind}-${hit.id}`}
+          text={hit.label}
+          contextualText={`${hit.kind} · ${hit.sub.replace(/_/g, " ")}`}
+          onClick={() => onNavigate(hit.path)}
+        />
+      ))}
+      {value.length >= 2 && pageHits.length === 0 && (results?.hits ?? []).length === 0 && (
+        <div className={styles.searchEmpty}>No matches.</div>
+      )}
+    </>
+  );
+};
 
 export const Shell = () => {
   const navigate = useNavigate();
@@ -112,33 +150,21 @@ export const Shell = () => {
             <div className={styles.workspaceActions}>
               <Dropdown
                 align="left"
-                width={220}
+                width={260}
                 trigger={
                   <LightIconButton Icon={IconSearch} size="small" accent="tertiary" />
                 }
               >
                 {(close) => (
-                  <>
-                    <SearchInput
-                      value={navSearch}
-                      onChange={setNavSearch}
-                      placeholder="Go to…"
-                    />
-                    {NAV.filter((n) =>
-                      n.label.toLowerCase().includes(navSearch.toLowerCase()),
-                    ).map(({ path, label, Icon }) => (
-                      <MenuItem
-                        key={path}
-                        text={label}
-                        LeftIcon={Icon}
-                        onClick={() => {
-                          navigate(path);
-                          setNavSearch("");
-                          close();
-                        }}
-                      />
-                    ))}
-                  </>
+                  <GlobalSearch
+                    value={navSearch}
+                    onChange={setNavSearch}
+                    onNavigate={(path) => {
+                      navigate(path);
+                      setNavSearch("");
+                      close();
+                    }}
+                  />
                 )}
               </Dropdown>
               <LightIconButton

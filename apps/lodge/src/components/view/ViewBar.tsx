@@ -9,7 +9,6 @@ import {
 } from "@tabler/icons-react";
 
 import { type IconComponent } from "@ui/icon/types/IconComponent";
-import { SearchInput } from "@ui/input/SearchInput/SearchInput";
 import { MenuItemMultiSelect } from "@ui/navigation/MenuItemMultiSelect/MenuItemMultiSelect";
 import { MenuItemSelect } from "@ui/navigation/MenuItemSelect/MenuItemSelect";
 
@@ -33,8 +32,6 @@ type ViewBarProps = {
   activeSortId?: string;
   sortDirection?: "asc" | "desc";
   onSortChange?: (id: string, direction: "asc" | "desc") => void;
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
   chips?: ReactNode;
 };
 
@@ -50,8 +47,6 @@ export const ViewBar = ({
   activeSortId,
   sortDirection = "asc",
   onSortChange,
-  searchValue,
-  onSearchChange,
   chips,
 }: ViewBarProps) => {
   const activeView = views.find((v) => v.id === activeViewId) ?? views[0];
@@ -92,16 +87,6 @@ export const ViewBar = ({
       </div>
 
       <div className={styles.right}>
-        {onSearchChange !== undefined && (
-          <div className={styles.search}>
-            <SearchInput
-              value={searchValue ?? ""}
-              onChange={onSearchChange}
-              placeholder="Search"
-            />
-          </div>
-        )}
-
         {onFilterToggle !== undefined && filterOptions.length > 0 && (
           <Dropdown
             align="right"

@@ -101,6 +101,12 @@
   color: var(--t-font-color-tertiary);
 }
 
+.searchEmpty {
+  padding: var(--t-spacing-2);
+  color: var(--t-font-color-tertiary);
+  font-size: var(--t-font-size-sm);
+}
+
 .main {
   flex: 1;
   display: flex;

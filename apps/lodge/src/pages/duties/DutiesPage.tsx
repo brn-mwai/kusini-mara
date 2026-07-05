@@ -16,7 +16,6 @@ import {
 import { api } from "@convex/api";
 import { Avatar } from "@ui/data-display/Avatar/Avatar";
 import { Banner } from "@ui/feedback/Banner/Banner";
-import { Status } from "@ui/data-display/Status/Status";
 import { Tag } from "@ui/data-display/Tag/Tag";
 import { LightIconButton } from "@ui/input/LightIconButton/LightIconButton";
 import { MenuItemSelectAvatar } from "@ui/navigation/MenuItemSelectAvatar/MenuItemSelectAvatar";
@@ -214,7 +213,7 @@ export const DutiesPage = () => {
       Icon: IconProgressCheck,
       width: 130,
       render: (r) => (
-        <Status
+        <Tag
           color={DUTY_STATUS_COLOR[r.dutyStatus] ?? "gray"}
           text={r.dutyStatus.replace("_", " ")}
         />

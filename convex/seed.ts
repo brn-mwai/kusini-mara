@@ -11,6 +11,20 @@ const SEEDED_TABLES = [
   "arrivalEvents",
   "acknowledgments",
   "transferEvents",
+  "bookings",
+  "guests",
+  "guestRequirements",
+  "stays",
+  "dutyAssignments",
+  "leaveRequests",
+  "leavePlan",
+  "coverageRules",
+  "staffLists",
+  "staffListMembers",
+  "broadcasts",
+  "messageThreads",
+  "notifications",
+  "printJobs",
 ] as const;
 
 export const reset = mutation({
@@ -152,6 +166,100 @@ export const run = mutation({
         createdByOrgId: operatorId,
         operatorId,
         reprotectCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    // booking with guests + requirements + a stay (the light-PMS spine)
+    const today = new Date(now).toISOString().slice(0, 10);
+    const inThree = new Date(now + 3 * 86_400_000).toISOString().slice(0, 10);
+    const bookingId = ulid();
+    await ctx.db.insert("bookings", {
+      id: bookingId,
+      propertyId,
+      operatorId,
+      guestName: "Mombaerts",
+      partySize: 3,
+      source: "manual",
+      arrivalDate: today,
+      departureDate: inThree,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const guestDefs = [
+      { first: "Luc", last: "Mombaerts", type: "adult" as const, lead: true },
+      { first: "Anna", last: "Mombaerts", type: "adult" as const, lead: false },
+      { first: "Elise", last: "Mombaerts", type: "child" as const, lead: false, age: 9 },
+    ];
+    let leadGuestId = "";
+    for (const g of guestDefs) {
+      const gid = ulid();
+      if (g.lead) leadGuestId = gid;
+      await ctx.db.insert("guests", {
+        id: gid,
+        bookingId,
+        propertyId,
+        name: { firstName: g.first, lastName: g.last },
+        guestType: g.type,
+        age: g.age,
+        isLead: g.lead,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    await ctx.db.insert("guestRequirements", {
+      id: ulid(),
+      guestId: leadGuestId,
+      propertyId,
+      category: "allergy",
+      label: "nut_free",
+      severity: "critical",
+      notes: "carries EpiPen",
+      carriesForward: true,
+    });
+
+    await ctx.db.insert("stays", {
+      id: ulid(),
+      bookingId,
+      propertyId,
+      plannedCheckIn: today,
+      plannedCheckOut: inThree,
+      status: "due_in",
+      boardBasis: "full_board",
+      adults: 2,
+      children: 1,
+      infants: 0,
+      occasion: "none",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // coverage rules + staff lists (dynamic by role)
+    for (const r of [
+      { role: "driver" as const, min: 1 },
+      { role: "guide" as const, min: 1 },
+    ]) {
+      await ctx.db.insert("coverageRules", {
+        id: ulid(),
+        propertyId,
+        role: r.role,
+        minStaff: r.min,
+        resilienceBuffer: 1,
+      });
+    }
+    for (const l of [
+      { name: "Drivers", role: "driver" as const },
+      { name: "Guides", role: "guide" as const },
+    ]) {
+      await ctx.db.insert("staffLists", {
+        id: ulid(),
+        propertyId,
+        name: l.name,
+        dynamic: true,
+        roleFilter: l.role,
+        active: true,
         createdAt: now,
         updatedAt: now,
       });
