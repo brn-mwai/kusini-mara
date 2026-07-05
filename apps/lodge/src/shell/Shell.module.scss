@@ -71,6 +71,37 @@
   overflow-y: auto;
 }
 
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-2);
+  height: 28px;
+  padding: var(--t-spacing-1);
+  background: none;
+  border: none;
+  border-radius: var(--t-border-radius-sm);
+  color: var(--t-font-color-secondary);
+  font-family: inherit;
+  font-size: var(--t-font-size-md);
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: var(--t-background-transparent-light);
+  }
+
+  &[data-active] {
+    background: var(--t-background-transparent-light);
+    color: var(--t-font-color-primary);
+  }
+}
+
+.navItemLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .drawerFooter {
   padding-top: var(--t-spacing-2);
 }

@@ -22,6 +22,7 @@ import { MenuItemSelectAvatar } from "@ui/navigation/MenuItemSelectAvatar/MenuIt
 import { MenuItemSelect } from "@ui/navigation/MenuItemSelect/MenuItemSelect";
 
 import { PageHeader } from "@/components/page/PageHeader";
+import { getObjectDef } from "@/objects/registry";
 import { exportCsv } from "@/lib/exportCsv";
 import { Dropdown } from "@/components/dropdown/Dropdown";
 import { RecordTable, type RecordColumn } from "@/components/table/RecordTable";
@@ -120,12 +121,17 @@ export const DutiesPage = () => {
       label: "Duty",
       Icon: IconClipboardList,
       width: 140,
-      render: (r) => (
-        <Tag
-          color={r.direction === "arrival" ? "blue" : "purple"}
-          text={r.dutyType === "airstrip_pickup" ? "Airstrip pickup" : "Airstrip dropoff"}
-        />
-      ),
+      render: (r) => {
+        const opt = getObjectDef("dutyAssignment")
+          .field("dutyType")
+          ?.options?.find((o) => o.value === r.dutyType);
+        return (
+          <Tag
+            color={(opt?.color as "blue" | "purple" | "green" | "yellow" | "turquoise") ?? "gray"}
+            text={opt?.label ?? r.dutyType.replace(/_/g, " ")}
+          />
+        );
+      },
     },
     {
       key: "staff",

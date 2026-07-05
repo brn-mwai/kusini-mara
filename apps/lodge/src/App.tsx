@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { Shell } from "./shell/Shell";
 import { MovementsPage } from "./pages/movements/MovementsPage";
+import { MovementRecordPage } from "./pages/movements/MovementRecordPage";
 import { NotificationsPage } from "./pages/notifications/NotificationsPage";
 import { ReportsPage } from "./pages/reports/ReportsPage";
 import { BookingsPage } from "./pages/bookings/BookingsPage";
@@ -22,6 +23,7 @@ export const App = () => (
       <Route path="/" element={<Navigate to="/today" replace />} />
       <Route path="/board" element={<Navigate to="/today" replace />} />
       <Route path="/today" element={<MovementsPage variant="today" />} />
+      <Route path="/movements/:id" element={<MovementRecordPage />} />
       <Route path="/arrivals" element={<MovementsPage variant="arrivals" />} />
       <Route path="/departures" element={<MovementsPage variant="departures" />} />
       <Route path="/reports" element={<ReportsPage />} />

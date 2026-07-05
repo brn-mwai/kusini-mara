@@ -74,6 +74,8 @@ type RecordPanelProps = {
   related?: PanelRelatedSection[];
   timeline?: PanelTimelineItem[];
   recordId?: string;
+  onOpen?: () => void;
+  embedded?: boolean;
   onClose: () => void;
 };
 
@@ -118,6 +120,31 @@ const InlineText = ({
   );
 };
 
+export const TimelineList = ({ items }: { items: PanelTimelineItem[] }) => (
+  <div className={styles.timeline}>
+    {items.length > 0 && (
+      <div className={styles.timelineMonth}>{monthLabel(items[0].at)}</div>
+    )}
+    {items.map((item, index) => (
+      <div key={item.id} className={styles.timelineRow}>
+        <div className={styles.timelineRail}>
+          <span className={styles.timelineIcon}>
+            <IconTimelineEvent size={12} />
+          </span>
+          {index < items.length - 1 && <span className={styles.timelineLine} />}
+        </div>
+        <div className={styles.timelineContent}>
+          <span className={styles.timelineText}>
+            {item.actor ? <strong>{item.actor}</strong> : "System"} {item.label}
+          </span>
+          <span className={styles.timelineTime}>{timeAgo(item.at)}</span>
+        </div>
+      </div>
+    ))}
+    {items.length === 0 && <span className={styles.placeholder}>No activity yet.</span>}
+  </div>
+);
+
 export const RecordPanel = ({
   title,
   titlePlaceholder = "Untitled",
@@ -128,6 +155,8 @@ export const RecordPanel = ({
   related = [],
   timeline,
   recordId,
+  onOpen,
+  embedded = false,
   onClose,
 }: RecordPanelProps) => {
   const [tab, setTab] = useState<"home" | "timeline">("home");
@@ -146,7 +175,7 @@ export const RecordPanel = ({
     });
 
   return (
-    <aside className={styles.panel} data-wide={wide || undefined}>
+    <aside className={styles.panel} data-wide={wide || undefined} data-embedded={embedded || undefined}>
       <header className={styles.header}>
         <span className={styles.headerChip}>
           <Avatar
@@ -162,7 +191,9 @@ export const RecordPanel = ({
           )}
         </span>
         {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
-        <LightIconButton Icon={IconX} size="small" accent="tertiary" onClick={onClose} />
+        {!embedded && (
+          <LightIconButton Icon={IconX} size="small" accent="tertiary" onClick={onClose} />
+        )}
       </header>
 
       <div className={styles.tabsRow}>
@@ -297,6 +328,7 @@ export const RecordPanel = ({
         )}
       </div>
 
+      {!embedded && (
       <footer className={styles.footer}>
         <Dropdown
           width={180}
@@ -317,13 +349,14 @@ export const RecordPanel = ({
         </Dropdown>
         <Button
           type="button"
-          title={wide ? "Collapse" : "Open"}
+          title={onOpen ? "Open" : wide ? "Collapse" : "Open"}
           variant="primary"
           accent="blue"
           size="small"
-          onClick={() => setWide((w) => !w)}
+          onClick={() => (onOpen ? onOpen() : setWide((w) => !w))}
         />
       </footer>
+      )}
     </aside>
   );
 };

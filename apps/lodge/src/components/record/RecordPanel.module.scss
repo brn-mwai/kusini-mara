@@ -13,6 +13,12 @@
     width: 560px;
     min-width: 560px;
   }
+
+  &[data-embedded] {
+    width: 100%;
+    min-width: 0;
+    border-left: none;
+  }
 }
 
 .tabsRow {

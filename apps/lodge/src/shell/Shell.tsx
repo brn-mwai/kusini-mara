@@ -37,7 +37,7 @@ import { MenuItem } from "@ui/navigation/MenuItem/MenuItem";
 import { Dropdown } from "@/components/dropdown/Dropdown";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-import { getObjectDef, OBJECT_BY_PATH } from "@/objects/registry";
+import { colorForSeed, getObjectDef, OBJECT_BY_PATH } from "@/objects/registry";
 
 import { ColorSchemeContext } from "./ColorSchemeContext";
 import styles from "./Shell.module.scss";
@@ -90,6 +90,11 @@ const NAV_GROUPS = [
 ];
 
 const NAV = NAV_GROUPS.flatMap((g) => g.items);
+
+const navColor = (path: string) => {
+  const objectName = OBJECT_BY_PATH[path];
+  return objectName ? getObjectDef(objectName).color : colorForSeed(path);
+};
 
 const GlobalSearch = ({
   value,
@@ -154,10 +159,26 @@ export const Shell = () => {
             accent="tertiary"
             onClick={() => setCollapsed(false)}
           />
+          <Dropdown
+            align="left"
+            width={260}
+            trigger={<LightIconButton Icon={IconSearch} size="small" accent="tertiary" />}
+          >
+            {(close) => (
+              <GlobalSearch
+                value={navSearch}
+                onChange={setNavSearch}
+                onNavigate={(path) => {
+                  navigate(path);
+                  setNavSearch("");
+                  close();
+                }}
+              />
+            )}
+          </Dropdown>
           <div className={styles.railTiles}>
             {NAV.map(({ path, label, Icon }) => {
-              const objectName = OBJECT_BY_PATH[path];
-              const color = objectName ? getObjectDef(objectName).color : "gray";
+              const color = navColor(path);
               return (
                 <button
                   key={path}
@@ -248,13 +269,16 @@ export const Shell = () => {
               <div key={group.label} className={styles.navGroup}>
                 <div className={styles.sectionLabel}>{group.label}</div>
                 {group.items.map(({ path, label, Icon }) => (
-                  <MenuItem
+                  <button
                     key={path}
-                    text={label}
-                    LeftIcon={Icon}
-                    selected={pathname.startsWith(path)}
+                    type="button"
+                    className={styles.navItem}
+                    data-active={pathname.startsWith(path) || undefined}
                     onClick={() => navigate(path)}
-                  />
+                  >
+                    <TintedIconTile Icon={Icon} color={navColor(path)} size={14} />
+                    <span className={styles.navItemLabel}>{label}</span>
+                  </button>
                 ))}
               </div>
             ))}

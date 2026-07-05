@@ -36,7 +36,7 @@ const CUSTOM_OBJECT_ICON_COLORS: ThemeColor[] = MAIN_COLOR_NAMES.filter(
   (color) => color !== "gray",
 );
 
-const getColorForCustomObject = (seed: string): ThemeColor => {
+export const colorForSeed = (seed: string): ThemeColor => {
   let hash = 0;
   for (let index = 0; index < seed.length; index += 1) {
     hash = (hash << 5) - hash + seed.charCodeAt(index);
@@ -113,7 +113,7 @@ const defs = new Map<string, ObjectDef>(
       labelPlural: config.labelPlural,
       description: config.description,
       Icon: iconByName(config.icon),
-      color: getColorForCustomObject(config.nameSingular),
+      color: colorForSeed(config.nameSingular),
       fields,
       field: (name) => fields.find((f) => f.name === name),
     };

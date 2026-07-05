@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import {
   IconBuildingSkyscraper,
@@ -29,12 +30,14 @@ import {
 } from "@/components/record/RecordPanel";
 import { ViewBar } from "@/components/view/ViewBar";
 import { exportCsv } from "@/lib/exportCsv";
+import { getObjectDef } from "@/objects/registry";
 import {
   RecordTable,
   type BulkAction,
   type RecordColumn,
 } from "@/components/table/RecordTable";
 
+import { useMovementRecord } from "./useMovementRecord";
 import styles from "./MovementsPage.module.scss";
 
 type BoardRow = {
@@ -51,27 +54,9 @@ type BoardRow = {
   dateIso: string | null;
 };
 
-const STATUS_COLOR: Record<string, "red" | "orange" | "blue" | "green" | "gray"> = {
-  posted: "red",
-  scheduled: "orange",
-  reconfirm_required: "red",
-  acknowledged: "green",
-  in_transit: "blue",
-  arrived: "blue",
-  completed: "gray",
-  escalated: "red",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  posted: "Needs ack",
-  scheduled: "Needs ack",
-  reconfirm_required: "Re-confirm",
-  acknowledged: "Acknowledged",
-  in_transit: "In transit",
-  arrived: "Arrived",
-  completed: "Completed",
-  escalated: "Escalated",
-};
+const movementDef = getObjectDef("movement");
+const optionOf = (fieldName: string, value: string) =>
+  movementDef.field(fieldName)?.options?.find((o) => o.value === value);
 
 
 const FILTER_OPTIONS = [
@@ -92,7 +77,7 @@ const SORT_FIELDS = [
 ];
 
 const timeOf = (ms: number | null) => {
-  if (ms === null) return "â€”";
+  if (ms === null) return "—";
   const d = new Date(ms);
   return `${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
 };
@@ -133,11 +118,11 @@ const TITLE_BY_VARIANT: Record<MovementsVariant, string> = {
 };
 
 export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
+  const navigate = useNavigate();
   const board = useQuery(api.board.today);
   const ack = useMutation(api.ack.one);
   const ackMany = useMutation(api.ack.many);
   const createDraft = useMutation(api.movements.createDraft);
-  const updateMovement = useMutation(api.movements.update);
 
   const [tabId, setTabId] = useState(TABS_BY_VARIANT[variant][0].id);
   const [filterIds, setFilterIds] = useState<string[]>([]);
@@ -145,14 +130,13 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const selected = useQuery(
-    api.movements.get,
-    selectedId === null ? "skip" : { id: selectedId },
-  );
-  const selectedTimeline = useQuery(
-    api.movements.timeline,
-    selectedId === null ? "skip" : { id: selectedId },
-  );
+  const {
+    selected,
+    panelGroups,
+    relatedSections,
+    timelineItems,
+    updateMovement,
+  } = useMovementRecord(selectedId);
 
   const variantRows = useMemo(() => {
     if (!board) return [];
@@ -195,10 +179,10 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
   }, [variantRows, tabId, filterIds, sortId, sortDirection]);
 
   if (board === undefined) {
-    return <div className={styles.loading}>Loading boardâ€¦</div>;
+    return <div className={styles.loading}>Loading board…</div>;
   }
   if (board === null) {
-    return <div className={styles.loading}>No property yet â€” seed the backend to begin.</div>;
+    return <div className={styles.loading}>No property yet — seed the backend to begin.</div>;
   }
 
   const columns: RecordColumn<BoardRow>[] = [
@@ -223,19 +207,29 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
       label: "Pax",
       Icon: IconUsers,
       width: 60,
-      render: (r) => <span className={styles.num}>Ã—{r.partySize}</span>,
+      render: (r) => <span className={styles.num}>×{r.partySize}</span>,
     },
     {
       key: "mode",
       label: "Mode",
       Icon: IconPlaneTilt,
       width: 130,
-      render: (r) => (
-        <Tag
-          color={r.direction === "arrival" ? "blue" : "purple"}
-          text={`${r.direction === "arrival" ? "â†“" : "â†‘"} ${r.mode.replace("_", " ")}`}
-        />
-      ),
+      render: (r) => {
+        const dir = optionOf("direction", r.direction);
+        const mode = optionOf("mode", r.mode);
+        return (
+          <span className={styles.pillRow}>
+            <Tag
+              color={(dir?.color as "blue" | "purple") ?? "gray"}
+              text={r.direction === "arrival" ? "↓ Pickup" : "↑ Dropoff"}
+            />
+            <Tag
+              color={(mode?.color as "blue" | "sky" | "turquoise" | "green" | "yellow" | "orange") ?? "gray"}
+              text={mode?.label ?? r.mode.replace(/_/g, " ")}
+            />
+          </span>
+        );
+      },
     },
     {
       key: "carrier",
@@ -247,7 +241,7 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
         r.carrier ? (
           <Chip label={r.carrier} variant={ChipVariant.Static} />
         ) : (
-          <span className={styles.muted}>â€”</span>
+          <span className={styles.muted}>—</span>
         ),
     },
     {
@@ -262,9 +256,15 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
       label: "Status",
       Icon: IconProgressCheck,
       width: 150,
-      render: (r) => (
-        <Tag color={STATUS_COLOR[r.status] ?? "gray"} text={STATUS_LABEL[r.status] ?? r.status} />
-      ),
+      render: (r) => {
+        const opt = optionOf("status", r.status);
+        return (
+          <Tag
+            color={(opt?.color as "red" | "orange" | "green" | "blue" | "gray") ?? "gray"}
+            text={opt?.label ?? r.status}
+          />
+        );
+      },
     },
     {
       key: "ack",
@@ -295,155 +295,6 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
       },
     },
   ];
-
-  const toLocalInput = (ms: number | null) => {
-    if (ms === null) return "";
-    const d = new Date(ms);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
-
-  const panelGroups: PanelGroup[] = selected
-    ? [
-        {
-          label: "General",
-          fields: [
-            {
-              kind: "number",
-              key: "pax",
-              label: "Pax",
-              Icon: IconUsers,
-              value: String(selected.partySize),
-              onCommit: (v) =>
-                void updateMovement({ id: selected.id, partySize: Number(v) || 1 }),
-            },
-            {
-              kind: "select",
-              key: "direction",
-              label: "Direction",
-              Icon: IconPlaneTilt,
-              value: selected.direction,
-              options: [
-                { id: "arrival", label: "Arrival (dropping)" },
-                { id: "departure", label: "Departure (picking)" },
-              ],
-              onCommit: (v) =>
-                void updateMovement({
-                  id: selected.id,
-                  direction: v as "arrival" | "departure",
-                }),
-            },
-            {
-              kind: "select",
-              key: "mode",
-              label: "Mode",
-              value: selected.mode,
-              options: [
-                { id: "charter", label: "Charter" },
-                { id: "scheduled_flight", label: "Scheduled flight" },
-                { id: "helicopter", label: "Helicopter" },
-                { id: "road_transfer", label: "Road transfer" },
-                { id: "self_drive", label: "Self drive" },
-                { id: "self_fly", label: "Self fly" },
-              ],
-              onCommit: (v) =>
-                void updateMovement({
-                  id: selected.id,
-                  mode: v as
-                    | "charter"
-                    | "scheduled_flight"
-                    | "helicopter"
-                    | "road_transfer"
-                    | "self_drive"
-                    | "self_fly",
-                }),
-            },
-          ],
-        },
-        {
-          label: "Transfer",
-          fields: [
-            {
-              kind: "text",
-              key: "carrier",
-              label: "Carrier",
-              Icon: IconBuildingSkyscraper,
-              value: selected.carrierName,
-              placeholder: "Safarilink",
-              onCommit: (v) => void updateMovement({ id: selected.id, carrierName: v }),
-            },
-            {
-              kind: "text",
-              key: "time",
-              label: "Time",
-              Icon: IconCalendarTime,
-              value: toLocalInput(selected.scheduledTime),
-              placeholder: "2026-07-05T11:00",
-              onCommit: (v) => {
-                const ms = new Date(v).getTime();
-                if (!Number.isNaN(ms)) void updateMovement({ id: selected.id, scheduledTime: ms });
-              },
-            },
-          ],
-        },
-        {
-          label: "System",
-          fields: [
-            {
-              kind: "readonly",
-              key: "status",
-              label: "Status",
-              Icon: IconProgressCheck,
-              content: (
-                <Tag
-                  color={STATUS_COLOR[selected.status] ?? "gray"}
-                  text={STATUS_LABEL[selected.status] ?? selected.status}
-                />
-              ),
-            },
-          ],
-        },
-      ]
-    : [];
-
-  const TIMELINE_LABEL: Record<string, string> = {
-    posted: "posted this movement",
-    acknowledged: "acknowledged the movement",
-    duty_assigned: "assigned the ground duty",
-    arrival_reprotected: "re-protected the transfer",
-    escalation_fired: "escalated â€” no acknowledgment in time",
-  };
-  const timelineItems: PanelTimelineItem[] = (selectedTimeline?.items ?? []).map(
-    (item: { id: string; action: string; actor: string | null; at: number }) => ({
-      id: item.id,
-      label: TIMELINE_LABEL[item.action] ?? item.action.replace(/_/g, " "),
-      actor: item.actor,
-      at: item.at,
-    }),
-  );
-
-  const relatedSections: PanelRelatedSection[] = selected
-    ? [
-        {
-          label: "Guests",
-          items: selected.guestNames.map((name: string, i: number) => ({
-            id: `${i}`,
-            label: name,
-          })),
-        },
-        {
-          label: "Ground",
-          items: [
-            ...(selected.dutyStaffName
-              ? [{ id: "staff", label: selected.dutyStaffName }]
-              : []),
-            ...(selected.dutyVehicleName
-              ? [{ id: "vehicle", label: selected.dutyVehicleName }]
-              : []),
-          ],
-        },
-      ]
-    : [];
 
   return (
     <div className={styles.withPanel}>
@@ -526,6 +377,7 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
         related={relatedSections}
         timeline={timelineItems}
         recordId={selected.id}
+        onOpen={() => navigate(`/movements/${selected.id}`)}
         onClose={() => setSelectedId(null)}
       />
     )}
