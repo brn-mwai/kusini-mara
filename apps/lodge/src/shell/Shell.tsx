@@ -37,64 +37,10 @@ import { MenuItem } from "@ui/navigation/MenuItem/MenuItem";
 import { Dropdown } from "@/components/dropdown/Dropdown";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-import { colorForSeed, getObjectDef, OBJECT_BY_PATH } from "@/objects/registry";
+import { NAV_ENTRIES, NAV_GROUPS } from "@/objects/registry";
 
 import { ColorSchemeContext } from "./ColorSchemeContext";
 import styles from "./Shell.module.scss";
-
-const NAV_GROUPS = [
-  {
-    label: "Operations",
-    items: [
-      { path: "/today", label: "Today", Icon: IconLayoutDashboard },
-      { path: "/arrivals", label: "Arrivals", Icon: IconPlaneArrival },
-      { path: "/departures", label: "Departures", Icon: IconPlaneDeparture },
-      { path: "/bookings", label: "Bookings", Icon: IconPlane },
-    ],
-  },
-  {
-    label: "Guests",
-    items: [
-      { path: "/guests", label: "Guest directory", Icon: IconUsers },
-      { path: "/checkin", label: "Check-in", Icon: IconDoorEnter },
-    ],
-  },
-  {
-    label: "Workforce",
-    items: [
-      { path: "/duties", label: "Duties", Icon: IconClipboardList },
-      { path: "/leave", label: "Leave planner", Icon: IconSunOff },
-      { path: "/staff", label: "Staff", Icon: IconUsersGroup },
-    ],
-  },
-  {
-    label: "Property",
-    items: [
-      { path: "/rooms", label: "Rooms", Icon: IconBed },
-      { path: "/calendar", label: "Calendar", Icon: IconCalendarEvent },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [{ path: "/reports", label: "Reports", Icon: IconChartBar }],
-  },
-  {
-    label: "Global",
-    items: [
-      { path: "/notifications", label: "Notifications", Icon: IconBell },
-      { path: "/broadcasts", label: "Broadcasts", Icon: IconBroadcast },
-      { path: "/print", label: "Print", Icon: IconPrinter },
-      { path: "/settings", label: "Settings", Icon: IconSettings },
-    ],
-  },
-];
-
-const NAV = NAV_GROUPS.flatMap((g) => g.items);
-
-const navColor = (path: string) => {
-  const objectName = OBJECT_BY_PATH[path];
-  return objectName ? getObjectDef(objectName).color : colorForSeed(path);
-};
 
 const GlobalSearch = ({
   value,
@@ -106,7 +52,7 @@ const GlobalSearch = ({
   onNavigate: (path: string) => void;
 }) => {
   const results = useQuery(api.searchq.global, { q: value });
-  const pageHits = NAV.filter(
+  const pageHits = NAV_ENTRIES.filter(
     (n) => value.length >= 2 && n.label.toLowerCase().includes(value.toLowerCase()),
   );
 
@@ -177,8 +123,7 @@ export const Shell = () => {
             )}
           </Dropdown>
           <div className={styles.railTiles}>
-            {NAV.map(({ path, label, Icon }) => {
-              const color = navColor(path);
+            {NAV_ENTRIES.map(({ path, label, Icon, color }) => {
               return (
                 <button
                   key={path}
@@ -268,7 +213,7 @@ export const Shell = () => {
             {NAV_GROUPS.map((group) => (
               <div key={group.label} className={styles.navGroup}>
                 <div className={styles.sectionLabel}>{group.label}</div>
-                {group.items.map(({ path, label, Icon }) => (
+                {group.items.map(({ path, label, Icon, color }) => (
                   <button
                     key={path}
                     type="button"
@@ -276,7 +221,7 @@ export const Shell = () => {
                     data-active={pathname.startsWith(path) || undefined}
                     onClick={() => navigate(path)}
                   >
-                    <TintedIconTile Icon={Icon} color={navColor(path)} size={14} />
+                    <TintedIconTile Icon={Icon} color={color} size={14} />
                     <span className={styles.navItemLabel}>{label}</span>
                   </button>
                 ))}

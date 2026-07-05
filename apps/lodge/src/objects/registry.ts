@@ -1,4 +1,13 @@
 import {
+  IconSettings,
+  IconPrinter,
+  IconPlaneDeparture,
+  IconPlaneArrival,
+  IconChartBar,
+  IconCalendarEvent,
+  IconBroadcast,
+  IconBell,
+  IconLayoutDashboard,
   IconBed,
   IconBriefcase,
   IconBuildingSkyscraper,
@@ -26,7 +35,7 @@ import {
   IconArrowsUpDown,
 } from "@tabler/icons-react";
 
-import { KUSINI_OBJECTS } from "kusini-app";
+import { KUSINI_NAVIGATION, KUSINI_OBJECTS } from "kusini-app";
 import { MAIN_COLOR_NAMES, type ThemeColor } from "@ui/theme";
 import { type IconComponent } from "@ui/icon/types/IconComponent";
 
@@ -47,6 +56,15 @@ export const colorForSeed = (seed: string): ThemeColor => {
 };
 
 const ICONS: Record<string, IconComponent> = {
+  IconSettings,
+  IconPrinter,
+  IconBroadcast,
+  IconBell,
+  IconChartBar,
+  IconCalendarEvent,
+  IconPlaneDeparture,
+  IconPlaneArrival,
+  IconLayoutDashboard,
   IconArrowsUpDown,
   IconBed,
   IconBriefcase,
@@ -127,14 +145,49 @@ export const getObjectDef = (nameSingular: string): ObjectDef => {
   return def;
 };
 
-export const OBJECT_BY_PATH: Record<string, string> = {
-  "/today": "movement",
-  "/arrivals": "movement",
-  "/departures": "movement",
-  "/bookings": "booking",
-  "/guests": "guest",
-  "/checkin": "stay",
-  "/duties": "dutyAssignment",
-  "/staff": "staff",
-  "/rooms": "room",
+const objectNameById = new Map(
+  KUSINI_OBJECTS.map((r) => [r.config.universalIdentifier, r.config.nameSingular]),
+);
+
+export type NavEntry = {
+  path: string;
+  label: string;
+  Icon: IconComponent;
+  color: ThemeColor;
+  objectName?: string;
 };
+
+export type NavGroup = { label: string; items: NavEntry[] };
+
+// Derived from the declared navigation-menu-items (Twenty app format): folder
+// order, item colors and icons all come from kusini-app definitions.
+export const NAV_GROUPS: NavGroup[] = KUSINI_NAVIGATION.folders.map((folderResult) => {
+  const folder = folderResult.config;
+  return {
+    label: folder.name ?? "",
+    items: KUSINI_NAVIGATION.items
+      .map((itemResult) => itemResult.config)
+      .filter((item) => item.folderUniversalIdentifier === folder.universalIdentifier)
+      .sort((a, b) => a.position - b.position)
+      .map((item) => {
+        const objectName = item.targetObjectUniversalIdentifier
+          ? objectNameById.get(item.targetObjectUniversalIdentifier)
+          : undefined;
+        return {
+          path: item.link ?? "/",
+          label: item.name ?? "",
+          Icon: iconByName(item.icon),
+          color:
+            (item.color as ThemeColor | undefined) ??
+            (objectName ? getObjectDef(objectName).color : colorForSeed(item.link ?? "")),
+          objectName,
+        };
+      }),
+  };
+});
+
+export const NAV_ENTRIES: NavEntry[] = NAV_GROUPS.flatMap((g) => g.items);
+
+export const OBJECT_BY_PATH: Record<string, string> = Object.fromEntries(
+  NAV_ENTRIES.filter((e) => e.objectName).map((e) => [e.path, e.objectName!]),
+);

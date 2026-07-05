@@ -25,3 +25,7 @@ export {
   staffObject,
   stayObject,
 };
+
+export { default as kusiniApplication } from "./application-config";
+export { KUSINI_VIEWS } from "./views/index-views";
+export { KUSINI_NAVIGATION } from "./navigation-menu-items/kusini-navigation";
