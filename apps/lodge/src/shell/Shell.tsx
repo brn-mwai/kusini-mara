@@ -4,7 +4,11 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { api } from "@convex/api";
 import {
+  IconBell,
   IconBroadcast,
+  IconChartBar,
+  IconPlaneArrival,
+  IconPlaneDeparture,
   IconBed,
   IconCalendarEvent,
   IconChevronDown,
@@ -35,20 +39,54 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ColorSchemeContext } from "./ColorSchemeContext";
 import styles from "./Shell.module.scss";
 
-const NAV = [
-  { path: "/board", label: "Board", Icon: IconLayoutDashboard },
-  { path: "/bookings", label: "Bookings", Icon: IconPlane },
-  { path: "/guests", label: "Guests", Icon: IconUsers },
-  { path: "/rooms", label: "Rooms", Icon: IconBed },
-  { path: "/checkin", label: "Check-in", Icon: IconDoorEnter },
-  { path: "/duties", label: "Duties", Icon: IconClipboardList },
-  { path: "/staff", label: "Staff", Icon: IconUsersGroup },
-  { path: "/leave", label: "Leave", Icon: IconSunOff },
-  { path: "/calendar", label: "Calendar", Icon: IconCalendarEvent },
-  { path: "/broadcasts", label: "Broadcasts", Icon: IconBroadcast },
-  { path: "/print", label: "Print", Icon: IconPrinter },
-  { path: "/settings", label: "Settings", Icon: IconSettings },
+const NAV_GROUPS = [
+  {
+    label: "Operations",
+    items: [
+      { path: "/today", label: "Today", Icon: IconLayoutDashboard },
+      { path: "/arrivals", label: "Arrivals", Icon: IconPlaneArrival },
+      { path: "/departures", label: "Departures", Icon: IconPlaneDeparture },
+      { path: "/bookings", label: "Bookings", Icon: IconPlane },
+    ],
+  },
+  {
+    label: "Guests",
+    items: [
+      { path: "/guests", label: "Guest directory", Icon: IconUsers },
+      { path: "/checkin", label: "Check-in", Icon: IconDoorEnter },
+    ],
+  },
+  {
+    label: "Workforce",
+    items: [
+      { path: "/duties", label: "Duties", Icon: IconClipboardList },
+      { path: "/leave", label: "Leave planner", Icon: IconSunOff },
+      { path: "/staff", label: "Staff", Icon: IconUsersGroup },
+    ],
+  },
+  {
+    label: "Property",
+    items: [
+      { path: "/rooms", label: "Rooms", Icon: IconBed },
+      { path: "/calendar", label: "Calendar", Icon: IconCalendarEvent },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [{ path: "/reports", label: "Reports", Icon: IconChartBar }],
+  },
+  {
+    label: "Global",
+    items: [
+      { path: "/notifications", label: "Notifications", Icon: IconBell },
+      { path: "/broadcasts", label: "Broadcasts", Icon: IconBroadcast },
+      { path: "/print", label: "Print", Icon: IconPrinter },
+      { path: "/settings", label: "Settings", Icon: IconSettings },
+    ],
+  },
 ];
+
+const NAV = NAV_GROUPS.flatMap((g) => g.items);
 
 const GlobalSearch = ({
   value,
@@ -176,16 +214,20 @@ export const Shell = () => {
             </div>
           </div>
 
-          <div className={styles.sectionLabel}>Workspace</div>
           <nav className={styles.nav}>
-            {NAV.map(({ path, label, Icon }) => (
-              <MenuItem
-                key={path}
-                text={label}
-                LeftIcon={Icon}
-                selected={pathname.startsWith(path)}
-                onClick={() => navigate(path)}
-              />
+            {NAV_GROUPS.map((group) => (
+              <div key={group.label} className={styles.navGroup}>
+                <div className={styles.sectionLabel}>{group.label}</div>
+                {group.items.map(({ path, label, Icon }) => (
+                  <MenuItem
+                    key={path}
+                    text={label}
+                    LeftIcon={Icon}
+                    selected={pathname.startsWith(path)}
+                    onClick={() => navigate(path)}
+                  />
+                ))}
+              </div>
             ))}
           </nav>
 

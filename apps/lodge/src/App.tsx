@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { Shell } from "./shell/Shell";
-import { BoardPage } from "./pages/board/BoardPage";
+import { MovementsPage } from "./pages/movements/MovementsPage";
+import { NotificationsPage } from "./pages/notifications/NotificationsPage";
+import { ReportsPage } from "./pages/reports/ReportsPage";
 import { BookingsPage } from "./pages/bookings/BookingsPage";
 import { BroadcastsPage } from "./pages/broadcasts/BroadcastsPage";
 import { CalendarPage } from "./pages/calendar/CalendarPage";
@@ -17,8 +19,13 @@ import { StaffPage } from "./pages/staff/StaffPage";
 export const App = () => (
   <Routes>
     <Route element={<Shell />}>
-      <Route path="/" element={<Navigate to="/board" replace />} />
-      <Route path="/board" element={<BoardPage />} />
+      <Route path="/" element={<Navigate to="/today" replace />} />
+      <Route path="/board" element={<Navigate to="/today" replace />} />
+      <Route path="/today" element={<MovementsPage variant="today" />} />
+      <Route path="/arrivals" element={<MovementsPage variant="arrivals" />} />
+      <Route path="/departures" element={<MovementsPage variant="departures" />} />
+      <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/bookings" element={<BookingsPage />} />
       <Route path="/guests" element={<GuestsPage />} />
       <Route path="/rooms" element={<RoomsPage />} />

@@ -17,6 +17,9 @@ export const today = query({
       )
       .collect();
 
+    const toIsoDate = (ms: number | undefined) =>
+      ms === undefined ? null : new Date(ms).toISOString().slice(0, 10);
+
     const rows = events
       .filter((e) => e.archivedAt === undefined && e.status !== "cancelled")
       .map((e) => ({
@@ -27,8 +30,11 @@ export const today = query({
         mode: e.mode,
         carrier: e.carrierName ?? null,
         scheduledTime: e.scheduledTime ?? null,
+        dateIso: toIsoDate(e.scheduledTime),
         status: e.status,
         needsAck: NEEDS_ACK.includes(e.status),
+        awaitingFlight:
+          (e.mode === "charter" || e.mode === "self_fly") && e.flightId === undefined,
         acknowledgedAt: e.status === "acknowledged" ? e.updatedAt : null,
       }));
 
@@ -41,9 +47,11 @@ export const today = query({
     const kpis = {
       total: rows.length,
       needsAck: rows.filter((r) => r.needsAck).length,
+      confirmed: rows.filter((r) => r.status === "acknowledged").length,
       arrivals: rows.filter((r) => r.direction === "arrival").length,
       departures: rows.filter((r) => r.direction === "departure").length,
       escalated: rows.filter((r) => r.status === "escalated").length,
+      awaitingFlight: rows.filter((r) => r.awaitingFlight).length,
     };
 
     return { property: { id: property.id, name: property.name }, kpis, rows };

@@ -1,0 +1,49 @@
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--t-spacing-3);
+  padding: var(--t-spacing-3);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t-spacing-3);
+  padding: var(--t-spacing-4);
+  background: var(--t-background-secondary);
+  border: 1px solid var(--t-border-color-medium);
+  border-radius: var(--t-border-radius-md);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--t-spacing-3);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statValue {
+  font-size: var(--t-font-size-lg);
+  font-weight: var(--t-font-weight-semi-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-size: var(--t-font-size-xs);
+  color: var(--t-font-color-tertiary);
+}
+
+.breakdown {
+  display: flex;
+  align-items: center;
+  gap: var(--t-spacing-2);
+  flex-wrap: wrap;
+  font-size: var(--t-font-size-sm);
+}

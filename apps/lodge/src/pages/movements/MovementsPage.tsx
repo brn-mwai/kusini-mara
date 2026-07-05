@@ -1,14 +1,11 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import {
-  IconAlertTriangle,
   IconBuildingSkyscraper,
   IconCalendarTime,
   IconCheck,
-  IconChecklist,
   IconDownload,
   IconLayoutDashboard,
-  IconList,
   IconPlaneTilt,
   IconPlus,
   IconProgressCheck,
@@ -22,6 +19,8 @@ import { Chip, ChipVariant } from "@ui/data-display/Chip/Chip";
 import { Tag } from "@ui/data-display/Tag/Tag";
 import { Button } from "@ui/input/Button/Button";
 
+import { KpiCards, type Kpi } from "@/components/kpi/KpiCards";
+import { PageTabs, type PageTab } from "@/components/tabs/PageTabs";
 import { PageHeader } from "@/components/page/PageHeader";
 import { RecordPanel, type PanelGroup } from "@/components/record/RecordPanel";
 import { ViewBar } from "@/components/view/ViewBar";
@@ -32,7 +31,7 @@ import {
   type RecordColumn,
 } from "@/components/table/RecordTable";
 
-import styles from "./BoardPage.module.scss";
+import styles from "./MovementsPage.module.scss";
 
 type BoardRow = {
   id: string;
@@ -44,6 +43,8 @@ type BoardRow = {
   scheduledTime: number | null;
   status: string;
   needsAck: boolean;
+  awaitingFlight: boolean;
+  dateIso: string | null;
 };
 
 const STATUS_COLOR: Record<string, "red" | "orange" | "blue" | "green" | "gray"> = {
@@ -68,11 +69,6 @@ const STATUS_LABEL: Record<string, string> = {
   escalated: "Escalated",
 };
 
-const VIEWS = [
-  { id: "today", label: "Today", Icon: IconList },
-  { id: "needs_ack", label: "Needs ack", Icon: IconChecklist },
-  { id: "escalations", label: "Escalations", Icon: IconAlertTriangle },
-];
 
 const FILTER_OPTIONS = [
   { id: "dir:arrival", label: "Arrivals" },
@@ -97,14 +93,51 @@ const timeOf = (ms: number | null) => {
   return `${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
 };
 
-export const BoardPage = () => {
+export type MovementsVariant = "today" | "arrivals" | "departures";
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
+const addDays = (iso: string, n: number) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+const TABS_BY_VARIANT: Record<MovementsVariant, PageTab[]> = {
+  today: [
+    { id: "all", label: "All" },
+    { id: "needs_attention", label: "Needs attention" },
+    { id: "arrivals", label: "Arrivals" },
+    { id: "departures", label: "Departures" },
+    { id: "awaiting_flight", label: "Awaiting flight" },
+  ],
+  arrivals: [
+    { id: "today", label: "Today" },
+    { id: "tomorrow", label: "Tomorrow" },
+    { id: "next7", label: "Next 7 days" },
+    { id: "unscheduled", label: "Unscheduled" },
+  ],
+  departures: [
+    { id: "today", label: "Today" },
+    { id: "tomorrow", label: "Tomorrow" },
+    { id: "next7", label: "Next 7 days" },
+    { id: "unscheduled", label: "Unscheduled" },
+  ],
+};
+
+const TITLE_BY_VARIANT: Record<MovementsVariant, string> = {
+  today: "Today",
+  arrivals: "Arrivals",
+  departures: "Departures",
+};
+
+export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
   const board = useQuery(api.board.today);
   const ack = useMutation(api.ack.one);
   const ackMany = useMutation(api.ack.many);
   const createDraft = useMutation(api.movements.createDraft);
   const updateMovement = useMutation(api.movements.update);
 
-  const [viewId, setViewId] = useState("today");
+  const [tabId, setTabId] = useState(TABS_BY_VARIANT[variant][0].id);
   const [filterIds, setFilterIds] = useState<string[]>([]);
   const [sortId, setSortId] = useState("time");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -119,8 +152,27 @@ export const BoardPage = () => {
     if (!board) return [];
     let result = [...(board.rows as BoardRow[])];
 
-    if (viewId === "needs_ack") result = result.filter((r) => r.needsAck);
-    if (viewId === "escalations") result = result.filter((r) => r.status === "escalated");
+    if (variant === "arrivals") result = result.filter((r) => r.direction === "arrival");
+    if (variant === "departures") result = result.filter((r) => r.direction === "departure");
+
+    const today = todayIso();
+    if (tabId === "needs_attention") {
+      result = result.filter((r) => r.needsAck || r.status === "escalated");
+    } else if (tabId === "arrivals") {
+      result = result.filter((r) => r.direction === "arrival");
+    } else if (tabId === "departures") {
+      result = result.filter((r) => r.direction === "departure");
+    } else if (tabId === "awaiting_flight" || tabId === "unscheduled") {
+      result = result.filter((r) => r.awaitingFlight);
+    } else if (tabId === "today") {
+      result = result.filter((r) => r.dateIso === today);
+    } else if (tabId === "tomorrow") {
+      result = result.filter((r) => r.dateIso === addDays(today, 1));
+    } else if (tabId === "next7") {
+      result = result.filter(
+        (r) => r.dateIso !== null && r.dateIso > today && r.dateIso <= addDays(today, 7),
+      );
+    }
 
     const dirFilters = filterIds.filter((f) => f.startsWith("dir:")).map((f) => f.slice(4));
     const modeFilters = filterIds.filter((f) => f.startsWith("mode:")).map((f) => f.slice(5));
@@ -134,7 +186,7 @@ export const BoardPage = () => {
       return ((a.scheduledTime ?? Infinity) - (b.scheduledTime ?? Infinity)) * dir;
     });
     return result;
-  }, [board, viewId, filterIds, sortId, sortDirection]);
+  }, [board, variant, tabId, filterIds, sortId, sortDirection]);
 
   if (board === undefined) {
     return <div className={styles.loading}>Loading board…</div>;
@@ -144,6 +196,30 @@ export const BoardPage = () => {
   }
 
   const { kpis } = board;
+
+  const today = todayIso();
+  const kpiCards: Kpi[] =
+    variant === "today"
+      ? [
+          { label: "Awaiting acknowledgment", value: kpis.needsAck, tone: kpis.needsAck > 0 ? "danger" : "default" },
+          { label: "Confirmed", value: kpis.confirmed, tone: "success" },
+          { label: "Escalated", value: kpis.escalated, tone: kpis.escalated > 0 ? "danger" : "default" },
+          { label: "Awaiting flight", value: kpis.awaitingFlight },
+          { label: "Total", value: kpis.total },
+        ]
+      : [
+          {
+            label: variant === "arrivals" ? "Arriving today" : "Departing today",
+            value: (board.rows as BoardRow[]).filter(
+              (r) =>
+                r.direction === (variant === "arrivals" ? "arrival" : "departure") &&
+                r.dateIso === today,
+            ).length,
+          },
+          { label: "Awaiting ack", value: kpis.needsAck, tone: kpis.needsAck > 0 ? "danger" : "default" },
+          { label: "Escalated", value: kpis.escalated, tone: kpis.escalated > 0 ? "danger" : "default" },
+          { label: "Awaiting flight", value: kpis.awaitingFlight },
+        ];
 
   const columns: RecordColumn<BoardRow>[] = [
     {
@@ -355,7 +431,7 @@ export const BoardPage = () => {
     <div className={styles.page}>
       <PageHeader
         Icon={IconLayoutDashboard}
-        title="Board"
+        title={TITLE_BY_VARIANT[variant]}
         actions={
           <Button
             type="button"
@@ -390,10 +466,12 @@ export const BoardPage = () => {
           },
         ]}
       />
+      <KpiCards kpis={kpiCards} />
+      <PageTabs tabs={TABS_BY_VARIANT[variant]} activeId={tabId} onChange={setTabId} />
       <ViewBar
-        views={VIEWS}
-        activeViewId={viewId}
-        onViewChange={setViewId}
+        views={[{ id: "default", label: TITLE_BY_VARIANT[variant] }]}
+        activeViewId="default"
+        onViewChange={() => undefined}
         count={rows.length}
         filterOptions={FILTER_OPTIONS}
         activeFilterIds={filterIds}

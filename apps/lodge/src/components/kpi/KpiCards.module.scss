@@ -1,0 +1,35 @@
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--t-spacing-2);
+  padding: var(--t-spacing-2) var(--t-spacing-3);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--t-spacing-2) var(--t-spacing-3);
+  background: var(--t-background-secondary);
+  border: 1px solid var(--t-border-color-medium);
+  border-radius: var(--t-border-radius-md);
+
+  &[data-tone="danger"] .value {
+    color: var(--t-color-red);
+  }
+
+  &[data-tone="success"] .value {
+    color: var(--t-color-green);
+  }
+}
+
+.value {
+  font-size: var(--t-font-size-lg);
+  font-weight: var(--t-font-weight-semi-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-size: var(--t-font-size-xs);
+  color: var(--t-font-color-tertiary);
+}
