@@ -106,8 +106,6 @@ const TABS_BY_VARIANT: Record<MovementsVariant, PageTab[]> = {
   today: [
     { id: "all", label: "All" },
     { id: "needs_attention", label: "Needs attention" },
-    { id: "arrivals", label: "Arrivals" },
-    { id: "departures", label: "Departures" },
     { id: "awaiting_flight", label: "Awaiting flight" },
   ],
   arrivals: [
@@ -148,20 +146,20 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
     selectedId === null ? "skip" : { id: selectedId },
   );
 
-  const rows = useMemo(() => {
+  const variantRows = useMemo(() => {
     if (!board) return [];
     let result = [...(board.rows as BoardRow[])];
-
     if (variant === "arrivals") result = result.filter((r) => r.direction === "arrival");
     if (variant === "departures") result = result.filter((r) => r.direction === "departure");
+    return result;
+  }, [board, variant]);
+
+  const rows = useMemo(() => {
+    let result = [...variantRows];
 
     const today = todayIso();
     if (tabId === "needs_attention") {
       result = result.filter((r) => r.needsAck || r.status === "escalated");
-    } else if (tabId === "arrivals") {
-      result = result.filter((r) => r.direction === "arrival");
-    } else if (tabId === "departures") {
-      result = result.filter((r) => r.direction === "departure");
     } else if (tabId === "awaiting_flight" || tabId === "unscheduled") {
       result = result.filter((r) => r.awaitingFlight);
     } else if (tabId === "today") {
@@ -186,7 +184,7 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
       return ((a.scheduledTime ?? Infinity) - (b.scheduledTime ?? Infinity)) * dir;
     });
     return result;
-  }, [board, variant, tabId, filterIds, sortId, sortDirection]);
+  }, [variantRows, tabId, filterIds, sortId, sortDirection]);
 
   if (board === undefined) {
     return <div className={styles.loading}>Loading board…</div>;
@@ -195,30 +193,70 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
     return <div className={styles.loading}>No property yet — seed the backend to begin.</div>;
   }
 
-  const { kpis } = board;
-
   const today = todayIso();
+  const scoped = {
+    needsAck: variantRows.filter((r) => r.needsAck).length,
+    confirmed: variantRows.filter((r) => r.status === "acknowledged").length,
+    escalated: variantRows.filter((r) => r.status === "escalated").length,
+    awaitingFlight: variantRows.filter((r) => r.awaitingFlight).length,
+    todayCount: variantRows.filter((r) => r.dateIso === today).length,
+    total: variantRows.length,
+  };
+  const goTab = (id: string) => () => setTabId(tabId === id ? TABS_BY_VARIANT[variant][0].id : id);
+
   const kpiCards: Kpi[] =
     variant === "today"
       ? [
-          { label: "Awaiting acknowledgment", value: kpis.needsAck, tone: kpis.needsAck > 0 ? "danger" : "default" },
-          { label: "Confirmed", value: kpis.confirmed, tone: "success" },
-          { label: "Escalated", value: kpis.escalated, tone: kpis.escalated > 0 ? "danger" : "default" },
-          { label: "Awaiting flight", value: kpis.awaitingFlight },
-          { label: "Total", value: kpis.total },
+          {
+            label: "Awaiting acknowledgment",
+            value: scoped.needsAck,
+            hint: "tap to filter",
+            tone: scoped.needsAck > 0 ? "danger" : "default",
+            onClick: goTab("needs_attention"),
+            active: tabId === "needs_attention",
+          },
+          { label: "Confirmed", value: scoped.confirmed, tone: "success" },
+          {
+            label: "Escalated",
+            value: scoped.escalated,
+            tone: scoped.escalated > 0 ? "danger" : "default",
+            onClick: goTab("needs_attention"),
+            active: tabId === "needs_attention",
+          },
+          {
+            label: "Awaiting flight",
+            value: scoped.awaitingFlight,
+            hint: "tap to filter",
+            onClick: goTab("awaiting_flight"),
+            active: tabId === "awaiting_flight",
+          },
+          { label: "Total", value: scoped.total },
         ]
       : [
           {
             label: variant === "arrivals" ? "Arriving today" : "Departing today",
-            value: (board.rows as BoardRow[]).filter(
-              (r) =>
-                r.direction === (variant === "arrivals" ? "arrival" : "departure") &&
-                r.dateIso === today,
-            ).length,
+            value: scoped.todayCount,
+            hint: "tap to filter",
+            onClick: goTab("today"),
+            active: tabId === "today",
           },
-          { label: "Awaiting ack", value: kpis.needsAck, tone: kpis.needsAck > 0 ? "danger" : "default" },
-          { label: "Escalated", value: kpis.escalated, tone: kpis.escalated > 0 ? "danger" : "default" },
-          { label: "Awaiting flight", value: kpis.awaitingFlight },
+          {
+            label: "Awaiting ack",
+            value: scoped.needsAck,
+            tone: scoped.needsAck > 0 ? "danger" : "default",
+          },
+          {
+            label: "Escalated",
+            value: scoped.escalated,
+            tone: scoped.escalated > 0 ? "danger" : "default",
+          },
+          {
+            label: "Unscheduled",
+            value: scoped.awaitingFlight,
+            hint: "tap to filter",
+            onClick: goTab("unscheduled"),
+            active: tabId === "unscheduled",
+          },
         ];
 
   const columns: RecordColumn<BoardRow>[] = [
@@ -487,9 +525,6 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
           setSortId(id);
           setSortDirection(dir);
         }}
-        chips={
-          kpis.needsAck > 0 ? <Tag color="red" text={`${kpis.needsAck} need ack`} /> : undefined
-        }
       />
       <RecordTable
         columns={columns}

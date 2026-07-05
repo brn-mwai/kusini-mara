@@ -1,6 +1,6 @@
 .row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--t-spacing-2);
   padding: var(--t-spacing-2) var(--t-spacing-3);
 }
@@ -8,11 +8,16 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 1px;
+  width: 150px;
   padding: var(--t-spacing-2) var(--t-spacing-3);
   background: var(--t-background-secondary);
   border: 1px solid var(--t-border-color-medium);
   border-radius: var(--t-border-radius-md);
+  font-family: inherit;
+  text-align: left;
+  transition: border-color calc(var(--t-animation-duration-fast) * 1s) ease;
 
   &[data-tone="danger"] .value {
     color: var(--t-color-red);
@@ -20,6 +25,23 @@
 
   &[data-tone="success"] .value {
     color: var(--t-color-green);
+  }
+
+  &[data-active] {
+    border-color: var(--t-color-blue);
+  }
+}
+
+button.card {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--t-background-transparent-light);
+    border-color: var(--t-border-color-strong);
+  }
+
+  &[data-active]:hover {
+    border-color: var(--t-color-blue);
   }
 }
 
@@ -31,5 +53,10 @@
 
 .label {
   font-size: var(--t-font-size-xs);
+  color: var(--t-font-color-secondary);
+}
+
+.hint {
+  font-size: var(--t-font-size-xxs);
   color: var(--t-font-color-tertiary);
 }
