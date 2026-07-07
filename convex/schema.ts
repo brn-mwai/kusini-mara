@@ -50,16 +50,28 @@ export const transportMode = v.union(
 
 export const direction = v.union(v.literal("arrival"), v.literal("departure"));
 
+// The two sides of the handshake. Whoever posts a movement assigns the other
+// side; the assigned side acknowledges and sets the pickup time.
+export const partySide = v.union(v.literal("lodge"), v.literal("airstrip"));
+
 export const arrivalStatus = v.union(
   v.literal("requested"),
   v.literal("scheduled"),
   v.literal("acknowledged"),
+  v.literal("reconfirm_required"), // a retime/re-protection voided the prior ack
   v.literal("in_transit"),
   v.literal("arrived"),
   v.literal("completed"),
   v.literal("escalated"),
   v.literal("cancelled"),
   v.literal("no_show"),
+);
+
+export const airstripCondition = v.union(
+  v.literal("open"),
+  v.literal("restricted"),
+  v.literal("waterlogged"),
+  v.literal("closed"),
 );
 
 export const timeConfidence = v.union(
@@ -196,6 +208,8 @@ export const notifyKind = v.union(
   v.literal("arrival_posted"),
   v.literal("arrival_updated"),
   v.literal("reconfirm_required"),
+  v.literal("reprotect"),
+  v.literal("strip_condition"),
   v.literal("escalation"),
   v.literal("duty_assigned"),
   v.literal("nudge"),
@@ -214,6 +228,10 @@ export const eventType = v.union(
   v.literal("arrival_rescheduled"),
   v.literal("arrival_acknowledged"),
   v.literal("arrival_reconfirm_requested"),
+  v.literal("arrival_reprotected"),
+  v.literal("arrival_landed"),
+  v.literal("vehicle_dispatched"),
+  v.literal("guest_collected"),
   v.literal("arrival_claimed"),
   v.literal("arrival_cancelled"),
   v.literal("flight_built"),
@@ -276,6 +294,9 @@ export default defineSchema({
     dutyContactId: v.optional(v.id("users")),
     backupContactId: v.optional(v.id("users")),
     opsPhone: v.optional(v.string()),
+    // "Guests at the strip N minutes before pickup" — the default report offset
+    // a movement inherits unless overridden per leg.
+    defaultReportOffsetMinutes: v.optional(v.number()),
     carryOverPolicy: v.optional(carryOverPolicy),
     carryOverCapDays: v.optional(v.number()),
     leaveYearStartMonth: v.optional(v.number()), // 1 = January
@@ -303,6 +324,11 @@ export default defineSchema({
     ...geo,
     surface: v.optional(v.string()), // murram | grass | tarmac
     lengthM: v.optional(v.number()),
+    // Live operability, set by the strip side; flows onto both boards and can
+    // shift pickup timing ("waterlogged — 4x4 only").
+    condition: v.optional(airstripCondition),
+    conditionNote: v.optional(v.string()),
+    conditionUpdatedAt: v.optional(v.number()),
     ...audit,
   })
     .index("by_name", ["name"])
@@ -375,6 +401,11 @@ export default defineSchema({
     origin: v.string(),
     destinationLabel: v.string(), // airstrip name or gate, for display
 
+    // The carrier as operated — top-level (not modeDetail) because it changes
+    // on re-protection and is often not a platform tenant (e.g. "Safarilink").
+    carrierName: v.optional(v.string()),
+    carrierOpsContact: v.optional(v.string()),
+
     // guest party — depth, not just a pax count
     guestName: v.string(), // lead guest / party label
     pax: v.number(), // total
@@ -405,6 +436,25 @@ export default defineSchema({
     createdBy: createdByParty,
     claimedByAirline: v.boolean(),
     claimedAt: v.optional(v.number()),
+
+    // ── the symmetric handshake: post → assign → acknowledge → set pickup time ──
+    // The poster owns the request fields (guest/party/mode/carrier/time); the
+    // assigned side owns the confirmation and the pickup time. Optional for
+    // legacy rows — resolved to lodge-side defaults in code.
+    postedBySide: v.optional(partySide),
+    assignedToSide: v.optional(partySide),
+    proposedPickupTime: v.optional(v.number()), // poster's suggested vehicle-meets-guests time
+    confirmedPickupTime: v.optional(v.number()), // set on acknowledgment by the assigned side
+    guestReportOffsetMinutes: v.optional(v.number()), // "be at the strip N mins early"
+
+    // re-protection (carrier/strip/time change) voids the ack — first-class
+    reprotectCount: v.optional(v.number()),
+    lastReprotectedAt: v.optional(v.number()),
+
+    // execution signals on the shared record — airstrip: landed; lodge: dispatched/collected
+    landedAt: v.optional(v.number()),
+    dispatchedAt: v.optional(v.number()),
+    collectedAt: v.optional(v.number()),
 
     // confirmation gate
     acknowledgedAt: v.optional(v.number()),
@@ -467,6 +517,10 @@ export default defineSchema({
     arrivalId: v.id("arrivalEvents"),
     propertyId: v.id("properties"),
     byUserId: v.id("users"),
+    // Which side of the handshake acknowledged (matches assignedToSide) and the
+    // pickup time it set at that moment. Optional for legacy lodge-only rows.
+    bySide: v.optional(partySide),
+    pickupTimeSet: v.optional(v.number()),
     at: v.number(),
     channel: notifyChannel,
     type: v.union(v.literal("initial"), v.literal("reconfirm")),

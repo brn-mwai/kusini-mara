@@ -34,7 +34,7 @@ function Login({ onEnter }: { onEnter: () => void }) {
         style={{ maxWidth: 380, width: "100%", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 32, textAlign: "center", boxShadow: "var(--shadow)" }}
       >
         <div className="sb-mono" style={{ width: 44, height: 44, margin: "0 auto 16px", fontSize: 19 }}>A</div>
-        <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.02em", marginBottom: 4 }}>Kusini Air</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-.02em", marginBottom: 4 }}>Kusini Airstrip</h1>
         <p style={{ color: "var(--text-2)", fontSize: 13.5, marginBottom: 20 }}>Mara Wings · charter operations</p>
         <div className="field" style={{ textAlign: "left" }}>
           <label>Email</label>

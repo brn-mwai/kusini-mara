@@ -75,6 +75,8 @@ const MODES = [
 ] as const;
 const modeMeta = (m: string) => MODES.find((x) => x.key === m) ?? MODES[0];
 
+const assignedToLodge = (a: any) => (a.assignedToSide ?? "lodge") === "lodge";
+
 function arrivalStatus(a: any): [PillTone, string, string] {
   switch (a.status) {
     case "requested": return ["mut", "ph-clock-countdown", "Awaiting transport"];
@@ -83,14 +85,20 @@ function arrivalStatus(a: any): [PillTone, string, string] {
     case "escalated": return ["risk", "ph-warning", "Escalated"];
     case "cancelled": return ["mut", "ph-x", "Cancelled"];
     case "no_show": return ["risk", "ph-user-minus", "No-show"];
+    case "reconfirm_required": return ["warn", "ph-arrows-clockwise", "Reconfirm"];
     case "acknowledged":
       return a.reconfirmRequested ? ["warn", "ph-arrows-clockwise", "Reconfirm"] : ["ok", "ph-check", "Confirmed"];
     case "scheduled":
-      return a.reconfirmRequested ? ["warn", "ph-arrows-clockwise", "Reconfirm"] : ["warn", "ph-bell-ringing", "Awaiting ack"];
+      if (a.reconfirmRequested) return ["warn", "ph-arrows-clockwise", "Reconfirm"];
+      return assignedToLodge(a)
+        ? ["warn", "ph-bell-ringing", "Awaiting your ack"]
+        : ["info", "ph-bell-ringing", "Awaiting strip"];
     default: return ["mut", "ph-question", a.status];
   }
 }
-const canAck = (a: any) => a.status === "scheduled" || a.status === "escalated";
+// The lodge may only acknowledge movements assigned to its side of the handshake.
+const canAck = (a: any) =>
+  ["scheduled", "escalated", "reconfirm_required"].includes(a.status) && assignedToLodge(a);
 
 function transportRef(a: any): string {
   const d = a.modeDetail ?? {};
@@ -188,8 +196,8 @@ function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
       </div>
 
       <div className="stats">
-        <Stat icon="ph-bell-ringing" tone="amber" label="Awaiting acknowledgment" value={awaiting} sub="confirm to close the loop" />
-        <Stat icon="ph-check-circle" tone="green" label="Confirmed" value={confirmed} sub="property acknowledged" />
+        <Stat icon="ph-bell-ringing" tone="amber" label="Awaiting your ack" value={awaiting} sub="acknowledge & set pickup time" />
+        <Stat icon="ph-check-circle" tone="green" label="Confirmed" value={confirmed} sub="pickup time agreed" />
         <Stat icon="ph-warning" tone="red" label="Escalated" value={escalated} sub="unacknowledged in window" />
         <Stat icon="ph-path" tone="blue" label="Total" value={rows.length} sub="all transport modes" />
       </div>
@@ -218,7 +226,17 @@ function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
           },
           {
             key: "time", label: "Time",
-            render: (a) => { const cd = fmt.countdown(a.scheduledTime); return (<><div className="eta mono">{fmt.hhmm(a.scheduledTime)}</div><div className={`cd ${cd.overdue ? "risk" : ""}`}>{cd.text}</div></>); },
+            render: (a) => {
+              const cd = fmt.countdown(a.scheduledTime);
+              return (
+                <>
+                  <div className="eta mono">{fmt.hhmm(a.scheduledTime)}</div>
+                  {a.confirmedPickupTime
+                    ? <div className="cd">pickup {fmt.hhmm(a.confirmedPickupTime)}</div>
+                    : <div className={`cd ${cd.overdue ? "risk" : ""}`}>{cd.text}</div>}
+                </>
+              );
+            },
           },
           { key: "status", label: "Status", render: (a) => { const [t, i, l] = arrivalStatus(a); return <Pill tone={t} icon={i}>{l}</Pill>; } },
           {
@@ -249,11 +267,13 @@ function BoardView({ view, rows, me }: { view: string; rows: any[]; me: Me }) {
 // ── Arrival detail drawer (everything about one arrival + actions) ────────────
 function ArrivalDetailModal({ arrivalId, onClose }: { arrivalId: Id<"arrivalEvents">; onClose: () => void }) {
   const a = useQuery(api.arrivals.get, { arrivalId });
-  const acknowledge = useMutation(api.arrivals.acknowledge);
   const cancel = useMutation(api.arrivals.cancel);
+  const dispatchVehicle = useMutation(api.arrivals.markDispatched);
+  const collect = useMutation(api.arrivals.markCollected);
   const toast = useToast();
   const [assign, setAssign] = useState(false);
   const [placeRoom, setPlaceRoom] = useState(false);
+  const [ackOpen, setAckOpen] = useState(false);
 
   if (!a) {
     return <Modal title="Arrival" onClose={onClose} footer={<Btn onClick={onClose}>Close</Btn>}><div className="reg">Loading…</div></Modal>;
@@ -272,8 +292,11 @@ function ArrivalDetailModal({ arrivalId, onClose }: { arrivalId: Id<"arrivalEven
   if (d.pilotContact) detailRows.push(["Pilot contact", d.pilotContact]);
   if (d.routeNotes) detailRows.push(["Route", d.routeNotes]);
 
-  const onAck = async () => { try { await acknowledge({ arrivalId }); toast("Acknowledged", "ph-check-circle"); } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); } };
   const onCancel = async () => { try { await cancel({ arrivalId }); toast("Arrival cancelled", "ph-x-circle"); onClose(); } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); } };
+  const onDispatch = async () => { try { await dispatchVehicle({ arrivalId }); toast("Vehicle dispatched", "ph-van"); } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); } };
+  const onCollect = async () => { try { await collect({ arrivalId }); toast("Guests collected — complete", "ph-flag-checkered"); } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); } };
+  const strip = a.stripCondition as { condition: string; note: string | null } | null;
+  const degraded = strip !== null && strip.condition !== "open";
 
   return (
     <>
@@ -287,7 +310,9 @@ function ArrivalDetailModal({ arrivalId, onClose }: { arrivalId: Id<"arrivalEven
             <div style={{ flex: 1 }} />
             <Btn icon="ph-bed" onClick={() => setPlaceRoom(true)}>Place in room</Btn>
             <Btn icon="ph-user-plus" onClick={() => setAssign(true)}>Assign ground</Btn>
-            {canAck(a) && <Btn variant="primary" icon="ph-check" onClick={onAck}>{a.reconfirmRequested ? "Reconfirm" : "Acknowledge"}</Btn>}
+            {a.status === "acknowledged" && !a.dispatchedAt && <Btn icon="ph-van" onClick={onDispatch}>Vehicle dispatched</Btn>}
+            {a.status === "in_transit" && !a.collectedAt && <Btn variant="primary" icon="ph-flag-checkered" onClick={onCollect}>Collected</Btn>}
+            {canAck(a) && <Btn variant="primary" icon="ph-check" onClick={() => setAckOpen(true)}>{a.reconfirmRequested || a.status === "reconfirm_required" ? "Reconfirm & set time" : "Acknowledge & set time"}</Btn>}
           </>
         }
       >
@@ -295,10 +320,20 @@ function ArrivalDetailModal({ arrivalId, onClose }: { arrivalId: Id<"arrivalEven
           <Pill tone={tone} icon={icon}>{label}</Pill>
           <span className="tag"><i className={`ph ${modeMeta(a.mode).icon}`} style={{ marginRight: 5 }} />{modeMeta(a.mode).label}</span>
           {a.vip && <span className="tag">VIP</span>}
+          {(a.reprotectCount ?? 0) > 0 && <span className="tag"><i className="ph ph-arrows-clockwise" style={{ marginRight: 5 }} />re-protected ×{a.reprotectCount}</span>}
         </div>
+
+        {degraded && strip && (
+          <div className="banner" style={{ color: "var(--risk-fg)", background: "var(--risk-bg)", marginBottom: 10 }}>
+            <i className="ph ph-warning" /> Strip {strip.condition}{strip.note ? ` — ${strip.note}` : ""}
+          </div>
+        )}
 
         <DetailRow k="Route" v={`${a.origin} → ${a.destinationLabel}`} />
         <DetailRow k="Time" v={`${fmt.hhmm(a.scheduledTime)} · ${new Date(a.scheduledTime).toDateString()}${a.timezone ? ` · ${a.timezone}` : ""}`} />
+        <DetailRow k="Pickup" v={a.confirmedPickupTime ? `${fmt.hhmm(a.confirmedPickupTime)} · confirmed` : `${fmt.hhmm(a.pickupTime)} · proposed`} />
+        <DetailRow k="Guest report" v={`${fmt.hhmm(a.guestReportTime)} · at the ${a.airstripId ? "strip" : "gate"}`} />
+        {a.carrierName ? <DetailRow k="Carrier" v={`${a.carrierName}${a.carrierOpsContact ? ` · ops ${a.carrierOpsContact}` : ""}`} /> : null}
         <DetailRow k="Party" v={`${a.pax} pax${a.leadGuestNationality ? ` · ${a.leadGuestNationality}` : ""}`} />
         {a.special?.length ? <DetailRow k="Special" v={a.special.join(", ")} /> : null}
         {a.luggage ? <DetailRow k="Luggage" v={a.luggage} /> : null}
@@ -333,7 +368,40 @@ function ArrivalDetailModal({ arrivalId, onClose }: { arrivalId: Id<"arrivalEven
       </Modal>
       {assign && <AssignModal arrival={a} onClose={() => setAssign(false)} />}
       {placeRoom && <RoomPlaceModal arrival={a} onClose={() => setPlaceRoom(false)} />}
+      {ackOpen && <AckTimeModal arrival={a} onClose={() => setAckOpen(false)} />}
     </>
+  );
+}
+
+// Acknowledge + set the pickup time — the assigned side's half of the handshake.
+// Accepting the proposal as-is or adjusting it both confirm the movement.
+function AckTimeModal({ arrival, onClose }: { arrival: any; onClose: () => void }) {
+  const acknowledge = useMutation(api.arrivals.acknowledge);
+  const toast = useToast();
+  const proposed = new Date(arrival.pickupTime ?? arrival.scheduledTime);
+  const [hh, setHh] = useState(String(proposed.getHours()).padStart(2, "0"));
+  const [mm, setMm] = useState(String(proposed.getMinutes()).padStart(2, "0"));
+
+  const submit = async () => {
+    const t = new Date(arrival.pickupTime ?? arrival.scheduledTime);
+    t.setHours(Number(hh), Number(mm), 0, 0);
+    try {
+      await acknowledge({ arrivalId: arrival._id, pickupTime: t.getTime() });
+      toast(`Acknowledged — pickup ${fmt.hhmm(t.getTime())}`, "ph-check-circle");
+      onClose();
+    } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
+  };
+
+  return (
+    <Modal title={`Acknowledge · ${arrival.guestName}`} onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-check" onClick={submit}>Confirm pickup time</Btn></>}>
+      <p className="reg" style={{ marginBottom: 10 }}>
+        Confirm you have this movement and set the time the vehicle meets the guests. Proposed: <span className="mono">{fmt.hhmm(arrival.pickupTime ?? arrival.scheduledTime)}</span>.
+      </p>
+      <Field label="Pickup time">
+        <TimeField hour={hh} minute={mm} onChange={(h, m) => { setHh(h); setMm(m); }} />
+      </Field>
+    </Modal>
   );
 }
 

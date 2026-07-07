@@ -1,4 +1,4 @@
-// Kusini Air service worker — app-shell cache for installability. Live data
+// Kusini Airstrip service worker — app-shell cache for installability. Live data
 // flows over Convex's WebSocket; this only keeps the shell available offline.
 const CACHE = "kusini-air-v1";
 const SHELL = ["/", "/manifest.webmanifest", "/icon.svg"];

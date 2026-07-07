@@ -86,8 +86,14 @@ export const run = internalMutation({
     ];
     const strips: Record<string, Id<"airstrips">> = {};
     for (const [name, code, region, lat, lng] of stripData) {
+      // Musiara waterlogged after overnight rain — the evidence scenario the
+      // condition signal exists for.
+      const waterlogged = name === "Musiara";
       strips[name] = await ctx.db.insert("airstrips", {
         name, code, region, timezone: TZ, latitude: lat, longitude: lng, surface: "murram",
+        condition: waterlogged ? "waterlogged" : "open",
+        conditionNote: waterlogged ? "Soft after rain — 4x4 only to the strip" : undefined,
+        conditionUpdatedAt: now - 2 * HOUR,
       });
     }
 
@@ -137,7 +143,7 @@ export const run = internalMutation({
       const property = await ctx.db.insert("properties", {
         operatorId, name, region, shortCode: code, timezone: TZ, countryCode: "KE",
         carryOverPolicy: "carry_capped", carryOverCapDays: 5, leaveYearStartMonth: 1,
-        opsPhone: phonePool(phoneSeq++),
+        opsPhone: phonePool(phoneSeq++), defaultReportOffsetMinutes: 30,
       });
       const duty = await ctx.db.insert("users", {
         scope: "property", propertyId: property, tokenIdentifier: `seed|${code}-duty`,
@@ -294,15 +300,22 @@ export const run = internalMutation({
       operatorId: Id<"operators">;
       dir: "arrival" | "departure"; guest: string; pax: number; origin: string; dest: string;
       strip?: string; flight?: Id<"flights"> | null; off: number; h: number; m: number;
-      status: "requested" | "scheduled" | "acknowledged" | "in_transit" | "completed";
+      status: "requested" | "scheduled" | "acknowledged" | "reconfirm_required" | "in_transit" | "completed";
       airline?: boolean; modeDetail?: any; special?: string[]; vip?: boolean; nationality?: string;
       escalateSoon?: boolean; guests?: string[]; assignVehicleIdx?: number[]; roomIdx?: number;
+      reprotect?: { carrier: string; opsContact?: string }; // re-protected onto another carrier
     };
+    const AIR_MODES = ["charter", "scheduled", "helicopter", "self_fly"];
     const mk = async (a: AOpts) => {
       const correlationId = newCorrelationId();
       const time = dayAt(a.off, a.h, a.m);
       const acked = a.status === "acknowledged" || a.status === "in_transit" || a.status === "completed";
-      const deadline = a.escalateSoon ? now + 90_000 : (a.status === "scheduled" ? time - win : undefined);
+      const awaitingAck = a.status === "scheduled" || a.status === "reconfirm_required";
+      const deadline = a.escalateSoon ? now + 90_000 : (awaitingAck ? time - win : undefined);
+      // The handshake: the lodge posts and assigns the other side — arrivals at
+      // a strip to the airstrip side, departures (and ground modes) to itself.
+      const assignedToSide =
+        AIR_MODES.includes(a.mode) && a.strip && a.dir === "arrival" ? "airstrip" as const : "lodge" as const;
       const id = await ctx.db.insert("arrivalEvents", {
         mode: a.mode, direction: a.dir, propertyId: a.property.property, operatorId: a.operatorId,
         airlineId: a.airline ? mara : undefined, airstripId: a.strip ? strips[a.strip] : undefined,
@@ -314,17 +327,35 @@ export const run = internalMutation({
         estimatedTime: a.status === "in_transit" ? time + 5 * 60000 : undefined,
         actualTime: a.status === "completed" ? time : undefined,
         status: a.status, flightId: a.flight ?? undefined, modeDetail: a.modeDetail,
-        createdBy: "property", claimedByAirline: false, reconfirmRequested: false,
+        createdBy: "property", claimedByAirline: false,
+        postedBySide: "lodge", assignedToSide,
+        proposedPickupTime: time, guestReportOffsetMinutes: 30,
+        confirmedPickupTime: acked ? time : undefined,
+        carrierName: a.reprotect?.carrier, carrierOpsContact: a.reprotect?.opsContact,
+        reprotectCount: a.reprotect ? 1 : undefined,
+        lastReprotectedAt: a.reprotect ? now - HOUR : undefined,
+        reconfirmRequested: a.status === "reconfirm_required",
         escalationDeadline: deadline, acknowledgedAt: acked ? time - 4 * HOUR : undefined,
         correlationId, sourceSystem: "reservations", externalRef: "RES-" + Math.abs(time % 1000000),
       });
       nArrivals++;
       await recordEvent(ctx, {
         correlationId, propertyId: a.property.property, airlineId: a.airline ? mara : undefined,
-        type: "arrival_created", summary: `${a.mode} ${a.dir} for ${a.guest}`, arrivalId: id,
+        type: "arrival_created", summary: `${a.mode} ${a.dir} posted for ${a.guest} — assigned to ${assignedToSide}`, arrivalId: id,
       });
+      if (a.reprotect) {
+        await recordEvent(ctx, {
+          correlationId, propertyId: a.property.property, airlineId: a.airline ? mara : undefined,
+          type: "arrival_reprotected",
+          summary: `${a.guest} re-protected onto ${a.reprotect.carrier} — prior acknowledgment void`,
+          arrivalId: id, meta: { toCarrier: a.reprotect.carrier },
+        });
+      }
       if (acked) {
-        await ctx.db.insert("acknowledgments", { arrivalId: id, propertyId: a.property.property, byUserId: a.property.duty, at: time - 4 * HOUR, channel: "mock", type: "initial" });
+        await ctx.db.insert("acknowledgments", {
+          arrivalId: id, propertyId: a.property.property, byUserId: assignedToSide === "airstrip" ? opsUser : a.property.duty,
+          bySide: assignedToSide, pickupTimeSet: time, at: time - 4 * HOUR, channel: "mock", type: "initial",
+        });
         await ctx.db.insert("notifications", { at: time - 4 * HOUR, channel: "sms", status: "sent", toPhone: "+254700000001", arrivalId: id, propertyId: a.property.property, airlineId: a.airline ? mara : undefined, kind: "arrival_posted", body: `New ${a.mode} ${a.dir}: ${a.guest} (${a.pax} pax)`, delivered: false, attempts: 1, correlationId });
       }
       for (const g of a.guests ?? []) {
@@ -381,6 +412,9 @@ export const run = internalMutation({
     await mk({ mode: "helicopter", property: tp, operatorId: maraCollection, dir: "arrival", guest: "Petrova party", pax: 2, origin: "Loisaba", dest: "Helipad", off: 0, h: 12, m: 30, status: "scheduled", nationality: "Russia", modeDetail: { operator: "Tropic Air", landingPoint: "North helipad" } });
     await mk({ mode: "charter", property: sm, operatorId: sandRiver, dir: "arrival", guest: "Garcia party", pax: 4, origin: "Wilson", dest: "Keekorok", strip: "Keekorok", flight: null, off: 0, h: 16, m: 0, status: "requested", airline: true, nationality: "Spain" });
     await mk({ mode: "road", property: lh, operatorId: laragai, dir: "arrival", guest: "Hendricks party", pax: 2, origin: "Nanyuki", dest: "Main gate", off: 0, h: 13, m: 0, status: "scheduled", nationality: "South Africa", modeDetail: { operator: "Laikipia Transfers", vehicle: "Land Cruiser" } });
+    // The evidence scenario: "re-protect Mombaertsx3 onto Safarilink… pick up
+    // from Loisaba at 11h25" — prior ack void, strip side must re-confirm.
+    await mk({ mode: "charter", property: lh, operatorId: laragai, dir: "arrival", guest: "Mombaerts party", pax: 3, origin: "Wilson", dest: "Loisaba", strip: "Loisaba", flight: null, off: 0, h: 11, m: 25, status: "reconfirm_required", airline: true, nationality: "Belgium", reprotect: { carrier: "Safarilink", opsContact: "+254709786000" } });
 
     // activate subscriptions counts
     return { operators: 3, properties: 6, staff: nStaff, arrivals: nArrivals, flights: 9, guests: nGuests };

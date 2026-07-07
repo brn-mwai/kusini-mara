@@ -32,9 +32,14 @@ const NAV: NavSection[] = [
   {
     sec: "Operations",
     items: [
+      { key: "acks", label: "Acknowledge", icon: "ph-check-square" },
       { key: "flights", label: "Flights", icon: "ph-airplane-in-flight" },
       { key: "requests", label: "Requests", icon: "ph-tray-arrow-down" },
     ],
+  },
+  {
+    sec: "Strip",
+    items: [{ key: "strips", label: "Strip conditions", icon: "ph-map-pin" }],
   },
   {
     sec: "Fleet",
@@ -47,8 +52,10 @@ const NAV: NavSection[] = [
 ];
 
 const TITLES: Record<string, string> = {
+  acks: "Acknowledge",
   flights: "Flights",
   requests: "Requests",
+  strips: "Strip conditions",
   aircraft: "Aircraft",
   pilots: "Pilots",
   reports: "Reports",
@@ -64,10 +71,26 @@ function flightStatusPill(s: string): [PillTone, string, string] {
   return ["mut", "ph-clock", "Planned"];
 }
 
+function legStatusPill(m: any): [PillTone, string, string] {
+  if (m.status === "escalated") return ["risk", "ph-warning", "escalated"];
+  if (m.status === "reconfirm_required" || m.reconfirmRequested) return ["warn", "ph-arrows-clockwise", "reconfirm"];
+  if (m.status === "acknowledged" || m.status === "in_transit") return ["ok", "ph-check", m.status];
+  if (m.status === "completed") return ["mut", "ph-check", "completed"];
+  return ["warn", "ph-bell-ringing", m.status];
+}
+
+const CONDITIONS = ["open", "restricted", "waterlogged", "closed"] as const;
+function conditionPill(c: string | null | undefined): [PillTone, string] {
+  if (c === "waterlogged" || c === "closed") return ["risk", c];
+  if (c === "restricted") return ["warn", c];
+  return ["ok", c ?? "open"];
+}
+
 export function Dashboard({ me }: { me: Me }) {
-  const [view, setView] = useState("flights");
+  const [view, setView] = useState("acks");
   const flights = useQuery(api.flights.board, {}) ?? [];
   const requests = useQuery(api.flights.requests, {}) ?? [];
+  const pendingAcks = useQuery(api.airstrip.pendingAcks, {}) ?? [];
   const notifs = useQuery(api.notifications.list, { app: "air" }) ?? [];
 
   const escalated = flights.filter((f: any) => f.escalated).length;
@@ -93,34 +116,242 @@ export function Dashboard({ me }: { me: Me }) {
 
   return (
     <Shell
-      appName="Kusini Air"
+      appName="Kusini Airstrip"
       shortCode={me.org.shortCode}
       navSections={NAV.map((s) => ({
         ...s,
-        items: s.items.map((i) =>
-          i.key === "requests" && requests.length ? { ...i, badge: requests.length } : i,
-        ),
+        items: s.items.map((i) => {
+          if (i.key === "requests" && requests.length) return { ...i, badge: requests.length };
+          if (i.key === "acks" && pendingAcks.length) return { ...i, badge: pendingAcks.length };
+          return i;
+        }),
       }))}
       recents={[
         { code: "5Y-BMF", label: "in flight" },
         { code: "5Y-CAC", label: "planned" },
       ]}
       activePage={view}
-      crumbPage={TITLES[view] ?? "Flights"}
+      crumbPage={TITLES[view] ?? "Acknowledge"}
       onNavigate={setView}
       user={{ name: me.name, sub: `${me.role} · ${me.org.name}`, initials: fmt.initials(me.name) }}
       pilot={{ icon: "ph-airplane-tilt", label: "Fleet today", fill: 60, meta: `${flights.filter((f: any) => f.status === "in_flight").length} flying` }}
-      bellBadge={escalated + requests.length || undefined}
+      bellBadge={escalated + requests.length + pendingAcks.length || undefined}
       paletteItems={paletteItems}
     >
+      {view === "acks" && <AcksView pending={pendingAcks} />}
       {view === "flights" && <FlightsView flights={flights} />}
       {view === "requests" && <RequestsView requests={requests} flights={flights} />}
+      {view === "strips" && <StripsView />}
       {view === "aircraft" && <AircraftView />}
       {view === "pilots" && <PilotsView />}
       {view === "reports" && <ReportsView flights={flights} requests={requests} />}
       {view === "notifications" && <NotificationsView notifs={notifs} />}
       {view === "settings" && <SettingsView me={me} />}
     </Shell>
+  );
+}
+
+// ── Acknowledge (the strip side's inbox: movements assigned to it) ────────────
+function AcksView({ pending }: { pending: any[] }) {
+  const [ackFor, setAckFor] = useState<any | null>(null);
+  const [reprotectFor, setReprotectFor] = useState<any | null>(null);
+  const escalated = pending.filter((m) => m.status === "escalated").length;
+  const reconfirm = pending.filter((m) => m.status === "reconfirm_required" || m.reconfirmRequested).length;
+
+  return (
+    <>
+      <div className="page-header-row">
+        <div>
+          <h1 className="page-title">Acknowledge</h1>
+          <p className="page-subtitle">Movements assigned to the strip side — confirm and set the pickup time</p>
+        </div>
+      </div>
+
+      <div className="stats">
+        <Stat icon="ph-bell-ringing" tone="amber" label="Awaiting your ack" value={pending.length} sub="acknowledge & set pickup time" />
+        <Stat icon="ph-arrows-clockwise" tone="amber" label="Reconfirm" value={reconfirm} sub="retimed or re-protected" />
+        <Stat icon="ph-warning" tone="red" label="Escalated" value={escalated} sub="unacknowledged in window" />
+        <Stat icon="ph-airplane-landing" tone="blue" label="Strips served" value={new Set(pending.map((m) => m.stripName)).size} />
+      </div>
+
+      <DataTable<any>
+        rows={pending}
+        noun="movement"
+        getRowKey={(m) => m._id}
+        searchText={(m) => `${m.guestName} ${m.propertyName} ${m.stripName}`}
+        searchPlaceholder="Search guest, lodge, strip…"
+        rowClassName={(m) => (m.status === "escalated" ? "esc" : "attn")}
+        empty={{ icon: "ph-check-circle", title: "Nothing awaiting acknowledgment." }}
+        columns={[
+          { key: "guest", label: "Guest", render: (m) => (<><div className="flt">{m.guestName}</div><div className="reg">{m.pax} pax · {m.propertyName}</div></>) },
+          {
+            key: "strip", label: "Airstrip",
+            render: (m) => (<><div className="flt">{m.stripName}</div>{m.stripCondition && m.stripCondition !== "open" ? <div className="reg" style={{ color: "var(--risk-fg)" }}>{m.stripCondition}</div> : null}</>),
+          },
+          {
+            key: "leg", label: "Leg",
+            render: (m) => (<span className="route"><i className={`ph ${m.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} />{m.direction}</span>),
+          },
+          { key: "carrier", label: "Carrier", render: (m) => m.carrierName ? (<><div className="flt">{m.carrierName}</div><div className="reg">re-protected ×{m.reprotectCount ?? 1}</div></>) : <span className="reg">own metal</span> },
+          { key: "time", label: "Proposed pickup", align: "right", render: (m) => <span className="mono">{fmt.hhmm(m.pickupTime)}</span> },
+          { key: "status", label: "Status", render: (m) => { const [t, i, l] = legStatusPill(m); return <Pill tone={t} icon={i}>{l}</Pill>; } },
+          {
+            key: "act", label: "", align: "right",
+            render: (m) => (
+              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                <Btn icon="ph-arrows-clockwise" onClick={() => setReprotectFor(m)}>Re-protect</Btn>
+                <button className="ackbtn" onClick={() => setAckFor(m)}>
+                  <i className="ph ph-check" />{m.status === "reconfirm_required" || m.reconfirmRequested ? "Reconfirm" : "Acknowledge"}
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+      {ackFor && <StripAckModal movement={ackFor} onClose={() => setAckFor(null)} />}
+      {reprotectFor && <ReprotectModal movement={reprotectFor} onClose={() => setReprotectFor(null)} />}
+    </>
+  );
+}
+
+// Acknowledge + set the pickup time — the strip side's half of the handshake.
+function StripAckModal({ movement, onClose }: { movement: any; onClose: () => void }) {
+  const acknowledge = useMutation(api.airstrip.acknowledge);
+  const toast = useToast();
+  const proposed = new Date(movement.pickupTime ?? movement.scheduledTime);
+  const [hh, setHh] = useState(String(proposed.getHours()).padStart(2, "0"));
+  const [mm, setMm] = useState(String(proposed.getMinutes()).padStart(2, "0"));
+
+  const submit = async () => {
+    const t = new Date(movement.pickupTime ?? movement.scheduledTime);
+    t.setHours(Number(hh), Number(mm), 0, 0);
+    try {
+      await acknowledge({ arrivalId: movement._id, pickupTime: t.getTime() });
+      toast(`Acknowledged — pickup ${fmt.hhmm(t.getTime())}`, "ph-check-circle");
+      onClose();
+    } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
+  };
+
+  return (
+    <Modal title={`Acknowledge · ${movement.guestName}`} onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-check" onClick={submit}>Confirm pickup time</Btn></>}>
+      <p className="reg" style={{ marginBottom: 10 }}>
+        {movement.propertyName} · {movement.stripName} · {movement.pax} pax. Confirm the strip has this movement and set the vehicle-meets-guests time. Proposed: <span className="mono">{fmt.hhmm(movement.pickupTime ?? movement.scheduledTime)}</span>.
+      </p>
+      <Field label="Pickup time">
+        <TimeField hour={hh} minute={mm} onChange={(h, m) => { setHh(h); setMm(m); }} />
+      </Field>
+    </Modal>
+  );
+}
+
+// Re-protect: carrier/strip/time change — voids the prior ack, re-notifies both sides.
+function ReprotectModal({ movement, onClose }: { movement: any; onClose: () => void }) {
+  const reprotect = useMutation(api.airstrip.reprotect);
+  const toast = useToast();
+  const [carrier, setCarrier] = useState("");
+  const [opsContact, setOpsContact] = useState("");
+  const [reason, setReason] = useState("");
+  const when = new Date(movement.scheduledTime);
+  const [hh, setHh] = useState(String(when.getHours()).padStart(2, "0"));
+  const [mm, setMm] = useState(String(when.getMinutes()).padStart(2, "0"));
+
+  const submit = async () => {
+    const t = new Date(movement.scheduledTime);
+    t.setHours(Number(hh), Number(mm), 0, 0);
+    try {
+      await reprotect({
+        arrivalId: movement._id,
+        carrierName: carrier || undefined,
+        carrierOpsContact: opsContact || undefined,
+        scheduledTime: t.getTime(),
+        reason: reason || undefined,
+      });
+      toast(`${movement.guestName} re-protected`, "ph-arrows-clockwise");
+      onClose();
+    } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
+  };
+
+  return (
+    <Modal title={`Re-protect · ${movement.guestName}`} onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-arrows-clockwise" onClick={submit}>Re-protect</Btn></>}>
+      <p className="reg" style={{ marginBottom: 10 }}>
+        Changes the carrier/time and voids the prior acknowledgment — both sides are re-notified and must re-confirm.
+      </p>
+      <Field label="New carrier (blank = keep)"><input value={carrier} onChange={(e) => setCarrier(e.target.value)} placeholder="e.g. Safarilink" /></Field>
+      <Field label="Carrier ops contact"><input value={opsContact} onChange={(e) => setOpsContact(e.target.value)} placeholder="+254…" /></Field>
+      <Field label="New time">
+        <TimeField hour={hh} minute={mm} onChange={(h, m) => { setHh(h); setMm(m); }} />
+      </Field>
+      <Field label="Reason"><input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. aircraft tech stop" /></Field>
+    </Modal>
+  );
+}
+
+// ── Strip conditions (the strip's live operability register) ──────────────────
+function StripsView() {
+  const strips = useQuery(api.airstrip.strips, {}) ?? [];
+  const [editFor, setEditFor] = useState<any | null>(null);
+  return (
+    <>
+      <div className="page-header-row">
+        <div>
+          <h1 className="page-title">Strip conditions</h1>
+          <p className="page-subtitle">Live operability — a degraded strip alerts every lodge that uses it</p>
+        </div>
+      </div>
+      <DataTable<any>
+        rows={strips}
+        noun="airstrip"
+        getRowKey={(s) => s._id}
+        searchText={(s) => `${s.name} ${s.code ?? ""} ${s.region}`}
+        empty={{ icon: "ph-map-pin", title: "No airstrips on record." }}
+        columns={[
+          { key: "name", label: "Airstrip", render: (s) => (<><div className="flt">{s.name}</div><div className="reg mono">{s.code ?? "—"}</div></>) },
+          { key: "region", label: "Region", render: (s) => s.region },
+          { key: "surface", label: "Surface", render: (s) => s.surface ?? <span className="reg">—</span> },
+          {
+            key: "condition", label: "Condition",
+            render: (s) => { const [tone, label] = conditionPill(s.condition); return <Pill tone={tone} icon="ph-traffic-cone">{label}</Pill>; },
+          },
+          { key: "note", label: "Note", render: (s) => s.conditionNote ?? <span className="reg">—</span> },
+          {
+            key: "act", label: "", align: "right",
+            render: (s) => (
+              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                <Btn icon="ph-pencil-simple" onClick={() => setEditFor(s)}>Update</Btn>
+              </div>
+            ),
+          },
+        ]}
+      />
+      {editFor && <ConditionModal strip={editFor} onClose={() => setEditFor(null)} />}
+    </>
+  );
+}
+
+function ConditionModal({ strip, onClose }: { strip: any; onClose: () => void }) {
+  const setCondition = useMutation(api.airstrip.setCondition);
+  const toast = useToast();
+  const [condition, setConditionValue] = useState<string>(strip.condition ?? "open");
+  const [note, setNote] = useState(strip.conditionNote ?? "");
+  const submit = async () => {
+    try {
+      await setCondition({ airstripId: strip._id, condition: condition as any, note: note || undefined });
+      toast(`${strip.name} set to ${condition}`, "ph-traffic-cone");
+      onClose();
+    } catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
+  };
+  return (
+    <Modal title={`Condition · ${strip.name}`} onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" icon="ph-check" onClick={submit}>Set condition</Btn></>}>
+      <Field label="Condition">
+        <Select value={condition} onChange={setConditionValue}
+          options={CONDITIONS.map((c) => ({ value: c, label: c }))} />
+      </Field>
+      <Field label="Note"><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. soft after rain — 4x4 only" /></Field>
+      <p className="reg" style={{ marginTop: 4 }}>Anything other than open sends an SMS heads-up to every lodge linked to this strip.</p>
+    </Modal>
   );
 }
 
@@ -149,7 +380,7 @@ function FlightsView({ flights }: { flights: any[] }) {
       <div className="stats">
         <Stat icon="ph-airplane-in-flight" tone="blue" label="In flight" value={flying} />
         <Stat icon="ph-airplane" tone="green" label="Flights today" value={flights.length} />
-        <Stat icon="ph-bell-ringing" tone="amber" label="Awaiting lodge ack" value={awaiting} sub={`${escal} with escalation`} />
+        <Stat icon="ph-bell-ringing" tone="amber" label="Awaiting ack" value={awaiting} sub={`${escal} with escalation`} />
         <Stat icon="ph-warning" tone="red" label="Escalated" value={escal} />
       </div>
 
@@ -231,35 +462,65 @@ function FlightsView({ flights }: { flights: any[] }) {
 }
 
 function ManifestModal({ flight, onClose }: { flight: any; onClose: () => void }) {
+  const acknowledge = useMutation(api.airstrip.acknowledge);
+  const markLanded = useMutation(api.airstrip.markLanded);
+  const toast = useToast();
   const legs = [...flight.legs].sort((a: any, b: any) => a.scheduledTime - b.scheduledTime);
+
+  const canStripAck = (m: any) =>
+    m.assignedToSide === "airstrip" && ["scheduled", "reconfirm_required", "escalated"].includes(m.status);
+  const canLand = (m: any) => ["acknowledged", "in_transit"].includes(m.status) && !m.landedAt;
+
+  const onAck = async (m: any) => {
+    try { await acknowledge({ arrivalId: m.id }); toast(`Acknowledged ${m.guestName}`, "ph-check-circle"); }
+    catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
+  };
+  const onLand = async (m: any) => {
+    try { await markLanded({ arrivalId: m.id }); toast(`${m.guestName} landed at ${m.airstrip}`, "ph-airplane-landing"); }
+    catch (e: any) { toast(e.message ?? "Failed", "ph-warning"); }
+  };
+
   return (
-    <Modal title={`Manifest · ${flight.aircraftReg} (${flight.code})`} onClose={onClose}
+    <Modal title={`Manifest · ${flight.aircraftReg} (${flight.code})`} onClose={onClose} wide
       footer={<Btn variant="primary" onClick={onClose}>Close</Btn>}>
       {legs.length === 0 ? (
         <EmptyState icon="ph-users">No legs on this flight.</EmptyState>
       ) : (
         <table>
-          <thead><tr><th>Guest</th><th>Leg</th><th>Airstrip</th><th>Pax</th><th>Status</th></tr></thead>
+          <thead><tr><th>Guest</th><th>Leg</th><th>Airstrip</th><th>Pax</th><th>Pickup</th><th>Status</th><th /></tr></thead>
           <tbody>
-            {legs.map((m: any) => (
-              <tr key={m.id}>
-                <td className="flt">{m.guestName}</td>
-                <td>
-                  <span className="route">
-                    <i className={`ph ${m.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} />
-                    {m.direction === "arrival" ? "drop" : "pick-up"}
-                  </span>
-                </td>
-                <td>{m.airstrip}</td>
-                <td>{m.pax}</td>
-                <td>
-                  <Pill tone={m.status === "acknowledged" || m.status === "in_flight" ? "ok" : m.status === "escalated" ? "risk" : "warn"}
-                    icon={m.status === "acknowledged" || m.status === "in_flight" ? "ph-check" : m.status === "escalated" ? "ph-warning" : "ph-bell-ringing"}>
-                    {m.status}
-                  </Pill>
-                </td>
-              </tr>
-            ))}
+            {legs.map((m: any) => {
+              const [tone, icon, label] = legStatusPill(m);
+              return (
+                <tr key={m.id}>
+                  <td className="flt">{m.guestName}</td>
+                  <td>
+                    <span className="route">
+                      <i className={`ph ${m.direction === "arrival" ? "ph-airplane-landing arr" : "ph-airplane-takeoff dep"}`} />
+                      {m.direction === "arrival" ? "drop" : "pick-up"}
+                    </span>
+                  </td>
+                  <td>{m.airstrip}</td>
+                  <td>{m.pax}</td>
+                  <td className="mono">
+                    {m.confirmedPickupTime
+                      ? fmt.hhmm(m.confirmedPickupTime)
+                      : m.proposedPickupTime
+                        ? `${fmt.hhmm(m.proposedPickupTime)}?`
+                        : "—"}
+                  </td>
+                  <td><Pill tone={tone} icon={icon}>{label}</Pill></td>
+                  <td>
+                    <div className="row-actions">
+                      {canStripAck(m) && (
+                        <button className="ackbtn" onClick={() => onAck(m)}><i className="ph ph-check" />Ack</button>
+                      )}
+                      {canLand(m) && <Btn icon="ph-airplane-landing" onClick={() => onLand(m)}>Landed</Btn>}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -446,7 +707,7 @@ function ReportsView({ flights, requests }: { flights: any[]; requests: any[] })
     <>
       <div className="page-header-row"><div><h1 className="page-title">Reports</h1><p className="page-subtitle">Circuit performance</p></div></div>
       <div className="stats">
-        <Stat icon="ph-check-circle" tone="green" label="Lodge ack rate" value={`${rate}%`} />
+        <Stat icon="ph-check-circle" tone="green" label="Ack rate" value={`${rate}%`} />
         <Stat icon="ph-airplane" tone="blue" label="Flights" value={flights.length} />
         <Stat icon="ph-tray-arrow-down" tone="amber" label="Open requests" value={requests.length} />
         <Stat icon="ph-warning" tone="red" label="Escalated flights" value={flights.filter((f) => f.escalated).length} />

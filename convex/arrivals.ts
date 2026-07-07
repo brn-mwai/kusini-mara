@@ -6,12 +6,23 @@ import {
 } from "./lib/tenancy";
 import { newCorrelationId, recordEvent } from "./lib/events";
 import { escalationWindowMs } from "./lib/constants";
-import { transportMode, direction } from "./schema";
+import { queueSms } from "./lib/notify";
+import {
+  assignedSide,
+  defaultAssignedSide,
+  effectivePickupTime,
+  guestReportTime,
+  hhmm,
+  isAckable,
+  isAirMode,
+} from "./lib/handshake";
+import { transportMode, direction, partySide } from "./schema";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
-async function enrich(ctx: QueryCtx, a: Doc<"arrivalEvents">) {
+async function enrich(ctx: QueryCtx, a: Doc<"arrivalEvents">, reportOffsetDefault: number) {
   const flight = a.flightId ? await ctx.db.get(a.flightId) : null;
+  const strip = a.airstripId ? await ctx.db.get(a.airstripId) : null;
   const duties = await ctx.db
     .query("dutyAssignments")
     .withIndex("by_arrival", (q) => q.eq("arrivalId", a._id))
@@ -29,6 +40,12 @@ async function enrich(ctx: QueryCtx, a: Doc<"arrivalEvents">) {
       ? { code: flight.code, reg: flight.aircraftReg, pilot: flight.pilotName, status: flight.status }
       : null,
     assigned: staff.filter(Boolean),
+    assignedToSide: assignedSide(a),
+    pickupTime: effectivePickupTime(a),
+    guestReportTime: guestReportTime(a, reportOffsetDefault),
+    stripCondition: strip?.condition
+      ? { condition: strip.condition, note: strip.conditionNote ?? null }
+      : null,
   };
 }
 
@@ -65,13 +82,15 @@ export const board = propertyQuery({
       ? rows.filter((a) => a.direction === args.direction)
       : rows;
     filtered.sort((a, b) => a.scheduledTime - b.scheduledTime);
-    return await Promise.all(filtered.map((a) => enrich(ctx, a)));
+    const offset = ctx.property.defaultReportOffsetMinutes ?? 30;
+    return await Promise.all(filtered.map((a) => enrich(ctx, a, offset)));
   },
 });
 
-// Create an arrival from the lodge side (any mode). Charter without a flight
-// lands as `requested` and surfaces on the airline's queue; other modes carry a
-// firm time and await acknowledgment.
+// Post a movement from the lodge side (any mode): create it, assign the other
+// side, and propose a pickup time. Charter without a flight lands as `requested`
+// and surfaces on the air queue first; every other mode carries a firm time and
+// awaits the assigned side's acknowledgment.
 export const create = propertyMutation({
   args: {
     mode: transportMode,
@@ -82,6 +101,9 @@ export const create = propertyMutation({
     pax: v.number(),
     scheduledTime: v.number(),
     airstripName: v.optional(v.string()),
+    assignedToSide: v.optional(partySide),
+    proposedPickupTime: v.optional(v.number()),
+    guestReportOffsetMinutes: v.optional(v.number()),
     special: v.optional(v.array(v.string())),
     luggage: v.optional(v.string()),
     modeDetail: MODE_DETAIL,
@@ -108,6 +130,12 @@ export const create = propertyMutation({
 
     const isCharter = args.mode === "charter";
     const status = isCharter ? "requested" : "scheduled";
+    // A movement with no strip party can only be assigned to the lodge itself.
+    const assignedToSide =
+      airstripId || isAirMode(args.mode)
+        ? args.assignedToSide ?? defaultAssignedSide(args.mode, args.direction)
+        : "lodge";
+    const proposedPickupTime = args.proposedPickupTime ?? args.scheduledTime;
     const correlationId = newCorrelationId();
     const arrivalId = await ctx.db.insert("arrivalEvents", {
       mode: args.mode,
@@ -126,9 +154,14 @@ export const create = propertyMutation({
       status,
       modeDetail: args.modeDetail,
       createdBy: "property",
+      postedBySide: "lodge",
+      assignedToSide,
+      proposedPickupTime,
+      guestReportOffsetMinutes:
+        args.guestReportOffsetMinutes ?? ctx.property.defaultReportOffsetMinutes ?? 30,
       claimedByAirline: false,
       reconfirmRequested: false,
-      escalationDeadline: isCharter ? undefined : args.scheduledTime - escalationWindowMs(),
+      escalationDeadline: isCharter ? undefined : proposedPickupTime - escalationWindowMs(),
       correlationId,
     });
     await recordEvent(ctx, {
@@ -136,10 +169,26 @@ export const create = propertyMutation({
       propertyId: ctx.property._id,
       airlineId,
       type: "arrival_created",
-      summary: `${args.mode} ${args.direction} created for ${args.guestName} (${args.pax} pax) from ${args.origin}`,
+      summary: `${args.mode} ${args.direction} posted for ${args.guestName} (${args.pax} pax) from ${args.origin} — assigned to ${assignedToSide}`,
       arrivalId,
       byUserId: ctx.user._id,
     });
+    // The record is the truth; the message is only the nudge. Prompt the
+    // assigned strip side to acknowledge (demo: the air org's ops desk).
+    if (assignedToSide === "airstrip" && airlineId) {
+      const airline = await ctx.db.get(airlineId);
+      if (airline?.opsPhone) {
+        await queueSms(ctx, {
+          toPhone: airline.opsPhone,
+          arrivalId,
+          propertyId: ctx.property._id,
+          airlineId,
+          kind: "arrival_posted",
+          body: `KUSINI: ${ctx.property.name} posted ${args.guestName} (${args.pax} pax) ${args.direction} at ${args.destinationLabel}, proposed pickup ${hhmm(proposedPickupTime)}. Please acknowledge and set the pickup time.`,
+          correlationId,
+        });
+      }
+    }
     return { arrivalId };
   },
 });
@@ -178,11 +227,19 @@ export const get = propertyQuery({
       .withIndex("by_arrival", (q) => q.eq("arrivalId", a._id))
       .first();
     const room = ra ? await ctx.db.get(ra.roomId) : null;
+    const strip = a.airstripId ? await ctx.db.get(a.airstripId) : null;
+    const offset = ctx.property.defaultReportOffsetMinutes ?? 30;
     return {
       ...a,
       flight: flight ? { code: flight.code, reg: flight.aircraftReg, pilot: flight.pilotName, status: flight.status } : null,
       guests, events, duties: dutyRows,
       room: room ? { name: room.name, type: room.type } : null,
+      assignedToSide: assignedSide(a),
+      pickupTime: effectivePickupTime(a),
+      guestReportTime: guestReportTime(a, offset),
+      stripCondition: strip?.condition
+        ? { condition: strip.condition, note: strip.conditionNote ?? null }
+        : null,
     };
   },
 });
@@ -203,21 +260,32 @@ export const cancel = propertyMutation({
   },
 });
 
-// Property acknowledges a scheduled arrival → closes the loop.
+// The lodge acknowledges a movement assigned to it and sets the pickup time
+// (accepting the poster's proposal unless it adjusts). Movements assigned to
+// the airstrip side are acknowledged on the air platform, not here.
 export const acknowledge = propertyMutation({
-  args: { arrivalId: v.id("arrivalEvents") },
+  args: {
+    arrivalId: v.id("arrivalEvents"),
+    pickupTime: v.optional(v.number()), // omit = accept the proposed time
+  },
   returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, args) => {
     const a = await requirePropertyArrival(ctx, ctx.property, args.arrivalId);
     if (a.status === "requested") throw new Error("Cannot acknowledge before the transport is confirmed");
+    if (assignedSide(a) !== "lodge") {
+      throw new Error("This movement is assigned to the airstrip side to acknowledge");
+    }
     if (a.status === "acknowledged" && !a.reconfirmRequested) return { ok: true };
+    if (!isAckable(a)) throw new Error("Movement is not awaiting acknowledgment");
 
-    const isReconfirm = a.reconfirmRequested;
+    const isReconfirm = a.reconfirmRequested || a.status === "reconfirm_required";
     const now = Date.now();
+    const confirmedPickupTime = args.pickupTime ?? a.proposedPickupTime ?? a.scheduledTime;
     await ctx.db.patch(a._id, {
       status: "acknowledged",
       acknowledgedAt: now,
       lastAckUserId: ctx.user._id,
+      confirmedPickupTime,
       reconfirmRequested: false,
       escalatedAt: undefined,
     });
@@ -225,6 +293,8 @@ export const acknowledge = propertyMutation({
       arrivalId: a._id,
       propertyId: a.propertyId,
       byUserId: ctx.user._id,
+      bySide: "lodge",
+      pickupTimeSet: confirmedPickupTime,
       at: now,
       channel: "mock",
       type: isReconfirm ? "reconfirm" : "initial",
@@ -234,7 +304,52 @@ export const acknowledge = propertyMutation({
       propertyId: a.propertyId,
       airlineId: a.airlineId,
       type: "arrival_acknowledged",
-      summary: `${ctx.user.name} acknowledged ${a.guestName} (${a.mode} ${a.direction})`,
+      summary: `${ctx.user.name} (lodge) acknowledged ${a.guestName} (${a.mode} ${a.direction}) — pickup ${hhmm(confirmedPickupTime)}`,
+      arrivalId: a._id,
+      byUserId: ctx.user._id,
+    });
+    return { ok: true };
+  },
+});
+
+// ── execution signals (lodge side): vehicle dispatched → guest collected ──────
+export const markDispatched = propertyMutation({
+  args: { arrivalId: v.id("arrivalEvents") },
+  returns: v.object({ ok: v.boolean() }),
+  handler: async (ctx, args) => {
+    const a = await requirePropertyArrival(ctx, ctx.property, args.arrivalId);
+    if (!["acknowledged", "in_transit"].includes(a.status)) {
+      throw new Error("Acknowledge the movement before dispatching the vehicle");
+    }
+    const now = Date.now();
+    await ctx.db.patch(a._id, { dispatchedAt: now, status: "in_transit" });
+    await recordEvent(ctx, {
+      correlationId: a.correlationId,
+      propertyId: a.propertyId,
+      airlineId: a.airlineId,
+      type: "vehicle_dispatched",
+      summary: `Vehicle dispatched for ${a.guestName} → ${a.destinationLabel}`,
+      arrivalId: a._id,
+      byUserId: ctx.user._id,
+    });
+    return { ok: true };
+  },
+});
+
+export const markCollected = propertyMutation({
+  args: { arrivalId: v.id("arrivalEvents") },
+  returns: v.object({ ok: v.boolean() }),
+  handler: async (ctx, args) => {
+    const a = await requirePropertyArrival(ctx, ctx.property, args.arrivalId);
+    if (["completed", "cancelled"].includes(a.status)) return { ok: true };
+    const now = Date.now();
+    await ctx.db.patch(a._id, { collectedAt: now, actualTime: a.actualTime ?? now, status: "completed" });
+    await recordEvent(ctx, {
+      correlationId: a.correlationId,
+      propertyId: a.propertyId,
+      airlineId: a.airlineId,
+      type: "guest_collected",
+      summary: `${a.guestName} collected — movement complete`,
       arrivalId: a._id,
       byUserId: ctx.user._id,
     });

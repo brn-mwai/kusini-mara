@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as airstrip from "../airstrip.js";
 import type * as arrivals from "../arrivals.js";
 import type * as crons from "../crons.js";
 import type * as duties from "../duties.js";
@@ -17,6 +18,8 @@ import type * as flights from "../flights.js";
 import type * as leave from "../leave.js";
 import type * as lib_constants from "../lib/constants.js";
 import type * as lib_events from "../lib/events.js";
+import type * as lib_handshake from "../lib/handshake.js";
+import type * as lib_notify from "../lib/notify.js";
 import type * as lib_providers from "../lib/providers.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as notifications from "../notifications.js";
@@ -32,6 +35,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  airstrip: typeof airstrip;
   arrivals: typeof arrivals;
   crons: typeof crons;
   duties: typeof duties;
@@ -41,6 +45,8 @@ declare const fullApi: ApiFromModules<{
   leave: typeof leave;
   "lib/constants": typeof lib_constants;
   "lib/events": typeof lib_events;
+  "lib/handshake": typeof lib_handshake;
+  "lib/notify": typeof lib_notify;
   "lib/providers": typeof lib_providers;
   "lib/tenancy": typeof lib_tenancy;
   notifications: typeof notifications;

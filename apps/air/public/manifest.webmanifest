@@ -1,6 +1,6 @@
 {
-  "name": "Kusini Air — Operations",
-  "short_name": "Kusini Air",
+  "name": "Kusini Airstrip — Operations",
+  "short_name": "Kusini Airstrip",
   "description": "Build flights, schedule transfers, watch lodges acknowledge live.",
   "start_url": "/",
   "display": "standalone",

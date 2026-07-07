@@ -4,11 +4,11 @@ import { ServiceWorker } from "@/components/ServiceWorker";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Kusini Air — Operations",
+  title: "Kusini Airstrip — Operations",
   description:
     "Charter flight coordination. Build flights, schedule guest transfers, watch lodges acknowledge in real time.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Kusini Air", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Kusini Airstrip", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

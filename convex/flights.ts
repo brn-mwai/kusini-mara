@@ -47,6 +47,12 @@ async function enrichFlight(ctx: QueryCtx, f: Doc<"flights">) {
       pax: m.pax,
       status: m.status,
       scheduledTime: m.scheduledTime,
+      assignedToSide: m.assignedToSide ?? "lodge",
+      proposedPickupTime: m.proposedPickupTime ?? null,
+      confirmedPickupTime: m.confirmedPickupTime ?? null,
+      reprotectCount: m.reprotectCount ?? 0,
+      landedAt: m.landedAt ?? null,
+      reconfirmRequested: m.reconfirmRequested,
     })),
     legCount: legs.length,
     pax,
@@ -129,13 +135,21 @@ export const scheduleArrival = airlineMutation({
     const newTime = args.scheduledTime ?? a.scheduledTime;
     const timeChanged = newTime !== a.scheduledTime;
     const wasAcked = a.status === "acknowledged";
+    const reconfirm = wasAcked && timeChanged;
+    // Scheduling fixes the aircraft time; the poster's proposed pickup follows
+    // it unless a distinct proposal already exists. A retime after ack voids
+    // the confirmed pickup — the assigned side must re-confirm.
+    const proposedPickupTime =
+      timeChanged || !a.proposedPickupTime ? newTime : a.proposedPickupTime;
 
     await ctx.db.patch(a._id, {
       flightId: flight._id,
       scheduledTime: newTime,
-      escalationDeadline: newTime - escalationWindowMs(),
-      status: "scheduled",
-      reconfirmRequested: wasAcked && timeChanged ? true : a.reconfirmRequested,
+      proposedPickupTime,
+      confirmedPickupTime: reconfirm ? undefined : a.confirmedPickupTime,
+      escalationDeadline: proposedPickupTime - escalationWindowMs(),
+      status: reconfirm ? "reconfirm_required" : wasAcked ? "acknowledged" : "scheduled",
+      reconfirmRequested: reconfirm ? true : a.reconfirmRequested,
     });
     await recordEvent(ctx, {
       correlationId: a.correlationId,
@@ -195,6 +209,11 @@ export const createCharter = airlineMutation({
       scheduledTime: args.scheduledTime,
       status: "requested",
       createdBy: "airline",
+      // Air-side dual entry: the airstrip side posts, so the lodge is the
+      // assigned acknowledger, whichever direction the movement runs.
+      postedBySide: "airstrip",
+      assignedToSide: "lodge",
+      proposedPickupTime: args.scheduledTime,
       claimedByAirline: true,
       reconfirmRequested: false,
       correlationId,
@@ -246,7 +265,7 @@ export const land = airlineMutation({
     const legs = await legsFor(ctx, flight._id);
     for (const m of legs) {
       if (["in_transit", "acknowledged", "scheduled"].includes(m.status)) {
-        await ctx.db.patch(m._id, { status: "completed" });
+        await ctx.db.patch(m._id, { status: "completed", landedAt: m.landedAt ?? Date.now() });
         await recordEvent(ctx, {
           correlationId: m.correlationId,
           propertyId: m.propertyId,

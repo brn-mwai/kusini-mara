@@ -1,11 +1,14 @@
 # Kusini
 
-**Guest-transfer coordination between charter airlines and remote Maasai Mara safari lodges.**
+**Guest-transfer coordination between remote safari lodges and the airstrips that serve them.**
 
-A transfer scheduled by the airline must be **explicitly acknowledged** by the lodge.
-Any transfer that stays unacknowledged near its time **escalates** — by SMS to the
-lodge backup contact and airline ops — so a guest is never silently stranded at an
-airstrip. **The acknowledgment loop is the product.**
+A guest transfer is a **movement** on one shared record. Whoever posts it **assigns the
+other side**; the assigned side **acknowledges and sets the pickup time** — arrival →
+the airstrip side acknowledges, departure → the lodge does. Any movement left
+unacknowledged near its pickup time **escalates** — by SMS to the assigned side's
+backup and the poster — so a guest is never silently stranded at an airstrip.
+**The symmetric handshake is the product:** post → assign → acknowledge → set pickup
+time, then landed → dispatched → collected.
 
 Two real apps, **one shared Convex backend**. An action in one app shows up in the
 other **live**, with no polling.
@@ -13,7 +16,7 @@ other **live**, with no polling.
 | App | Live (Vercel) | Audience | Posture |
 |---|---|---|---|
 | **Kusini Lodge** | `kusini-lodge-brn-mwais-projects.vercel.app` | lodge duty contact + team | offline-first PWA |
-| **Kusini Air** | `kusini-air-brn-mwais-projects.vercel.app` | charter operator ops | online-first PWA |
+| **Kusini Airstrip** | `kusini-air-brn-mwais-projects.vercel.app` | strip handlers + charter ops | online-first PWA |
 
 > **Live now** (demo mode): both deployed to Vercel (team `brn-mwais-projects`)
 > against one Convex prod deployment (`judicious-giraffe-509`), publicly reachable,
@@ -23,22 +26,31 @@ other **live**, with no polling.
 
 ---
 
-## The linkage (the whole point)
+## The handshake (the whole point)
 
 ```
-booking ──spawns──> 2 movements ──airline attaches──> flight
-   (lodge)            (the spine)        (Air)
+booking ──spawns──> 2 movements ──poster assigns──> the other side
+   (lodge)            (the spine)          (acknowledges + sets pickup time)
 ```
 
-1. **Air schedules** a queued movement onto a flight → it appears on the **Lodge**
-   board as a confirmed transfer awaiting acknowledgment (stops showing “awaiting flight”).
-2. **Lodge acknowledges** → an `acknowledgments` row is written and the **Air** flight’s
-   ack count (X/Y) ticks up **live**.
-3. **Lodge assigns ground staff** → written to `dutyAssignments`.
-4. **Scheduler** — if a movement stays unacknowledged within the escalation window before
-   its scheduled time, it’s set `escalated`, a `transferEvent` is written, and SMS goes to
-   the backup contact + airline ops. **Both boards flag it live.**
-5. Every state change writes a `transferEvent` carrying the **`correlationId`**, so the
+1. **Post + assign** — the lodge posts a movement (`postedBySide`) and assigns the other
+   side (`assignedToSide`): an **arrival** at a strip goes to the **airstrip** side, a
+   **departure** (and any ground mode) to the **lodge**. Air-side dual entry mirrors it.
+2. **Acknowledge + set the pickup time** — the assigned side confirms on its own board and
+   writes `confirmedPickupTime` (accepting or adjusting the poster's proposal). An
+   `acknowledgments` row records **who, when, which side, and the time it set**; the other
+   board's ack count ticks up **live**. The guest report time ("be at the strip N minutes
+   early") derives from the confirmed pickup.
+3. **Execute** — status signals ride the shared record: the airstrip posts **landed** and
+   the strip's live **condition** (open/restricted/waterlogged/closed → flagged on the
+   lodge board); the lodge posts **vehicle dispatched** and **collected**.
+4. **Re-protect** — a carrier/strip/time change voids the prior acknowledgment
+   (`reconfirm_required`), bumps `reprotectCount`, re-notifies **both** sides by SMS, and
+   the assigned side must re-confirm.
+5. **Scheduler** — a movement still unacknowledged (or unreconfirmed) within the escalation
+   window before its pickup time is set `escalated`, and SMS goes to the **assigned side's**
+   backup **and the poster**. **Both boards flag it live.**
+6. Every state change writes a `transferEvent` carrying the **`correlationId`**, so the
    audit log is the single source of truth.
 
 Convex reactive queries drive the cross-app updates — the two apps subscribe to the same
@@ -81,9 +93,11 @@ transferEvents`
 The **movement** is the unit that links the two apps: a booking spawns two movements; the
 airline attaches a flight to a movement; the lodge acknowledges a movement.
 
-**Movement lifecycle:** `requested → scheduled` (flight assigned) `→ acknowledged` (lodge)
-`→ in_flight → landed → completed`; plus **`escalated`** if unacknowledged within the window.
-Physical progress is kept distinct from the lodge confirmation gate.
+**Movement lifecycle:** `requested → scheduled` (posted + assigned) `→ acknowledged`
+(the **assigned side** confirms + sets the pickup time) `→ in_transit → completed`;
+plus **`reconfirm_required`** after a retime/re-protection and **`escalated`** if
+unacknowledged within the window. Physical progress is kept distinct from the
+confirmation gate.
 
 See `convex/schema.ts` (validators + indexes on every table).
 
