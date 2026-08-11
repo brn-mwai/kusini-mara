@@ -1,0 +1,211 @@
+[
+  {
+    "id": "turkana",
+    "name": "Turkana",
+    "regionId": "asal_north",
+    "regionName": "ASAL North",
+    "areaKm2": 68680,
+    "population": 926976,
+    "centroid": [
+      35.3583,
+      3.1747
+    ],
+    "bbox": [
+      33.9928,
+      0.9188,
+      36.7237,
+      5.4306
+    ],
+    "hasModelCoverage": true
+  },
+  {
+    "id": "marsabit",
+    "name": "Marsabit",
+    "regionId": "asal_north",
+    "regionName": "ASAL North",
+    "areaKm2": 70961,
+    "population": 459785,
+    "centroid": [
+      37.6983,
+      2.8602
+    ],
+    "bbox": [
+      36.0498,
+      1.2629,
+      39.3468,
+      4.4575
+    ],
+    "hasModelCoverage": true
+  },
+  {
+    "id": "samburu",
+    "name": "Samburu",
+    "regionId": "asal_north",
+    "regionName": "ASAL North",
+    "areaKm2": 21022,
+    "population": 310327,
+    "centroid": [
+      37.1838,
+      1.5407
+    ],
+    "bbox": [
+      36.2866,
+      0.5654,
+      38.0809,
+      2.5161
+    ],
+    "hasModelCoverage": false
+  },
+  {
+    "id": "isiolo",
+    "name": "Isiolo",
+    "regionId": "asal_north",
+    "regionName": "ASAL North",
+    "areaKm2": 25336,
+    "population": 268002,
+    "centroid": [
+      38.1626,
+      1.0066
+    ],
+    "bbox": [
+      36.8644,
+      -0.0842,
+      39.4608,
+      2.0974
+    ],
+    "hasModelCoverage": true
+  },
+  {
+    "id": "wajir",
+    "name": "Wajir",
+    "regionId": "asal_northeast",
+    "regionName": "ASAL Northeast",
+    "areaKm2": 56686,
+    "population": 781263,
+    "centroid": [
+      39.9406,
+      1.9262
+    ],
+    "bbox": [
+      38.8886,
+      0.1843,
+      40.9926,
+      3.6681
+    ],
+    "hasModelCoverage": true
+  },
+  {
+    "id": "mandera",
+    "name": "Mandera",
+    "regionId": "asal_northeast",
+    "regionName": "ASAL Northeast",
+    "areaKm2": 25940,
+    "population": 867457,
+    "centroid": [
+      40.8408,
+      3.2295
+    ],
+    "bbox": [
+      39.7753,
+      2.1763,
+      41.9063,
+      4.2828
+    ],
+    "hasModelCoverage": true
+  },
+  {
+    "id": "garissa",
+    "name": "Garissa",
+    "regionId": "asal_northeast",
+    "regionName": "ASAL Northeast",
+    "areaKm2": 44175,
+    "population": 841353,
+    "centroid": [
+      40.112,
+      -0.5191
+    ],
+    "bbox": [
+      38.6617,
+      -2.0329,
+      41.5622,
+      0.9947
+    ],
+    "hasModelCoverage": true
+  },
+  {
+    "id": "kitui",
+    "name": "Kitui",
+    "regionId": "asal_eastern",
+    "regionName": "ASAL Eastern",
+    "areaKm2": 30497,
+    "population": 1136187,
+    "centroid": [
+      38.3346,
+      -1.5595
+    ],
+    "bbox": [
+      37.594,
+      -3.0675,
+      39.0751,
+      -0.0515
+    ],
+    "hasModelCoverage": true
+  },
+  {
+    "id": "makueni",
+    "name": "Makueni",
+    "regionId": "asal_eastern",
+    "regionName": "ASAL Eastern",
+    "areaKm2": 8009,
+    "population": 987653,
+    "centroid": [
+      37.8303,
+      -2.2536
+    ],
+    "bbox": [
+      37.1415,
+      -2.9898,
+      38.5191,
+      -1.5175
+    ],
+    "hasModelCoverage": true
+  },
+  {
+    "id": "machakos",
+    "name": "Machakos",
+    "regionId": "asal_eastern",
+    "regionName": "ASAL Eastern",
+    "areaKm2": 6208,
+    "population": 1421932,
+    "centroid": [
+      37.3721,
+      -1.2782
+    ],
+    "bbox": [
+      36.876,
+      -1.7802,
+      37.8681,
+      -0.7761
+    ],
+    "hasModelCoverage": true
+  },
+  {
+    "id": "tharaka_nithi",
+    "name": "Tharaka-Nithi",
+    "regionId": "asal_eastern",
+    "regionName": "ASAL Eastern",
+    "areaKm2": 2639,
+    "population": 393177,
+    "centroid": [
+      37.8085,
+      -0.1905
+    ],
+    "bbox": [
+      37.3078,
+      -0.45,
+      38.3091,
+      0.0689
+    ],
+    "hasModelCoverage": false
+  }
+]

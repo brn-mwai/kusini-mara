@@ -1,0 +1,599 @@
+[
+  {
+    "id": "prob",
+    "group": "forecast",
+    "label": "Drought probability",
+    "unit": "P",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [
+      0.1,
+      0.25,
+      0.4,
+      0.6
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/prob/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "classed",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "agreement",
+    "group": "forecast",
+    "label": "Ensemble agreement",
+    "unit": "share",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [
+      0.2,
+      0.4,
+      0.6,
+      0.8
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/agreement/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "p10",
+    "group": "forecast",
+    "label": "Probability p10",
+    "unit": "P",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [
+      0.1,
+      0.25,
+      0.4,
+      0.6
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/p10/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "p90",
+    "group": "forecast",
+    "label": "Probability p90",
+    "unit": "P",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [
+      0.1,
+      0.25,
+      0.4,
+      0.6
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/p90/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "tercile_below",
+    "group": "forecast",
+    "label": "Tercile below-normal",
+    "unit": "P",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [
+      0.33,
+      0.45,
+      0.6,
+      0.75
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/tercile_below/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "classed",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "vci3m",
+    "group": "observed",
+    "label": "VCI3M",
+    "unit": "VCI",
+    "domain": [
+      0,
+      100
+    ],
+    "classBreaks": [
+      10,
+      20,
+      35,
+      50
+    ],
+    "colourRamp": [
+      "#B24A2C",
+      "#C97A3C",
+      "#D9A84E",
+      "#8FA96A",
+      "#4FA987"
+    ],
+    "reversed": true,
+    "tileUrl": "/v1/tiles/vci3m/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "classed",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "ndvi",
+    "group": "observed",
+    "label": "NDVI",
+    "unit": "NDVI",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [
+      0.2,
+      0.35,
+      0.5,
+      0.65
+    ],
+    "colourRamp": [
+      "#B24A2C",
+      "#C97A3C",
+      "#D9A84E",
+      "#8FA96A",
+      "#4FA987"
+    ],
+    "reversed": true,
+    "tileUrl": "/v1/tiles/ndvi/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "ndvi_anom",
+    "group": "observed",
+    "label": "NDVI anomaly",
+    "unit": "dNDVI",
+    "domain": [
+      -0.3,
+      0.3
+    ],
+    "classBreaks": [
+      -0.15,
+      -0.05,
+      0.05,
+      0.15
+    ],
+    "colourRamp": [
+      "#B24A2C",
+      "#C97A3C",
+      "#D9A84E",
+      "#8FA96A",
+      "#4FA987"
+    ],
+    "reversed": true,
+    "tileUrl": "/v1/tiles/ndvi_anom/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "chirps_precip",
+    "group": "observed",
+    "label": "CHIRPS rainfall",
+    "unit": "mm",
+    "domain": [
+      0,
+      300
+    ],
+    "classBreaks": [
+      30,
+      80,
+      150,
+      220
+    ],
+    "colourRamp": [
+      "#39474F",
+      "#3E6B7A",
+      "#4C93A6",
+      "#63BDC9",
+      "#8FE3DD"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/chirps_precip/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "rain_anom",
+    "group": "observed",
+    "label": "Rainfall anomaly",
+    "unit": "%",
+    "domain": [
+      -80,
+      80
+    ],
+    "classBreaks": [
+      -40,
+      -15,
+      15,
+      40
+    ],
+    "colourRamp": [
+      "#B24A2C",
+      "#C97A3C",
+      "#D9A84E",
+      "#8FA96A",
+      "#4FA987"
+    ],
+    "reversed": true,
+    "tileUrl": "/v1/tiles/rain_anom/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "lst_day",
+    "group": "observed",
+    "label": "LST day",
+    "unit": "degC",
+    "domain": [
+      15,
+      50
+    ],
+    "classBreaks": [
+      25,
+      32,
+      38,
+      44
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/lst_day/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "lst_anom",
+    "group": "observed",
+    "label": "LST anomaly",
+    "unit": "degC",
+    "domain": [
+      -5,
+      5
+    ],
+    "classBreaks": [
+      -2,
+      -0.5,
+      0.5,
+      2
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/lst_anom/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "soil_moisture",
+    "group": "observed",
+    "label": "Soil moisture",
+    "unit": "% vol",
+    "domain": [
+      0,
+      45
+    ],
+    "classBreaks": [
+      8,
+      15,
+      25,
+      35
+    ],
+    "colourRamp": [
+      "#39474F",
+      "#3E6B7A",
+      "#4C93A6",
+      "#63BDC9",
+      "#8FE3DD"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/soil_moisture/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "bridge_rain",
+    "group": "bridge",
+    "label": "Predicted rainfall",
+    "unit": "mm",
+    "domain": [
+      0,
+      300
+    ],
+    "classBreaks": [
+      30,
+      80,
+      150,
+      220
+    ],
+    "colourRamp": [
+      "#39474F",
+      "#3E6B7A",
+      "#4C93A6",
+      "#63BDC9",
+      "#8FE3DD"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/bridge_rain/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "bridge_ndvi",
+    "group": "bridge",
+    "label": "Predicted NDVI",
+    "unit": "NDVI",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [
+      0.2,
+      0.35,
+      0.5,
+      0.65
+    ],
+    "colourRamp": [
+      "#B24A2C",
+      "#C97A3C",
+      "#D9A84E",
+      "#8FA96A",
+      "#4FA987"
+    ],
+    "reversed": true,
+    "tileUrl": "/v1/tiles/bridge_ndvi/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "bridge_lst",
+    "group": "bridge",
+    "label": "Predicted LST",
+    "unit": "degC",
+    "domain": [
+      15,
+      50
+    ],
+    "classBreaks": [
+      25,
+      32,
+      38,
+      44
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/bridge_lst/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "fc_minus_obs",
+    "group": "error",
+    "label": "Forecast minus observed",
+    "unit": "dP",
+    "domain": [
+      -1,
+      1
+    ],
+    "classBreaks": [
+      -0.5,
+      -0.15,
+      0.15,
+      0.5
+    ],
+    "colourRamp": [
+      "#4C93A6",
+      "#7FBFB9",
+      "#39474F",
+      "#C98A5A",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/fc_minus_obs/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "abs_error",
+    "group": "error",
+    "label": "Absolute error",
+    "unit": "dP",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [
+      0.1,
+      0.2,
+      0.35,
+      0.5
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/abs_error/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "brier_contrib",
+    "group": "error",
+    "label": "Brier contribution",
+    "unit": "B",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [
+      0.05,
+      0.15,
+      0.3,
+      0.5
+    ],
+    "colourRamp": [
+      "#4FA987",
+      "#8FA96A",
+      "#D9A84E",
+      "#C97A3C",
+      "#B24A2C"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/brier_contrib/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": true
+  },
+  {
+    "id": "county_bounds",
+    "group": "context",
+    "label": "County boundaries",
+    "unit": "",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [],
+    "colourRamp": [
+      "#26333B"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/county_bounds/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "classed",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "livelihood_zones",
+    "group": "context",
+    "label": "Livelihood zones",
+    "unit": "",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [],
+    "colourRamp": [
+      "#4FA987",
+      "#D9A84E",
+      "#4C93A6",
+      "#8F7AB2"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/livelihood_zones/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "classed",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "water_points",
+    "group": "context",
+    "label": "Water points",
+    "unit": "",
+    "domain": [
+      0,
+      1
+    ],
+    "classBreaks": [],
+    "colourRamp": [
+      "#63BDC9"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/water_points/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "classed",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "population",
+    "group": "context",
+    "label": "Population",
+    "unit": "per km2",
+    "domain": [
+      0,
+      250
+    ],
+    "classBreaks": [
+      5,
+      25,
+      80,
+      160
+    ],
+    "colourRamp": [
+      "#39474F",
+      "#4C5E6B",
+      "#6B7F8C",
+      "#93A6B0",
+      "#C4D1D6"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/population/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  }
+]

@@ -1,0 +1,1511 @@
+{
+  "id": "2026-07",
+  "status": "verified",
+  "initDate": "2026-07-01",
+  "generatedAt": "2026-07-03T07:18:44Z",
+  "contentHash": "7a2e9c04d1b8f3557e6a0b2c91d4e8f0a3c7b5d2896e1f4a0d3b6c9e82f5a170",
+  "run": {
+    "source": "ECMWF SEAS5",
+    "ensembleMembers": 51,
+    "ensembleReduction": "member_wise",
+    "forecastGrib": "seas5_20260701_tp_t2m_51mem.grib2",
+    "climatologyGrib": "seas5_clim_1993-2016_07.grib2",
+    "codeCommit": "4b81e77",
+    "droughtModel": "cascade-gbm v0.4.0",
+    "bridgeModel": "bridge-ridge v0.2.0",
+    "labelVersion": "vci3m_v1",
+    "featureCoverage": 0.79
+  },
+  "config": {
+    "threshold": 0.25,
+    "thresholdRationale": "NDMA drought bulletin trigger review, March 2026: P(VCI3M below 20) at 0.25 balances misses against alert fatigue on the 2019-2025 record."
+  },
+  "forecasts": [
+    {
+      "countyId": "turkana",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0.071,
+      "probP10": 0.064,
+      "probP90": 0.08,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.221,
+        "near": 0.3,
+        "above": 0.479
+      },
+      "signal": "normal",
+      "margin": -0.179,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.041,
+          "value": -0.8,
+          "unit": "SPI"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.028,
+          "value": 0.6,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.017,
+          "value": 1.2,
+          "unit": "degC"
+        },
+        {
+          "feature": "soil_moisture_anom",
+          "label": "Soil moisture anomaly",
+          "contribution": -0.012,
+          "value": 0.4,
+          "unit": "sd"
+        }
+      ]
+    },
+    {
+      "countyId": "turkana",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0.118,
+      "probP10": 0.106,
+      "probP90": 0.132,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.268,
+        "near": 0.3,
+        "above": 0.432
+      },
+      "signal": "normal",
+      "margin": -0.132,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.041,
+          "value": -0.8,
+          "unit": "SPI"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.028,
+          "value": 0.6,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.017,
+          "value": 1.2,
+          "unit": "degC"
+        },
+        {
+          "feature": "soil_moisture_anom",
+          "label": "Soil moisture anomaly",
+          "contribution": -0.012,
+          "value": 0.4,
+          "unit": "sd"
+        }
+      ]
+    },
+    {
+      "countyId": "turkana",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0.221,
+      "probP10": 0.199,
+      "probP90": 0.248,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.371,
+        "near": 0.3,
+        "above": 0.329
+      },
+      "signal": "normal",
+      "margin": -0.029,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.041,
+          "value": -0.8,
+          "unit": "SPI"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.028,
+          "value": 0.6,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.017,
+          "value": 1.2,
+          "unit": "degC"
+        },
+        {
+          "feature": "soil_moisture_anom",
+          "label": "Soil moisture anomaly",
+          "contribution": -0.012,
+          "value": 0.4,
+          "unit": "sd"
+        }
+      ]
+    },
+    {
+      "countyId": "marsabit",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0.071,
+      "probP10": 0.064,
+      "probP90": 0.08,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.221,
+        "near": 0.3,
+        "above": 0.479
+      },
+      "signal": "normal",
+      "margin": -0.179,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.041,
+          "value": -0.8,
+          "unit": "SPI"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.028,
+          "value": 0.6,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.017,
+          "value": 1.2,
+          "unit": "degC"
+        },
+        {
+          "feature": "soil_moisture_anom",
+          "label": "Soil moisture anomaly",
+          "contribution": -0.012,
+          "value": 0.4,
+          "unit": "sd"
+        }
+      ]
+    },
+    {
+      "countyId": "marsabit",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0.118,
+      "probP10": 0.106,
+      "probP90": 0.132,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.268,
+        "near": 0.3,
+        "above": 0.432
+      },
+      "signal": "normal",
+      "margin": -0.132,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.041,
+          "value": -0.8,
+          "unit": "SPI"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.028,
+          "value": 0.6,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.017,
+          "value": 1.2,
+          "unit": "degC"
+        },
+        {
+          "feature": "soil_moisture_anom",
+          "label": "Soil moisture anomaly",
+          "contribution": -0.012,
+          "value": 0.4,
+          "unit": "sd"
+        }
+      ]
+    },
+    {
+      "countyId": "marsabit",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0.221,
+      "probP10": 0.199,
+      "probP90": 0.248,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.371,
+        "near": 0.3,
+        "above": 0.329
+      },
+      "signal": "normal",
+      "margin": -0.029,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.041,
+          "value": -0.8,
+          "unit": "SPI"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.028,
+          "value": 0.6,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.017,
+          "value": 1.2,
+          "unit": "degC"
+        },
+        {
+          "feature": "soil_moisture_anom",
+          "label": "Soil moisture anomaly",
+          "contribution": -0.012,
+          "value": 0.4,
+          "unit": "sd"
+        }
+      ]
+    },
+    {
+      "countyId": "samburu",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0,
+      "probP10": null,
+      "probP90": null,
+      "ensembleAgreement": null,
+      "membersAboveThreshold": null,
+      "membersTotal": null,
+      "terciles": null,
+      "signal": "no_coverage",
+      "margin": 0,
+      "drivers": null
+    },
+    {
+      "countyId": "samburu",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0,
+      "probP10": null,
+      "probP90": null,
+      "ensembleAgreement": null,
+      "membersAboveThreshold": null,
+      "membersTotal": null,
+      "terciles": null,
+      "signal": "no_coverage",
+      "margin": 0,
+      "drivers": null
+    },
+    {
+      "countyId": "samburu",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0,
+      "probP10": null,
+      "probP90": null,
+      "ensembleAgreement": null,
+      "membersAboveThreshold": null,
+      "membersTotal": null,
+      "terciles": null,
+      "signal": "no_coverage",
+      "margin": 0,
+      "drivers": null
+    },
+    {
+      "countyId": "isiolo",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0.071,
+      "probP10": 0.064,
+      "probP90": 0.08,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.221,
+        "near": 0.3,
+        "above": 0.479
+      },
+      "signal": "normal",
+      "margin": -0.179,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.041,
+          "value": -0.8,
+          "unit": "SPI"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.028,
+          "value": 0.6,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.017,
+          "value": 1.2,
+          "unit": "degC"
+        },
+        {
+          "feature": "soil_moisture_anom",
+          "label": "Soil moisture anomaly",
+          "contribution": -0.012,
+          "value": 0.4,
+          "unit": "sd"
+        }
+      ]
+    },
+    {
+      "countyId": "isiolo",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0.118,
+      "probP10": 0.106,
+      "probP90": 0.132,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.268,
+        "near": 0.3,
+        "above": 0.432
+      },
+      "signal": "normal",
+      "margin": -0.132,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.041,
+          "value": -0.8,
+          "unit": "SPI"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.028,
+          "value": 0.6,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.017,
+          "value": 1.2,
+          "unit": "degC"
+        },
+        {
+          "feature": "soil_moisture_anom",
+          "label": "Soil moisture anomaly",
+          "contribution": -0.012,
+          "value": 0.4,
+          "unit": "sd"
+        }
+      ]
+    },
+    {
+      "countyId": "isiolo",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0.221,
+      "probP10": 0.199,
+      "probP90": 0.248,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.371,
+        "near": 0.3,
+        "above": 0.329
+      },
+      "signal": "normal",
+      "margin": -0.029,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.041,
+          "value": -0.8,
+          "unit": "SPI"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.028,
+          "value": 0.6,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.017,
+          "value": 1.2,
+          "unit": "degC"
+        },
+        {
+          "feature": "soil_moisture_anom",
+          "label": "Soil moisture anomaly",
+          "contribution": -0.012,
+          "value": 0.4,
+          "unit": "sd"
+        }
+      ]
+    },
+    {
+      "countyId": "wajir",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0.19,
+      "probP10": 0.171,
+      "probP90": 0.213,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.34,
+        "near": 0.3,
+        "above": 0.36
+      },
+      "signal": "normal",
+      "margin": -0.06,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.088,
+          "value": -1.3,
+          "unit": "SPI"
+        },
+        {
+          "feature": "iod_dmi",
+          "label": "IOD, Dipole Mode Index",
+          "contribution": -0.034,
+          "value": 0.3,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.026,
+          "value": 1.7,
+          "unit": "degC"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.019,
+          "value": -0.11,
+          "unit": "NDVI"
+        }
+      ]
+    },
+    {
+      "countyId": "wajir",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0.246,
+      "probP10": 0.221,
+      "probP90": 0.276,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.396,
+        "near": 0.3,
+        "above": 0.304
+      },
+      "signal": "normal",
+      "margin": -0.004,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.088,
+          "value": -1.3,
+          "unit": "SPI"
+        },
+        {
+          "feature": "iod_dmi",
+          "label": "IOD, Dipole Mode Index",
+          "contribution": -0.034,
+          "value": 0.3,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.026,
+          "value": 1.7,
+          "unit": "degC"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.019,
+          "value": -0.11,
+          "unit": "NDVI"
+        }
+      ]
+    },
+    {
+      "countyId": "wajir",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0.385,
+      "probP10": 0.347,
+      "probP90": 0.431,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.535,
+        "near": 0.3,
+        "above": 0.165
+      },
+      "signal": "watch",
+      "margin": 0.135,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.088,
+          "value": -1.3,
+          "unit": "SPI"
+        },
+        {
+          "feature": "iod_dmi",
+          "label": "IOD, Dipole Mode Index",
+          "contribution": -0.034,
+          "value": 0.3,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.026,
+          "value": 1.7,
+          "unit": "degC"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.019,
+          "value": -0.11,
+          "unit": "NDVI"
+        }
+      ]
+    },
+    {
+      "countyId": "mandera",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0.19,
+      "probP10": 0.171,
+      "probP90": 0.213,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.34,
+        "near": 0.3,
+        "above": 0.36
+      },
+      "signal": "normal",
+      "margin": -0.06,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.088,
+          "value": -1.3,
+          "unit": "SPI"
+        },
+        {
+          "feature": "iod_dmi",
+          "label": "IOD, Dipole Mode Index",
+          "contribution": -0.034,
+          "value": 0.3,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.026,
+          "value": 1.7,
+          "unit": "degC"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.019,
+          "value": -0.11,
+          "unit": "NDVI"
+        }
+      ]
+    },
+    {
+      "countyId": "mandera",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0.246,
+      "probP10": 0.221,
+      "probP90": 0.276,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.396,
+        "near": 0.3,
+        "above": 0.304
+      },
+      "signal": "normal",
+      "margin": -0.004,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.088,
+          "value": -1.3,
+          "unit": "SPI"
+        },
+        {
+          "feature": "iod_dmi",
+          "label": "IOD, Dipole Mode Index",
+          "contribution": -0.034,
+          "value": 0.3,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.026,
+          "value": 1.7,
+          "unit": "degC"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.019,
+          "value": -0.11,
+          "unit": "NDVI"
+        }
+      ]
+    },
+    {
+      "countyId": "mandera",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0.385,
+      "probP10": 0.347,
+      "probP90": 0.431,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.535,
+        "near": 0.3,
+        "above": 0.165
+      },
+      "signal": "watch",
+      "margin": 0.135,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.088,
+          "value": -1.3,
+          "unit": "SPI"
+        },
+        {
+          "feature": "iod_dmi",
+          "label": "IOD, Dipole Mode Index",
+          "contribution": -0.034,
+          "value": 0.3,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.026,
+          "value": 1.7,
+          "unit": "degC"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.019,
+          "value": -0.11,
+          "unit": "NDVI"
+        }
+      ]
+    },
+    {
+      "countyId": "garissa",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0.19,
+      "probP10": 0.171,
+      "probP90": 0.213,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.34,
+        "near": 0.3,
+        "above": 0.36
+      },
+      "signal": "normal",
+      "margin": -0.06,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.088,
+          "value": -1.3,
+          "unit": "SPI"
+        },
+        {
+          "feature": "iod_dmi",
+          "label": "IOD, Dipole Mode Index",
+          "contribution": -0.034,
+          "value": 0.3,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.026,
+          "value": 1.7,
+          "unit": "degC"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.019,
+          "value": -0.11,
+          "unit": "NDVI"
+        }
+      ]
+    },
+    {
+      "countyId": "garissa",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0.246,
+      "probP10": 0.221,
+      "probP90": 0.276,
+      "ensembleAgreement": 0.196,
+      "membersAboveThreshold": 10,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.396,
+        "near": 0.3,
+        "above": 0.304
+      },
+      "signal": "normal",
+      "margin": -0.004,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.088,
+          "value": -1.3,
+          "unit": "SPI"
+        },
+        {
+          "feature": "iod_dmi",
+          "label": "IOD, Dipole Mode Index",
+          "contribution": -0.034,
+          "value": 0.3,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.026,
+          "value": 1.7,
+          "unit": "degC"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.019,
+          "value": -0.11,
+          "unit": "NDVI"
+        }
+      ]
+    },
+    {
+      "countyId": "garissa",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0.385,
+      "probP10": 0.347,
+      "probP90": 0.431,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.535,
+        "near": 0.3,
+        "above": 0.165
+      },
+      "signal": "watch",
+      "margin": 0.135,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.088,
+          "value": -1.3,
+          "unit": "SPI"
+        },
+        {
+          "feature": "iod_dmi",
+          "label": "IOD, Dipole Mode Index",
+          "contribution": -0.034,
+          "value": 0.3,
+          "unit": "degC"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.026,
+          "value": 1.7,
+          "unit": "degC"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.019,
+          "value": -0.11,
+          "unit": "NDVI"
+        }
+      ]
+    },
+    {
+      "countyId": "kitui",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0.612,
+      "probP10": 0.551,
+      "probP90": 0.685,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.762,
+        "near": 0.3,
+        "above": 0.05
+      },
+      "signal": "drought",
+      "margin": 0.362,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.214,
+          "value": -1.9,
+          "unit": "SPI"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.102,
+          "value": -0.19,
+          "unit": "NDVI"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.067,
+          "value": 2.4,
+          "unit": "degC"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.031,
+          "value": 0.6,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "countyId": "kitui",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0.871,
+      "probP10": 0.784,
+      "probP90": 0.976,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.85,
+        "near": 0.3,
+        "above": 0.05
+      },
+      "signal": "drought",
+      "margin": 0.621,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.214,
+          "value": -1.9,
+          "unit": "SPI"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.102,
+          "value": -0.19,
+          "unit": "NDVI"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.067,
+          "value": 2.4,
+          "unit": "degC"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.031,
+          "value": 0.6,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "countyId": "kitui",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0.298,
+      "probP10": 0.268,
+      "probP90": 0.334,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.448,
+        "near": 0.3,
+        "above": 0.252
+      },
+      "signal": "watch",
+      "margin": 0.048,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.214,
+          "value": -1.9,
+          "unit": "SPI"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.102,
+          "value": -0.19,
+          "unit": "NDVI"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.067,
+          "value": 2.4,
+          "unit": "degC"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.031,
+          "value": 0.6,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "countyId": "makueni",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0.612,
+      "probP10": 0.551,
+      "probP90": 0.685,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.762,
+        "near": 0.3,
+        "above": 0.05
+      },
+      "signal": "drought",
+      "margin": 0.362,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.214,
+          "value": -1.9,
+          "unit": "SPI"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.102,
+          "value": -0.19,
+          "unit": "NDVI"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.067,
+          "value": 2.4,
+          "unit": "degC"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.031,
+          "value": 0.6,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "countyId": "makueni",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0.871,
+      "probP10": 0.784,
+      "probP90": 0.976,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.85,
+        "near": 0.3,
+        "above": 0.05
+      },
+      "signal": "drought",
+      "margin": 0.621,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.214,
+          "value": -1.9,
+          "unit": "SPI"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.102,
+          "value": -0.19,
+          "unit": "NDVI"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.067,
+          "value": 2.4,
+          "unit": "degC"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.031,
+          "value": 0.6,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "countyId": "makueni",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0.298,
+      "probP10": 0.268,
+      "probP90": 0.334,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.448,
+        "near": 0.3,
+        "above": 0.252
+      },
+      "signal": "watch",
+      "margin": 0.048,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.214,
+          "value": -1.9,
+          "unit": "SPI"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.102,
+          "value": -0.19,
+          "unit": "NDVI"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.067,
+          "value": 2.4,
+          "unit": "degC"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.031,
+          "value": 0.6,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "countyId": "machakos",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0.612,
+      "probP10": 0.551,
+      "probP90": 0.685,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.762,
+        "near": 0.3,
+        "above": 0.05
+      },
+      "signal": "drought",
+      "margin": 0.362,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.214,
+          "value": -1.9,
+          "unit": "SPI"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.102,
+          "value": -0.19,
+          "unit": "NDVI"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.067,
+          "value": 2.4,
+          "unit": "degC"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.031,
+          "value": 0.6,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "countyId": "machakos",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0.871,
+      "probP10": 0.784,
+      "probP90": 0.976,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.85,
+        "near": 0.3,
+        "above": 0.05
+      },
+      "signal": "drought",
+      "margin": 0.621,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.214,
+          "value": -1.9,
+          "unit": "SPI"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.102,
+          "value": -0.19,
+          "unit": "NDVI"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.067,
+          "value": 2.4,
+          "unit": "degC"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.031,
+          "value": 0.6,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "countyId": "machakos",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0.298,
+      "probP10": 0.268,
+      "probP90": 0.334,
+      "ensembleAgreement": 0.706,
+      "membersAboveThreshold": 36,
+      "membersTotal": 51,
+      "terciles": {
+        "below": 0.448,
+        "near": 0.3,
+        "above": 0.252
+      },
+      "signal": "watch",
+      "margin": 0.048,
+      "drivers": [
+        {
+          "feature": "era5_spi3",
+          "label": "Rainfall deficit, 3 month",
+          "contribution": 0.214,
+          "value": -1.9,
+          "unit": "SPI"
+        },
+        {
+          "feature": "ndvi_anom",
+          "label": "NDVI anomaly",
+          "contribution": 0.102,
+          "value": -0.19,
+          "unit": "NDVI"
+        },
+        {
+          "feature": "era5_lst_anom",
+          "label": "Land temp anomaly",
+          "contribution": 0.067,
+          "value": 2.4,
+          "unit": "degC"
+        },
+        {
+          "feature": "nino34",
+          "label": "ENSO state, Nino3.4",
+          "contribution": 0.031,
+          "value": 0.6,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "countyId": "tharaka_nithi",
+      "validYear": 2026,
+      "validMonth": 8,
+      "leadMonths": 1,
+      "droughtProb": 0,
+      "probP10": null,
+      "probP90": null,
+      "ensembleAgreement": null,
+      "membersAboveThreshold": null,
+      "membersTotal": null,
+      "terciles": null,
+      "signal": "no_coverage",
+      "margin": 0,
+      "drivers": null
+    },
+    {
+      "countyId": "tharaka_nithi",
+      "validYear": 2026,
+      "validMonth": 9,
+      "leadMonths": 2,
+      "droughtProb": 0,
+      "probP10": null,
+      "probP90": null,
+      "ensembleAgreement": null,
+      "membersAboveThreshold": null,
+      "membersTotal": null,
+      "terciles": null,
+      "signal": "no_coverage",
+      "margin": 0,
+      "drivers": null
+    },
+    {
+      "countyId": "tharaka_nithi",
+      "validYear": 2026,
+      "validMonth": 10,
+      "leadMonths": 3,
+      "droughtProb": 0,
+      "probP10": null,
+      "probP90": null,
+      "ensembleAgreement": null,
+      "membersAboveThreshold": null,
+      "membersTotal": null,
+      "terciles": null,
+      "signal": "no_coverage",
+      "margin": 0,
+      "drivers": null
+    }
+  ],
+  "verification": {
+    "verifiedAt": "2026-09-06T05:30:00Z",
+    "truthSource": "vci3m_v1",
+    "brier": 0.158,
+    "brierSkillScore": 0.071,
+    "rocAuc": 0.66,
+    "hits": 2,
+    "misses": 1,
+    "falseAlarms": 1,
+    "correctNegatives": 5,
+    "perCounty": [
+      {
+        "countyId": "turkana",
+        "predicted": 0.071,
+        "observed": 0,
+        "brier": 0.005
+      },
+      {
+        "countyId": "marsabit",
+        "predicted": 0.071,
+        "observed": 0,
+        "brier": 0.005
+      },
+      {
+        "countyId": "isiolo",
+        "predicted": 0.071,
+        "observed": 0,
+        "brier": 0.005
+      },
+      {
+        "countyId": "wajir",
+        "predicted": 0.19,
+        "observed": 0,
+        "brier": 0.036
+      },
+      {
+        "countyId": "mandera",
+        "predicted": 0.19,
+        "observed": 0,
+        "brier": 0.036
+      },
+      {
+        "countyId": "garissa",
+        "predicted": 0.19,
+        "observed": 1,
+        "brier": 0.656
+      },
+      {
+        "countyId": "kitui",
+        "predicted": 0.612,
+        "observed": 1,
+        "brier": 0.151
+      },
+      {
+        "countyId": "makueni",
+        "predicted": 0.612,
+        "observed": 1,
+        "brier": 0.151
+      },
+      {
+        "countyId": "machakos",
+        "predicted": 0.612,
+        "observed": 0,
+        "brier": 0.375
+      }
+    ]
+  }
+}

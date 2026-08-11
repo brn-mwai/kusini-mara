@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Counties — Cascade Bridge</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/console.css">
+</head>
+<body>
+<nav class="rail" id="rail"></nav>
+<main class="console">
+  <header class="band band-1">
+    <span class="page-title">Counties</span>
+    <span class="vsep"></span>
+    <nav class="tabs">
+      <a class="tab" id="tab-map" href="counties.html">Map</a>
+      <a class="tab" id="tab-table" href="counties.html?view=table">Table</a>
+    </nav>
+    <span class="grow"></span>
+    <button class="btn btn-teal" id="btn-county-add"></button>
+  </header>
+  <div class="band band-2">
+    <label class="search" id="search-box"></label>
+    <button class="btn btn-icon" id="btn-filter" title="Filter"></button>
+    <label class="select" id="scope-select"></label>
+    <button class="btn btn-icon btn-ghost" id="btn-overflow" title="More"></button>
+  </div>
+  <section class="band band-4" id="band-4"></section>
+  <footer class="band band-5">
+    <div class="month-pills" id="month-pills"></div>
+    <div class="meta-footer">
+      <span class="kbd-hint"><kbd>[</kbd> rail &nbsp;<kbd>&#8592;</kbd><kbd>&#8594;</kbd> month</span>
+      <span id="meta-issue" class="num"></span>
+    </div>
+  </footer>
+</main>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/format.js"></script>
+<script src="assets/shell.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/components.js"></script>
+<script src="assets/map.js"></script>
+<script>
+(() => {
+  const D = CB_DATA, F = CB.fmt, S = CB.state
+  CB.shell.init({ page: 'counties' })
+
+  const pad2 = n => String(n).padStart(2, '0')
+  const PERIOD_POINTS = { '1M': 2, '3M': 4, '6M': 7, '1Y': 13, '2Y': 24, '5Y': 24 }
+  const PROB_LAYER = D.layers.find(l => l.id === 'prob')
+
+  const st = {
+    issueId: D.issues[S.get('issue')] ? S.get('issue') : '2026-08',
+    month: null,
+    scope: null,
+    period: PERIOD_POINTS[S.get('period')] ? S.get('period') : '1Y',
+    view: S.get('view') === 'table' ? 'table' : 'map',
+    forced: ['empty', 'loading'].includes(S.get('state')) ? S.get('state') : null,
+    region: 'all',
+    query: '',
+    hover: null,
+    sort: { key: 'canonical', dir: 1 },
+  }
+  const issue = () => D.issues[st.issueId]
+  const monthsOf = () => [...new Set(issue().forecasts.map(f => f.validYear + '-' + pad2(f.validMonth)))]
+  st.month = monthsOf().includes(S.get('month')) ? S.get('month') : monthsOf()[1] || monthsOf()[0]
+  st.scope = D.counties.some(c => c.id === S.get('scope')) ? S.get('scope') : 'turkana'
+
+  const fc = (countyId, month) => issue().forecasts.find(f =>
+    f.countyId === countyId && f.validYear + '-' + pad2(f.validMonth) === month)
+  const probDelta = countyId => D.series[countyId]?.latest.probDelta[st.month] ?? null
+
+  const counties = () => D.counties.filter(c =>
+    (st.region === 'all' || c.regionId === st.region) &&
+    (!st.query || (c.name + ' ' + c.regionName).toLowerCase().includes(st.query)))
+
+  document.getElementById('btn-county-add').innerHTML = CB.icon('plus') + 'Add county'
+  document.getElementById('btn-county-add').addEventListener('click', () => CB.toast('Add county is not wired in this prototype'))
+  document.getElementById('btn-filter').innerHTML = CB.icon('filter')
+  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-overflow').innerHTML = CB.icon('more')
+  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('search-box').innerHTML =
+    CB.icon('search') + '<input id="search-input" type="search" placeholder="Search county, region, forecast">'
+  document.getElementById('search-input').addEventListener('input', e => {
+    st.query = e.target.value.trim().toLowerCase()
+    renderMain()
+  })
+  const regions = [['all', 'All regions'], ...new Map(D.counties.map(c => [c.regionId, c.regionName]))]
+  document.getElementById('scope-select').innerHTML =
+    `<select id="region-select">${regions.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>` + CB.icon('chevD', 'sm')
+  document.getElementById('region-select').addEventListener('change', e => {
+    st.region = e.target.value
+    renderMain()
+  })
+
+  document.getElementById('tab-map').addEventListener('click', e => {
+    e.preventDefault(); st.view = 'map'; S.set({ view: null }); render()
+  })
+  document.getElementById('tab-table').addEventListener('click', e => {
+    e.preventDefault(); st.view = 'table'; S.set({ view: 'table' }); render()
+  })
+
+  let map = null, mapFailed = false
+  function ensureMap(container) {
+    if (map || mapFailed) return
+    try {
+      map = CB.map.create(container)
+      CB.map.controls(container.parentElement, map)
+      map.on('load', () => paintMap())
+      CB.map.onCountyHover(map, id => { setHover(id) })
+      CB.map.onCountyClick(map, id => { selectCounty(id) })
+    } catch (err) {
+      mapFailed = true
+      container.parentElement.innerHTML =
+        CB.ui.emptyState({ icon: 'warn', title: 'Map unavailable', body: 'WebGL could not be initialised in this browser. County data remains available in the list and table.' })
+    }
+  }
+  function paintMap() {
+    if (!map || !map.isStyleLoaded()) return
+    const vals = {}
+    for (const c of D.counties) vals[c.id] = fc(c.id, st.month)?.droughtProb ?? null
+    CB.map.paintValues(map, vals, PROB_LAYER)
+    CB.map.setSelected(map, st.scope)
+  }
+
+  function setHover(id) {
+    if (st.hover === id) return
+    st.hover = id
+    document.querySelectorAll('[data-county]').forEach(el =>
+      el.classList.toggle('hover', el.dataset.county === id))
+    if (map && map.isStyleLoaded()) CB.map.setHover(map, id)
+  }
+
+  function selectCounty(id) {
+    st.scope = id
+    S.set({ scope: id })
+    renderMain()
+  }
+
+  function rowHtml(c) {
+    const f = fc(c.id, st.month)
+    const color = c.hasModelCoverage
+      ? CB.ui.colorForValue(PROB_LAYER, f?.droughtProb)
+      : getComputedStyle(document.documentElement).getPropertyValue('--nocov').trim()
+    return `<button class="county-row${c.id === st.scope ? ' selected' : ''}${c.hasModelCoverage ? '' : ' nocov'}"
+        id="row-county-${c.id}" data-county="${c.id}">
+      <span class="thumb">${CB.ui.countyThumb(c.id, color)}</span>
+      <span class="who">
+        <div class="name">${CB.esc(c.name)}</div>
+        <div class="region">${CB.esc(c.regionName)}</div>
+      </span>
+      <span class="vals">
+        <span class="prob num">${c.hasModelCoverage ? 'P ' + F.prob(f?.droughtProb) : F.DASH}
+          ${c.hasModelCoverage ? CB.ui.deltaArrow(probDelta(c.id)) : ''}</span>
+        ${CB.ui.signalPill(f?.signal ?? 'no_coverage')}
+      </span>
+    </button>`
+  }
+
+  function listHtml() {
+    if (st.forced === 'loading') return `<div class="col-scroll">${CB.ui.skelRows(8)}</div>`
+    const rows = st.forced === 'empty' ? [] : counties()
+    const body = rows.length
+      ? rows.map(rowHtml).join('')
+      : CB.ui.emptyState({
+          icon: 'counties',
+          title: st.forced === 'empty' ? 'No counties yet' : 'No counties match',
+          body: st.forced === 'empty'
+            ? 'Counties appear here once a model run covers them.'
+            : 'Nothing matches that search in the selected region. Clear the search or widen the region scope.',
+        })
+    return `<div class="list-head">${rows.length || 0} counties · Issue <span class="num">${st.issueId}</span> · valid <span class="num">${F.ym(st.month)}</span></div>
+      <div class="col-scroll" id="county-list">${body}</div>
+      <div class="list-foot"><button class="btn btn-teal btn-full" id="btn-county-add-foot">${CB.icon('plus')}Add county</button></div>`
+  }
+
+  function detailHtml() {
+    if (st.forced === 'loading') {
+      return `<div class="detail-body">${CB.ui.skelBlock(28)}${CB.ui.skelBlock(90)}${CB.ui.skelBlock(210)}${CB.ui.skelBlock(180)}</div>`
+    }
+    const c = D.counties.find(x => x.id === st.scope)
+    if (!c || st.forced === 'empty') {
+      return CB.ui.emptyState({ icon: 'counties', title: 'No county selected', body: 'Select a county from the list to see its forecast detail.' })
+    }
+    const f = fc(c.id, st.month)
+    const ser = D.series[c.id]
+    const head = `<div class="detail-head">
+        <button class="btn-ghost btn btn-icon" id="btn-county-close" title="Close">${CB.icon('x')}</button>
+        <button class="btn-ghost btn btn-icon" title="Collapse">${CB.icon('collapse')}</button>
+        <span class="grow"></span>
+        <button class="btn-ghost btn btn-icon" title="More">${CB.icon('more')}</button>
+      </div>`
+    const title = `<div class="detail-title">
+        <h2>${CB.esc(c.name)}</h2>
+        <div class="facts num">${F.int(c.areaKm2)} km²<br>${c.population === null ? F.DASH : F.int(c.population) + ' people'}<br>${F.coord(c.centroid)}</div>
+      </div>
+      <div class="detail-flags">
+        ${CB.ui.signalPill(f?.signal ?? 'no_coverage')}
+        <span class="issue-ref">${CB.icon('calendar', 'sm')}Issue <span class="num">${st.issueId}</span></span>
+        <span class="issue-ref">Lead <span class="num">${f ? f.leadMonths + 'M' : F.DASH}</span></span>
+      </div>`
+    if (!c.hasModelCoverage) {
+      return head + `<div class="detail-body">` + title +
+        CB.ui.emptyState({ icon: 'warn', title: 'No model coverage', body: c.name + ' is outside the current model domain. Forecasts, series and skill are unavailable until coverage is added.' }) +
+        `</div>`
+    }
+    const rows = CB.ui.metricRow({
+      label: 'Drought probability', value: F.prob(f.droughtProb), delta: probDelta(c.id),
+      spark: ser.series.prob.slice(-12), sparkDomain: [0, 1],
+    }) + CB.ui.metricRow({
+      label: 'Ensemble agreement', value: F.members(f.membersAboveThreshold, f.membersTotal),
+    }) + CB.ui.metricRow({
+      label: 'VCI3M', value: F.num1(ser.latest.vci3m.value), delta: ser.latest.vci3m.delta, deltaDigits: 1,
+      spark: ser.series.vci3m.slice(-12),
+    }) + CB.ui.metricRow({
+      label: 'Rainfall anomaly', value: F.pct(ser.latest.rainAnom.value),
+      spark: ser.series.rain_anom.slice(-12),
+    }) + CB.ui.metricRow({
+      label: 'Land temp anomaly', value: F.degC(ser.latest.lstAnom.value),
+      spark: ser.series.lst_anom.slice(-12),
+    })
+    const periods = Object.keys(PERIOD_POINTS).map(p =>
+      `<button data-period="${p}" class="${p === st.period ? 'active' : ''}">${p}</button>`).join('')
+    return head + `<div class="detail-body">` + title +
+      `<div class="metric-rows">${rows}</div>
+      <div class="panel chart-box">
+        <div class="chart-title"><span>Drought probability, p10–p90 band</span><div class="period-tabs" id="period-tabs">${periods}</div></div>
+        <div id="prob-chart"></div>
+      </div>
+      </div>`
+  }
+
+  function mapColHtml() {
+    if (st.forced === 'loading') return `<div style="padding:14px;height:100%">${CB.ui.skelBlock(420)}</div>`
+    return `<div class="map-wrap"><div id="map"></div><div class="map-note">Boundaries: geoBoundaries KEN ADM1 · fills: issue ${st.issueId}</div></div>`
+  }
+
+  const TABLE_COLS = [
+    { key: 'name', label: 'County' },
+    { key: 'regionName', label: 'Region' },
+    { key: 'prob', label: 'Probability', r: 1 },
+    { key: 'p10', label: 'p10', r: 1 },
+    { key: 'p90', label: 'p90', r: 1 },
+    { key: 'members', label: 'Members above', r: 1 },
+    { key: 'vci', label: 'VCI3M', r: 1 },
+    { key: 'signal', label: 'Signal' },
+    { key: 'lead', label: 'Lead', r: 1 },
+    { key: 'issue', label: 'Issue' },
+  ]
+  function tableRecord(c) {
+    const f = fc(c.id, st.month)
+    const cov = c.hasModelCoverage
+    return {
+      id: c.id, name: c.name, regionName: c.regionName,
+      prob: cov ? f?.droughtProb ?? null : null,
+      p10: cov ? f?.probP10 ?? null : null,
+      p90: cov ? f?.probP90 ?? null : null,
+      members: cov ? f?.membersAboveThreshold ?? null : null,
+      vci: D.series[c.id]?.latest.vci3m.value ?? null,
+      signal: f?.signal ?? 'no_coverage',
+      lead: cov ? f?.leadMonths ?? null : null,
+      issue: st.issueId, cov,
+    }
+  }
+  function tableHtml() {
+    if (st.forced === 'loading') return `<div style="padding:14px;width:100%">${CB.ui.skelRows(9, 20)}</div>`
+    let recs = (st.forced === 'empty' ? [] : counties()).map(tableRecord)
+    if (!recs.length) {
+      return `<div style="width:100%">${CB.ui.emptyState({ icon: 'counties', title: st.forced === 'empty' ? 'No counties yet' : 'No counties match', body: 'Adjust the search or region scope to see rows here.' })}</div>`
+    }
+    const { key, dir } = st.sort
+    if (key !== 'canonical') {
+      recs.sort((a, b) => {
+        const av = a[key], bv = b[key]
+        if (av === null) return 1
+        if (bv === null) return -1
+        return (typeof av === 'string' ? av.localeCompare(bv) : av - bv) * dir
+      })
+    }
+    const head = TABLE_COLS.map(col =>
+      `<th class="${col.r ? 'r' : ''}" data-sort="${col.key}">${col.label}${st.sort.key === col.key ? `<span class="sort-ind">${st.sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')
+    const body = recs.map(r => `<tr data-county="${r.id}" id="trow-${r.id}">
+        <td>${CB.esc(r.name)}</td>
+        <td style="color:var(--text-dim)">${CB.esc(r.regionName)}</td>
+        <td class="r num">${F.prob(r.prob)}</td>
+        <td class="r num">${F.prob(r.p10)}</td>
+        <td class="r num">${F.prob(r.p90)}</td>
+        <td class="r num">${r.members === null ? F.DASH : r.members + ' / 51'}</td>
+        <td class="r num">${F.num1(r.vci)}</td>
+        <td>${CB.ui.signalPill(r.signal)}</td>
+        <td class="r num">${r.lead === null ? F.DASH : r.lead + 'M'}</td>
+        <td class="num">${r.issue}</td>
+      </tr>`).join('')
+    return `<div class="table-wrap"><table class="data"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
+  }
+
+  function renderBand5() {
+    const months = monthsOf()
+    const pills = months.map(m =>
+      `<button class="pill-btn num${m === st.month ? ' active' : ''}" data-month="${m}">${F.monthShort(m)}</button>`).join('')
+    document.getElementById('month-pills').innerHTML =
+      `<button class="btn btn-icon btn-ghost" data-step="-1" title="Previous month">${CB.icon('chevL')}</button>` +
+      pills +
+      `<button class="btn btn-icon btn-ghost" data-step="1" title="Next month">${CB.icon('chevR')}</button>`
+    const i = issue()
+    document.getElementById('meta-issue').textContent =
+      `Issue ${i.id} · ${i.run.labelVersion} · ${F.hashShort(i.contentHash)}`
+  }
+
+  function stepMonth(dir) {
+    const months = monthsOf()
+    const i = months.indexOf(st.month)
+    const next = months[Math.min(months.length - 1, Math.max(0, i + dir))]
+    if (next !== st.month) {
+      st.month = next
+      S.set({ month: next })
+      renderBand5()
+      renderMain()
+    }
+  }
+
+  function renderMain() {
+    const band4 = document.getElementById('band-4')
+    document.getElementById('tab-map').classList.toggle('active', st.view === 'map')
+    document.getElementById('tab-table').classList.toggle('active', st.view === 'table')
+    if (st.view === 'table') {
+      map = null
+      band4.innerHTML = tableHtml()
+      band4.querySelectorAll('th[data-sort]').forEach(th => th.addEventListener('click', () => {
+        const k = th.dataset.sort
+        st.sort = { key: k, dir: st.sort.key === k ? -st.sort.dir : 1 }
+        renderMain()
+      }))
+      band4.querySelectorAll('tr[data-county]').forEach(tr => {
+        tr.addEventListener('click', () => { st.view = 'map'; S.set({ view: null }); selectCounty(tr.dataset.county); render() })
+        tr.addEventListener('mouseenter', () => setHover(tr.dataset.county))
+        tr.addEventListener('mouseleave', () => setHover(null))
+      })
+      return
+    }
+    band4.innerHTML = `<div class="cols-3">
+      <div class="col col-list">${listHtml()}</div>
+      <div class="col col-detail"><div class="col-scroll">${detailHtml()}</div></div>
+      <div class="col col-map">${mapColHtml()}</div>
+    </div>`
+    band4.querySelectorAll('.county-row').forEach(row => {
+      row.addEventListener('click', () => selectCounty(row.dataset.county))
+      row.addEventListener('mouseenter', () => setHover(row.dataset.county))
+      row.addEventListener('mouseleave', () => setHover(null))
+    })
+    document.getElementById('btn-county-add-foot')?.addEventListener('click', () => CB.toast('Add county is not wired in this prototype'))
+    document.getElementById('btn-county-close')?.addEventListener('click', () => selectCounty('turkana'))
+    document.getElementById('period-tabs')?.addEventListener('click', e => {
+      const b = e.target.closest('button[data-period]')
+      if (!b) return
+      st.period = b.dataset.period
+      S.set({ period: st.period })
+      renderMain()
+    })
+    const chartEl = document.getElementById('prob-chart')
+    if (chartEl) {
+      const ser = D.series[st.scope]
+      const n = PERIOD_POINTS[st.period]
+      const t = ser.t.slice(-n)
+      requestAnimationFrame(() => CB.charts.probSeries(chartEl, {
+        t,
+        prob: ser.series.prob.slice(-n),
+        p10: ser.series.p10.slice(-n),
+        p90: ser.series.p90.slice(-n),
+        threshold: issue().config.threshold,
+        forecastFrom: Math.max(0, t.length - 3),
+      }))
+    }
+    const mapEl = document.getElementById('map')
+    if (mapEl && st.forced !== 'loading') {
+      const existing = map
+      if (existing) {
+        mapEl.replaceWith(existing.getContainer())
+        existing.resize()
+        paintMap()
+      } else {
+        ensureMap(mapEl)
+      }
+    }
+  }
+
+  function render() {
+    renderBand5()
+    renderMain()
+  }
+
+  document.getElementById('month-pills').addEventListener('click', e => {
+    const step = e.target.closest('[data-step]')
+    if (step) { stepMonth(Number(step.dataset.step)); return }
+    const pill = e.target.closest('[data-month]')
+    if (pill && pill.dataset.month !== st.month) {
+      st.month = pill.dataset.month
+      S.set({ month: st.month })
+      render()
+    }
+  })
+  document.addEventListener('cb:month-step', e => stepMonth(e.detail.dir))
+  window.addEventListener('resize', () => {
+    const chartEl = document.getElementById('prob-chart')
+    if (chartEl && D.series[st.scope]) renderMain()
+  })
+
+  render()
+})()
+</script>
+</body>
+</html>
