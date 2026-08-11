@@ -362,10 +362,10 @@ body.rail-open .rail-avatar .rail-label { opacity: 1; }
 .county-row .prob { font-size: 13px; display: flex; align-items: baseline; gap: 6px; }
 
 .delta { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; }
-.delta.up.bad, .delta.down.good-dir { color: var(--bad); }
-.delta.down.bad, .delta.up.good-dir { color: var(--good); }
 .delta.up { color: var(--bad); }
 .delta.down { color: var(--good); }
+.delta.up.inv { color: var(--good); }
+.delta.down.inv { color: var(--bad); }
 .delta.flat { color: var(--text-faint); }
 .delta svg.ic { width: 12px; height: 12px; }
 

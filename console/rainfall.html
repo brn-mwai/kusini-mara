@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rainfall — Cascade Bridge</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/console.css">
+</head>
+<body>
+<nav class="rail" id="rail"></nav>
+<main class="console">
+  <header class="band band-1">
+    <span class="page-title">Rainfall</span>
+    <span class="vsep"></span>
+    <label class="select" id="scope-select"></label>
+    <span class="grow"></span>
+    <button class="btn btn-teal" id="btn-export"></button>
+  </header>
+  <div class="band band-2">
+    <label class="search" id="search-box"></label>
+    <button class="btn btn-icon" id="btn-filter" title="Filter"></button>
+    <button class="btn btn-icon btn-ghost" id="btn-overflow" title="More"></button>
+  </div>
+  <div class="band band-3">
+    <div id="layer-chips" style="display:flex;gap:8px;align-items:center;overflow-x:auto"></div>
+    <span class="grow" style="flex:1"></span>
+    <span id="layer-sub" class="kbd-hint num"></span>
+  </div>
+  <section class="band band-4" id="band-4" style="position:relative"></section>
+  <footer class="band band-5">
+    <div id="scrubber" style="display:flex;align-items:center;gap:12px"></div>
+    <div class="meta-footer">
+      <span class="kbd-hint"><kbd>[</kbd> rail &nbsp;<kbd>&#8592;</kbd><kbd>&#8594;</kbd> month</span>
+      <span id="meta-line" class="num"></span>
+    </div>
+  </footer>
+</main>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/format.js"></script>
+<script src="assets/shell.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/components.js"></script>
+<script src="assets/map.js"></script>
+<script>
+(() => {
+  const CFG = {"rail":"rainfall","title":"Rainfall","icon":"rainfall","subtitle":"CHIRPS · observed monthly rainfall","defaultLayer":"chirps_precip","chips":[{"id":"chirps_precip","label":"CHIRPS rainfall"},{"id":"rain_anom","label":"Rainfall anomaly"},{"id":"spi3","label":"SPI-3"},{"id":"spi6","label":"SPI-6"}]}
+  const D = CB_DATA, F = CB.fmt, S = CB.state
+  CB.shell.init({ page: CFG.rail })
+
+  const LAYERS = Object.fromEntries(D.layers.map(l => [l.id, l]))
+  const chipIds = CFG.chips.map(c => c.id)
+
+  const st = {
+    layer: chipIds.includes(S.get('layer')) ? S.get('layer') : CFG.defaultLayer,
+    scope: D.counties.some(c => c.id === S.get('scope')) ? S.get('scope') : null,
+    period: ['1M', '3M', '1Y', '5Y'].includes(S.get('period')) ? S.get('period') : '3M',
+    forced: ['empty', 'loading'].includes(S.get('state')) ? S.get('state') : null,
+    query: '',
+    range: null,
+  }
+  const layer = () => LAYERS[st.layer]
+  const lv = () => D.layerValues[st.layer]
+  const valuesFlat = () => Object.fromEntries(D.counties.map(c => [c.id, lv().values[c.id] ? lv().values[c.id].value : null]))
+  /* observed snapshots often occupy a sliver of the full domain (August CHIRPS
+     is 13-33mm of 0-300); fit the initial display range so the ramp is legible,
+     exactly what the panel's range handles are for */
+  function fitRange() {
+    const vals = Object.values(valuesFlat()).filter(v => v !== null)
+    const [d0, d1] = layer().domain
+    const lo = Math.min(...vals), hi = Math.max(...vals)
+    const pad = (hi - lo) * 0.25 || (d1 - d0) * 0.05
+    return [Math.max(d0, lo - pad), Math.min(d1, hi + pad)]
+  }
+  const rangeOf = () => st.range || fitRange()
+
+  const fmtVal = v => {
+    if (v === null || v === undefined) return F.DASH
+    const [d0, d1] = layer().domain
+    return Math.abs(d1 - d0) <= 2 ? v.toFixed(2) : Math.abs(d1 - d0) <= 10 ? F.num1(v) : Math.abs(v) >= 100 ? F.int(Math.round(v)) : F.num1(v)
+  }
+  /* break indices per layer: [severeBelowIdx, moderateBelowIdx]; raw totals
+     (chirps mm, ndvi) carry no absolute risk meaning so they get no pill */
+  const RISK_IDX = {
+    vci3m: [1, 2], ndvi_anom: [0, 1], rain_anom: [0, 1], spi3: [0, 1], spi6: [0, 1],
+    soil_moisture: [0, 1], soil_moisture_50: [0, 1],
+  }
+  function riskOf(v) {
+    const idx = RISK_IDX[st.layer]
+    if (!idx || v === null || v === undefined) return null
+    const b = layer().classBreaks
+    if (v < b[idx[0]]) return ['Severe', 'pill-drought']
+    if (v < b[idx[1]]) return ['Moderate', 'pill-watch']
+    return ['Normal', 'pill-normal']
+  }
+
+  document.getElementById('btn-export').innerHTML = CB.icon('external') + 'Export view'
+  document.getElementById('btn-export').addEventListener('click', () => CB.toast('Export is not wired in this prototype'))
+  document.getElementById('btn-filter').innerHTML = CB.icon('filter')
+  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-overflow').innerHTML = CB.icon('more')
+  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('search-box').innerHTML =
+    CB.icon('search') + `<input id="search-input" type="search" placeholder="Search county">`
+  document.getElementById('search-input').addEventListener('input', e => {
+    st.query = e.target.value.trim().toLowerCase()
+    renderList()
+  })
+  const scopes = [['', 'All counties'], ...D.counties.map(c => [c.id, c.name])]
+  const scopeSel = document.getElementById('scope-select')
+  scopeSel.innerHTML = `<select id="scope-sel">${scopes.map(([v, l]) =>
+    `<option value="${v}"${v === (st.scope || '') ? ' selected' : ''}>${l}</option>`).join('')}</select>` + CB.icon('chevD', 'sm')
+  document.getElementById('scope-sel').addEventListener('change', e => {
+    st.scope = e.target.value || null
+    S.set({ scope: st.scope })
+    renderList()
+    syncMapSelection()
+  })
+
+  function renderChips() {
+    const host = document.getElementById('layer-chips')
+    host.innerHTML = CFG.chips.map(c =>
+      `<button class="pill-btn${c.id === st.layer ? ' active' : ''}" data-layer="${c.id}" style="height:30px">${c.label}</button>`).join('')
+    host.querySelectorAll('[data-layer]').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.layer === st.layer) return
+      st.layer = b.dataset.layer
+      st.range = null
+      S.set({ layer: st.layer })
+      render()
+    }))
+    document.getElementById('layer-sub').textContent = CFG.subtitle
+  }
+
+  function rowHtml(c) {
+    const entry = lv().values[c.id]
+    const v = entry ? entry.value : null
+    const color = CB.ui.rampColor(layer(), v, rangeOf())
+    const risk = riskOf(v)
+    return `<button class="county-row${c.id === st.scope ? ' selected' : ''}" data-county="${c.id}" id="row-${c.id}">
+      <span class="thumb">${CB.ui.countyThumb(c.id, color)}</span>
+      <span class="who">
+        <div class="name">${CB.esc(c.name)}</div>
+        <div class="region num">${F.int(c.areaKm2)} km²</div>
+      </span>
+      <span class="vals">
+        <span class="prob num">${fmtVal(v)}<span style="color:var(--text-faint);font-size:10px"> ${CB.esc(layer().unit)}</span>
+          ${entry ? CB.ui.deltaArrow(entry.delta, { digits: Math.abs(layer().domain[1]) <= 1 ? 2 : 1, inv: true }) : ''}</span>
+        ${risk ? `<span class="pill ${risk[1]}"><span class="dot"></span>${risk[0]}</span>` : ''}
+      </span>
+    </button>`
+  }
+
+  function renderList() {
+    const host = document.getElementById('county-list-host')
+    if (!host) return
+    if (st.forced === 'loading') { host.innerHTML = `<div class="col-scroll">${CB.ui.skelRows(8)}</div>`; return }
+    const rows = st.forced === 'empty' ? [] :
+      D.counties.filter(c => (!st.scope || c.id === st.scope || true) && (!st.query || c.name.toLowerCase().includes(st.query)))
+    const sum = lv().summary
+    const head = `<button class="county-row" id="row-all" style="border-bottom-width:2px">
+      <span class="thumb" style="display:flex;align-items:center;justify-content:center">${CB.icon(CFG.icon)}</span>
+      <span class="who"><div class="name">All counties</div><div class="region num">${F.int(sum.totalAreaKm2)} km²</div></span>
+      <span class="vals"><span class="prob num">${sum.mean === null ? F.DASH : fmtVal(sum.mean)}<span style="color:var(--text-faint);font-size:10px"> ${CB.esc(layer().unit)}</span>
+        ${CB.ui.deltaArrow(sum.delta, { digits: 1, inv: true })}</span></span>
+    </button>`
+    host.innerHTML = rows.length
+      ? `<div class="list-head">${rows.length} counties · observed ${F.ym(lv().asOf.slice(0, 7))}</div>
+         <div class="col-scroll">${head}${rows.map(rowHtml).join('')}</div>`
+      : `<div class="col-scroll">${CB.ui.emptyState({ icon: CFG.icon, title: st.forced === 'empty' ? 'No observations yet' : 'No counties match', body: st.forced === 'empty' ? 'County values appear once the first satellite composite is ingested.' : 'Nothing matches that search.' })}</div>`
+    host.querySelectorAll('[data-county]').forEach(row => {
+      row.addEventListener('click', () => {
+        st.scope = st.scope === row.dataset.county ? null : row.dataset.county
+        S.set({ scope: st.scope })
+        document.getElementById('scope-sel').value = st.scope || ''
+        renderList()
+        syncMapSelection()
+      })
+      row.addEventListener('mouseenter', () => setHover(row.dataset.county))
+      row.addEventListener('mouseleave', () => setHover(null))
+    })
+  }
+
+  let map = null, canvasCtl = null, panelEl = null, mapFailed = false
+  function setHover(id) {
+    document.querySelectorAll('[data-county]').forEach(el => el.classList.toggle('hover', el.dataset.county === id))
+    if (map && map.isStyleLoaded()) CB.map.setHover(map, id)
+  }
+  function syncMapSelection() {
+    if (map && map.isStyleLoaded()) CB.map.setSelected(map, st.scope, { dimOthers: false })
+    renderPanel()
+  }
+  function paintMap() {
+    if (map && map.isStyleLoaded()) CB.map.paintRamp(map, valuesFlat(), layer(), rangeOf())
+    if (canvasCtl) canvasCtl.redraw()
+  }
+  function renderPanel() {
+    if (!map) return
+    if (panelEl) panelEl.remove()
+    panelEl = CB.ui.layerPanel({
+      collapsed: window.matchMedia('(max-width: 760px)').matches,
+      layer: layer(),
+      hist: D.histograms[st.layer],
+      align: 'left',
+      monthLabel: 'Observed as of ' + F.ym(lv().asOf.slice(0, 7)),
+      scopeLabel: st.scope ? D.counties.find(c => c.id === st.scope).name : 'All counties',
+      range: rangeOf(),
+      onRangeChange: r => { st.range = r; paintMap(); renderList() },
+      onSwapLayer: id => {
+        if (!chipIds.includes(id)) { CB.toast('This page shows only ' + CFG.title.toLowerCase() + ' layers'); renderPanel(); return }
+        st.layer = id; st.range = null; S.set({ layer: id }); render()
+      },
+      onClose: () => CB.toast('This page always shows one layer'),
+    })
+    document.getElementById('map-wrap-host').appendChild(panelEl)
+  }
+
+  function renderMain() {
+    const b4 = document.getElementById('band-4')
+    b4.innerHTML = `<div class="cols-3" style="grid-template-columns:330px 1fr">
+      <div class="col col-list" id="county-list-host"></div>
+      <div class="col col-map" style="position:relative" id="map-col">
+        ${st.forced === 'loading' ? `<div style="padding:14px;height:100%">${CB.ui.skelBlock(420)}</div>`
+          : `<div class="map-wrap" id="map-wrap-host"><div id="map"></div>
+             <div class="map-note">Boundaries: geoBoundaries KEN ADM1 · fills from data/layer-values.json</div></div>`}
+      </div>
+    </div>`
+    renderList()
+    if (st.forced === 'loading') return
+    if (mapFailed) {
+      document.getElementById('map-col').innerHTML =
+        `<div style="display:flex;align-items:center;justify-content:center;height:100%">${CB.ui.emptyState({ icon: 'warn', title: 'Map unavailable', body: 'WebGL could not be initialised in this browser. County values remain in the list.' })}</div>`
+      return
+    }
+    try {
+      map = CB.map.create(document.getElementById('map'))
+      map.on('load', () => {
+        paintMap()
+        if (st.scope) CB.map.setSelected(map, st.scope, { dimOthers: false })
+      })
+      CB.map.onCountyHover(map, id => setHover(id))
+      CB.map.onCountyClick(map, id => {
+        st.scope = st.scope === id ? null : id
+        S.set({ scope: st.scope })
+        document.getElementById('scope-sel').value = st.scope || ''
+        renderList()
+        syncMapSelection()
+      })
+      const wrap = document.getElementById('map-wrap-host')
+      canvasCtl = CB.map.fieldCanvas(map, wrap, () => valuesFlat(), () => layer(), () => rangeOf())
+      CB.map.controls(wrap, map)
+      renderPanel()
+    } catch (err) {
+      mapFailed = true
+      renderMain()
+    }
+  }
+
+  const MONTHS = [
+    { value: '2026-06', label: 'Jun', hasData: false },
+    { value: '2026-07', label: 'Jul', hasData: false },
+    { value: '2026-08', label: 'Aug', hasData: true },
+  ]
+  let scrub
+  function renderScrubber() {
+    scrub = CB.ui.timeScrubber(document.getElementById('scrubber'), {
+      periods: ['1M', '3M', '1Y', '5Y'],
+      period: st.period,
+      months: MONTHS,
+      selected: '2026-08',
+      onPeriodChange: p => { st.period = p; S.set({ period: p }) },
+      onSelect: m => {
+        if (m !== '2026-08') {
+          CB.toast('No observed snapshot for that month in the prototype')
+          scrub.set(null, '2026-08')
+        }
+      },
+    })
+    document.getElementById('meta-line').textContent =
+      `${st.layer} · observed ${lv().asOf} · ${layer().unit || 'index'}`
+  }
+  document.addEventListener('cb:month-step', () => {
+    CB.toast('Only the August 2026 snapshot ships with the prototype')
+  })
+
+  function render() {
+    renderChips()
+    renderScrubber()
+    if (map) { try { map.remove() } catch {} map = null }
+    if (canvasCtl) { canvasCtl.destroy(); canvasCtl = null }
+    panelEl = null
+    renderMain()
+  }
+  render()
+})()
+</script>
+</body>
+</html>

@@ -7,11 +7,11 @@ CB.ui = (() => {
     return `<span class="pill pill-${signal}"><span class="dot"></span>${SIGNAL_LABEL[signal] || signal}</span>`
   }
 
-  function deltaArrow(v, { digits = 2, suffix = '' } = {}) {
+  function deltaArrow(v, { digits = 2, suffix = '', inv = false } = {}) {
     if (v === null || v === undefined) return `<span class="delta flat num">${CB.fmt.DASH}</span>`
     const dir = v > 0.0005 ? 'up' : v < -0.0005 ? 'down' : 'flat'
     const icon = dir === 'up' ? CB.icon('up') : dir === 'down' ? CB.icon('down') : ''
-    return `<span class="delta ${dir} num">${icon}${CB.fmt.delta(v, digits)}${suffix}</span>`
+    return `<span class="delta ${dir}${inv ? ' inv' : ''} num">${icon}${CB.fmt.delta(v, digits)}${suffix}</span>`
   }
 
   let geoIndex = null
@@ -54,14 +54,14 @@ CB.ui = (() => {
     </svg>`
   }
 
-  function metricRow({ label, value, unit, delta, deltaDigits, spark, sparkColor, sparkDomain }) {
+  function metricRow({ label, value, unit, delta, deltaDigits, deltaInv, spark, sparkColor, sparkDomain }) {
     const sparkHtml = spark
       ? CB.charts.sparkline(spark, { color: sparkColor, min: sparkDomain?.[0], max: sparkDomain?.[1] })
       : ''
     return `<div class="metric-row">
       <span class="spark">${sparkHtml}</span>
       <span class="m-label">${CB.esc(label)}</span>
-      ${delta !== undefined ? deltaArrow(delta, { digits: deltaDigits ?? 2 }) : ''}
+      ${delta !== undefined ? deltaArrow(delta, { digits: deltaDigits ?? 2, inv: deltaInv }) : ''}
       <span class="m-value num">${value}${unit ? `<span class="unit">${CB.esc(unit)}</span>` : ''}</span>
     </div>`
   }

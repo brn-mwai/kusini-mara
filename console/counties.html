@@ -214,7 +214,7 @@
     }) + CB.ui.metricRow({
       label: 'Ensemble agreement', value: F.members(f.membersAboveThreshold, f.membersTotal),
     }) + CB.ui.metricRow({
-      label: 'VCI3M', value: F.num1(ser.latest.vci3m.value), delta: ser.latest.vci3m.delta, deltaDigits: 1,
+      label: 'VCI3M', value: F.num1(ser.latest.vci3m.value), delta: ser.latest.vci3m.delta, deltaDigits: 1, deltaInv: true,
       spark: ser.series.vci3m.slice(-12),
     }) + CB.ui.metricRow({
       label: 'Rainfall anomaly', value: F.pct(ser.latest.rainAnom.value),

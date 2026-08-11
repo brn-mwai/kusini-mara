@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alerts — Cascade Bridge</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/console.css">
+<style>
+.alert-row .a-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.alert-row .a-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.alert-row .a-when { margin-left: auto; color: var(--text-faint); font-size: 11px; flex: none; }
+.alert-row.unacked { background: color-mix(in srgb, var(--surface) 55%, transparent); }
+.alert-detail { width: 46%; min-width: 340px; border-left: 1px solid var(--hairline); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.alert-big { font-size: 34px; font-weight: 700; }
+@media (max-width: 900px) { .alert-detail { width: 100%; min-width: 0; border-left: none; border-top: 1px solid var(--hairline); } .alerts-cols { flex-direction: column; } }
+</style>
+</head>
+<body>
+<nav class="rail" id="rail"></nav>
+<main class="console">
+  <header class="band band-1">
+    <span class="page-title">Alerts</span>
+    <span class="vsep"></span>
+    <span class="kbd-hint" id="inbox-count"></span>
+    <span class="grow"></span>
+    <button class="btn" id="btn-ack-all"></button>
+  </header>
+  <div class="band band-2">
+    <label class="search" id="search-box"></label>
+    <button class="btn btn-icon" id="btn-filter" title="Filter"></button>
+    <label class="select" id="scope-select"></label>
+    <button class="btn btn-icon btn-ghost" id="btn-overflow" title="More"></button>
+  </div>
+  <div class="band band-3">
+    <div id="filter-chips" style="display:flex;gap:8px;align-items:center;overflow-x:auto"></div>
+  </div>
+  <section class="band band-4" id="band-4"></section>
+</main>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/format.js"></script>
+<script src="assets/shell.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/components.js"></script>
+<script src="assets/map.js"></script>
+<script>
+(() => {
+  const D = CB_DATA, F = CB.fmt, S = CB.state
+  CB.shell.init({ page: 'alerts' })
+
+  const LEVEL_COLOR = { advisory: 'var(--normal)', watch: 'var(--watch)', warning: '#C97A3C', emergency: 'var(--drought)' }
+  const FILTERS = [['all', 'All'], ['unread', 'Unread'], ['acked', 'Acknowledged'], ['failed', 'Failed']]
+  const county = id => D.counties.find(c => c.id === id)
+
+  const acked = {}
+  for (const a of D.alerts) acked[a.id] = a.deliveries.some(d => d.state === 'acked')
+
+  const st = {
+    filter: ['unread', 'acked', 'failed'].includes(S.get('filter')) ? S.get('filter') : 'all',
+    scope: D.counties.some(c => c.id === S.get('scope')) ? S.get('scope') : null,
+    alert: D.alerts.some(a => a.id === S.get('alert')) ? S.get('alert') : D.alerts[0]?.id,
+    forced: ['empty', 'loading'].includes(S.get('state')) ? S.get('state') : null,
+    query: '',
+  }
+
+  const visible = () => (st.forced === 'empty' ? [] : D.alerts)
+    .filter(a => !st.scope || a.countyId === st.scope)
+    .filter(a => st.filter === 'all'
+      || (st.filter === 'unread' && !acked[a.id])
+      || (st.filter === 'acked' && acked[a.id])
+      || (st.filter === 'failed' && a.deliveries.some(d => d.state === 'failed')))
+    .filter(a => !st.query || (county(a.countyId).name + ' ' + a.level + ' ' + a.issueId).toLowerCase().includes(st.query))
+    .sort((a, b) => b.firedAt.localeCompare(a.firedAt))
+
+  document.getElementById('btn-ack-all').innerHTML = CB.icon('check') + 'Mark all acknowledged'
+  document.getElementById('btn-ack-all').addEventListener('click', () => {
+    for (const a of D.alerts) acked[a.id] = true
+    CB.toast('All alerts acknowledged — prototype keeps this in memory')
+    render()
+  })
+  document.getElementById('btn-filter').innerHTML = CB.icon('filter')
+  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-overflow').innerHTML = CB.icon('more')
+  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('search-box').innerHTML =
+    CB.icon('search') + '<input id="search-input" type="search" placeholder="Search county, level, issue">'
+  document.getElementById('search-input').addEventListener('input', e => {
+    st.query = e.target.value.trim().toLowerCase()
+    render()
+  })
+  const scopes = [['', 'All counties'], ...D.counties.map(c => [c.id, c.name])]
+  document.getElementById('scope-select').innerHTML =
+    `<select id="scope-sel">${scopes.map(([v, l]) => `<option value="${v}"${v === (st.scope || '') ? ' selected' : ''}>${l}</option>`).join('')}</select>` + CB.icon('chevD', 'sm')
+  document.getElementById('scope-sel').addEventListener('change', e => {
+    st.scope = e.target.value || null
+    S.set({ scope: st.scope })
+    render()
+  })
+
+  function renderChips() {
+    const host = document.getElementById('filter-chips')
+    host.innerHTML = FILTERS.map(([id, label]) =>
+      `<button class="pill-btn${id === st.filter ? ' active' : ''}" data-f="${id}" style="height:30px">${label}</button>`).join('')
+    host.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => {
+      st.filter = b.dataset.f
+      S.set({ filter: st.filter === 'all' ? null : st.filter })
+      render()
+    }))
+  }
+
+  const delivChip = d => `<span class="deliv d-${d.state}">${CB.esc(d.channel)} · ${d.state}</span>`
+
+  function rowHtml(a) {
+    const c = county(a.countyId)
+    return `<button class="alert-row${a.id === st.alert ? ' selected' : ''}${acked[a.id] ? '' : ' unacked'}" data-alert="${a.id}">
+      <span class="sev-dot" style="background:${LEVEL_COLOR[a.level]}"></span>
+      <span class="a-main">
+        <span class="a-line">
+          <b>${CB.esc(c.name)}</b>
+          <span style="color:var(--text-dim)">crossed <b>${a.level}</b> at</span>
+          <span class="num">P ${F.prob(a.probability)}</span>
+          <span class="issue-ref" style="height:20px">Issue <span class="num">${a.issueId}</span></span>
+          <span class="a-when num">${a.firedAt.slice(0, 10)} ${a.firedAt.slice(11, 16)}</span>
+        </span>
+        <span class="a-line">${a.deliveries.map(delivChip).join('')}
+          ${acked[a.id] ? `<span class="deliv d-acked">${CB.esc('acknowledged')}</span>` : ''}</span>
+      </span>
+      ${CB.icon('chevR', 'sm')}
+    </button>`
+  }
+
+  function detailHtml(a) {
+    if (!a) return CB.ui.emptyState({ icon: 'alerts', title: 'No alert selected', body: 'Select an alert from the inbox to inspect its payload and CAP document.' })
+    const c = county(a.countyId)
+    const payload = { ...a }
+    delete payload.capXml
+    const rows = a.deliveries.map(d => `<tr>
+      <td>${CB.esc(d.channel)}</td>
+      <td><span class="deliv d-${d.state}">${d.state}</span></td>
+      <td class="num">${d.at ? d.at.slice(0, 16).replace('T', ' ') : F.DASH}</td>
+      <td style="color:var(--bad)">${d.error ? CB.esc(d.error) : ''}</td>
+    </tr>`).join('')
+    return `
+      <div class="detail-flags">
+        <span class="pill" style="color:${LEVEL_COLOR[a.level]};background:color-mix(in srgb,${LEVEL_COLOR[a.level]} 16%,transparent)"><span class="dot"></span>${a.level}</span>
+        <span class="issue-ref">${CB.icon('calendar', 'sm')}Issue <span class="num">${a.issueId}</span></span>
+        ${acked[a.id] ? '' : `<button class="btn btn-teal" id="btn-ack" style="margin-left:auto">${CB.icon('check')}Acknowledge</button>`}
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:650">${CB.esc(c.name)} County</div>
+        <div class="alert-big num">P ${F.prob(a.probability)}</div>
+        <div class="kbd-hint num">fired ${a.firedAt}</div>
+      </div>
+      <div class="panel" style="overflow:hidden">
+        <table class="data"><thead><tr><th>Channel</th><th>State</th><th>At</th><th>Error</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>
+      <div>
+        <div class="chart-title" style="margin-bottom:6px"><span>Payload</span></div>
+        <pre class="code">${CB.esc(JSON.stringify(payload, null, 2))}</pre>
+      </div>
+      <div>
+        <div class="chart-title" style="margin-bottom:6px"><span>CAP 1.2</span></div>
+        <pre class="code">${CB.esc(a.capXml)}</pre>
+      </div>`
+  }
+
+  function render() {
+    renderChips()
+    const b4 = document.getElementById('band-4')
+    if (st.forced === 'loading') {
+      b4.innerHTML = `<div style="flex:1;padding:14px">${CB.ui.skelRows(9, 24)}</div>`
+      document.getElementById('inbox-count').textContent = ''
+      return
+    }
+    const items = visible()
+    const unread = items.filter(a => !acked[a.id]).length
+    document.getElementById('inbox-count').textContent = `${items.length} alerts · ${unread} unacknowledged`
+    const sel = D.alerts.find(a => a.id === st.alert && items.some(x => x.id === a.id)) || items[0] || null
+    if (sel) st.alert = sel.id
+    b4.innerHTML = `<div class="alerts-cols" style="display:flex;flex:1;min-height:0;width:100%">
+      <div class="col" style="flex:1;min-width:0"><div class="col-scroll" id="inbox">
+        ${items.length ? items.map(rowHtml).join('') : CB.ui.emptyState({ icon: 'alerts', title: st.forced === 'empty' ? 'Inbox zero' : 'Nothing matches', body: st.forced === 'empty' ? 'Alerts land here when a published issue crosses a tenant trigger.' : 'No alert matches that filter. Try All.' })}
+      </div></div>
+      <div class="alert-detail" id="alert-detail">${detailHtml(sel)}</div>
+    </div>`
+    b4.querySelectorAll('[data-alert]').forEach(row => row.addEventListener('click', () => {
+      st.alert = row.dataset.alert
+      S.set({ alert: st.alert })
+      render()
+    }))
+    document.getElementById('btn-ack')?.addEventListener('click', () => {
+      acked[st.alert] = true
+      CB.toast('Acknowledged — prototype keeps this in memory')
+      render()
+    })
+  }
+  render()
+})()
+</script>
+</body>
+</html>

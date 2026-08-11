@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outlook — Cascade Bridge</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/console.css">
+<style>
+.outlook-rail { width: 330px; flex: none; border-left: 1px solid var(--hairline); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.gauge-row { display: flex; align-items: center; gap: 14px; padding: 12px; }
+.gauge-meta { display: flex; flex-direction: column; gap: 2px; }
+.gauge-meta .g-phase { font-weight: 650; }
+.gauge-meta .g-val { color: var(--text-dim); font-size: 11.5px; }
+.legend-strip { position: absolute; left: 12px; bottom: 24px; z-index: 10; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+.legend-cells { display: flex; }
+.legend-cells span { width: 34px; height: 8px; }
+.legend-labels { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--text-faint); }
+@media (max-width: 1100px) { .outlook-rail { width: 280px; } }
+@media (max-width: 760px) { .outlook-rail { width: 100%; border-left: none; border-top: 1px solid var(--hairline); } }
+</style>
+</head>
+<body>
+<nav class="rail" id="rail"></nav>
+<main class="console">
+  <header class="band band-1">
+    <span class="page-title">Outlook</span>
+    <span class="vsep"></span>
+    <span class="kbd-hint">SEAS5 seasonal ensemble</span>
+    <span class="grow"></span>
+    <button class="btn btn-teal" id="btn-export"></button>
+  </header>
+  <div class="band band-2">
+    <label class="search" id="search-box"></label>
+    <button class="btn btn-icon" id="btn-filter" title="Filter"></button>
+    <label class="select" id="issue-select"></label>
+    <button class="btn btn-icon btn-ghost" id="btn-overflow" title="More"></button>
+  </div>
+  <div class="band band-3">
+    <div id="region-chips" style="display:flex;gap:8px;align-items:center;overflow-x:auto"></div>
+    <span class="grow" style="flex:1"></span>
+    <span class="kbd-hint num" id="run-line"></span>
+  </div>
+  <section class="band band-4" id="band-4" style="position:relative"></section>
+  <footer class="band band-5">
+    <div id="scrubber" style="display:flex;align-items:center;gap:12px"></div>
+    <div class="meta-footer">
+      <span class="kbd-hint"><kbd>&#8592;</kbd><kbd>&#8594;</kbd> month</span>
+      <span id="meta-line" class="num"></span>
+    </div>
+  </footer>
+</main>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/format.js"></script>
+<script src="assets/shell.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/components.js"></script>
+<script src="assets/map.js"></script>
+<script>
+(() => {
+  const D = CB_DATA, F = CB.fmt, S = CB.state
+  CB.shell.init({ page: 'outlook' })
+
+  const pad2 = n => String(n).padStart(2, '0')
+  const TERC_LAYER = D.layers.find(l => l.id === 'tercile_below')
+  const REGIONS = [
+    ['all', 'All regions'], ['asal_north', 'ASAL North'],
+    ['asal_northeast', 'ASAL Northeast'], ['asal_eastern', 'ASAL Eastern'],
+  ]
+
+  const st = {
+    issueId: D.issues[S.get('issue')] ? S.get('issue') : '2026-08',
+    month: null,
+    region: ['asal_north', 'asal_northeast', 'asal_eastern'].includes(S.get('region')) ? S.get('region') : 'asal_eastern',
+    scope: D.counties.some(c => c.id === S.get('scope')) ? S.get('scope') : 'kitui',
+    period: ['1M', '3M', '1Y'].includes(S.get('period')) ? S.get('period') : '3M',
+    forced: ['empty', 'loading'].includes(S.get('state')) ? S.get('state') : null,
+  }
+  const issue = () => D.issues[st.issueId]
+  const monthsOf = () => [...new Set(issue().forecasts.map(f => f.validYear + '-' + pad2(f.validMonth)))]
+  st.month = monthsOf().includes(S.get('month')) ? S.get('month') : monthsOf()[1] || monthsOf()[0]
+  const threshold = () => Number(S.get('threshold')) || issue().config.threshold
+  const fcOf = (cid, m) => issue().forecasts.find(f => f.countyId === cid && f.validYear + '-' + pad2(f.validMonth) === m)
+  const tercValues = () => Object.fromEntries(D.counties.map(c => {
+    const f = fcOf(c.id, st.month)
+    return [c.id, c.hasModelCoverage && f && f.terciles ? f.terciles.below : null]
+  }))
+
+  document.getElementById('btn-export').innerHTML = CB.icon('external') + 'Export outlook'
+  document.getElementById('btn-export').addEventListener('click', () => CB.toast('Export is not wired in this prototype'))
+  document.getElementById('btn-filter').innerHTML = CB.icon('filter')
+  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-overflow').innerHTML = CB.icon('more')
+  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('search-box').innerHTML =
+    CB.icon('search') + '<input id="search-input" type="search" placeholder="Search county, region">'
+  document.getElementById('search-input').addEventListener('input', e => {
+    st.query = e.target.value.trim().toLowerCase()
+    renderList()
+  })
+  document.getElementById('issue-select').innerHTML =
+    `<select id="issue-sel">${Object.keys(D.issues).map(id =>
+      `<option value="${id}"${id === st.issueId ? ' selected' : ''}>Issue ${id}</option>`).join('')}</select>` + CB.icon('chevD', 'sm')
+  document.getElementById('issue-sel').addEventListener('change', e => {
+    st.issueId = e.target.value
+    const ms = monthsOf()
+    if (!ms.includes(st.month)) st.month = ms[1] || ms[0]
+    S.set({ issue: st.issueId, month: st.month })
+    render()
+  })
+
+  function renderChips() {
+    const host = document.getElementById('region-chips')
+    host.innerHTML = REGIONS.map(([id, label]) =>
+      `<button class="pill-btn${(id === 'all' ? !D.ensemble[st.region] : id === st.region) ? '' : ''}${id === st.region ? ' active' : ''}" data-region="${id}" style="height:30px">${label}</button>`).join('')
+    host.querySelectorAll('[data-region]').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.region === 'all') { CB.toast('Pick a region to see its ensemble'); return }
+      st.region = b.dataset.region
+      S.set({ region: st.region })
+      render()
+    }))
+    const r = issue().run
+    document.getElementById('run-line').textContent = `${r.source} · ${r.ensembleMembers} members · ${r.ensembleReduction}`
+  }
+
+  function rowHtml(c) {
+    const f = fcOf(c.id, st.month)
+    const cov = c.hasModelCoverage && f
+    const below = cov && f.terciles ? f.terciles.below : null
+    const color = CB.ui.rampColor(TERC_LAYER, below)
+    return `<button class="county-row${c.id === st.scope ? ' selected' : ''}${cov ? '' : ' nocov'}" data-county="${c.id}">
+      <span class="thumb">${CB.ui.countyThumb(c.id, color)}</span>
+      <span class="who">
+        <div class="name">${CB.esc(c.name)}</div>
+        <div class="region">${CB.esc(c.regionName)}</div>
+      </span>
+      <span class="vals">
+        <span class="prob num">${below === null ? F.DASH : 'below ' + Math.round(below * 100) + '%'}</span>
+        ${CB.ui.signalPill(f ? f.signal : 'no_coverage')}
+      </span>
+    </button>`
+  }
+
+  function renderList() {
+    const host = document.getElementById('county-list-host')
+    if (!host) return
+    if (st.forced === 'loading') { host.innerHTML = `<div class="col-scroll">${CB.ui.skelRows(8)}</div>`; return }
+    const rows = st.forced === 'empty' ? [] :
+      D.counties.filter(c => !st.query || (c.name + ' ' + c.regionName).toLowerCase().includes(st.query))
+    host.innerHTML = rows.length
+      ? `<div class="list-head">Tercile below-normal · valid <span class="num">${F.ym(st.month)}</span></div>
+         <div class="col-scroll">${rows.map(rowHtml).join('')}</div>`
+      : `<div class="col-scroll">${CB.ui.emptyState({ icon: 'outlook', title: st.forced === 'empty' ? 'No outlook yet' : 'No counties match', body: st.forced === 'empty' ? 'Tercile forecasts appear when an issue is published.' : 'Nothing matches that search.' })}</div>`
+    host.querySelectorAll('[data-county]').forEach(row => {
+      row.addEventListener('click', () => {
+        st.scope = row.dataset.county
+        S.set({ scope: st.scope })
+        const c = D.counties.find(x => x.id === st.scope)
+        if (c && D.ensemble[c.regionId]) { st.region = c.regionId; S.set({ region: st.region }) }
+        render()
+      })
+      row.addEventListener('mouseenter', () => setHover(row.dataset.county))
+      row.addEventListener('mouseleave', () => setHover(null))
+    })
+  }
+
+  function gauge(value, lo, hi, phase, indexName) {
+    const t = Math.max(0, Math.min(1, (value - lo) / (hi - lo)))
+    const a = Math.PI * (1 - t)
+    const r = 34, cx = 44, cy = 44
+    const x = cx + r * Math.cos(a), y = cy - r * Math.sin(a)
+    return `<svg width="88" height="52" viewBox="0 0 88 52">
+      <path d="M10 44 A34 34 0 0 1 78 44" fill="none" stroke="var(--surface-2)" stroke-width="7" stroke-linecap="round"/>
+      <path d="M10 44 A34 34 0 ${t > 0.5 ? 1 : 0} 1 ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="var(--teal)" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="var(--text)"/>
+      <text x="10" y="51" style="font-family:var(--mono);font-size:8px" fill="var(--text-faint)">${lo}</text>
+      <text x="72" y="51" style="font-family:var(--mono);font-size:8px" fill="var(--text-faint)">+${hi}</text>
+    </svg>`
+  }
+
+  function railHtml() {
+    if (st.forced === 'loading') return CB.ui.skelBlock(120) + CB.ui.skelBlock(220) + CB.ui.skelBlock(140)
+    const ctx = D.ensemble.context
+    const ens = D.ensemble[st.region]
+    const regionName = REGIONS.find(([id]) => id === st.region)[1]
+    const selCounty = D.counties.find(c => c.id === st.scope)
+    const selFc = selCounty ? fcOf(selCounty.id, st.month) : null
+    return `
+      <div class="panel">
+        <div class="gauge-row">
+          ${gauge(ctx.enso.value, -3, 3)}
+          <div class="gauge-meta">
+            <span class="kbd-hint">ENSO state · ${CB.esc(ctx.enso.index)}</span>
+            <span class="g-phase">${CB.esc(ctx.enso.phase)}</span>
+            <span class="g-val num">${F.delta(ctx.enso.value, 1)}°C · as of ${F.ym(ctx.enso.asOf)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="gauge-row">
+          ${gauge(ctx.iod.value, -3, 3)}
+          <div class="gauge-meta">
+            <span class="kbd-hint">IOD state · ${CB.esc(ctx.iod.index)}</span>
+            <span class="g-phase">${CB.esc(ctx.iod.phase)}</span>
+            <span class="g-val num">${F.delta(ctx.iod.value, 1)}°C · as of ${F.ym(ctx.iod.asOf)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel chart-box">
+        <div class="chart-title"><span>SEAS5 ensemble · ${CB.esc(regionName)}</span><span class="num">51 members</span></div>
+        <div id="fan-chart"></div>
+        <div class="kbd-hint num" style="margin-top:6px">P(drought) per member · dashed rule at threshold ${threshold()}</div>
+      </div>
+      <div class="panel chart-box">
+        <div class="chart-title"><span>Terciles · ${selCounty ? CB.esc(selCounty.name) : ''} · ${F.monthShort(st.month)}</span></div>
+        <div id="tercile-bars"></div>
+        ${selFc && selFc.terciles ? '' : `<div class="kbd-hint">No model coverage for this county.</div>`}
+      </div>`
+  }
+
+  let map = null, canvasCtl = null, mapFailed = false
+  function setHover(id) {
+    document.querySelectorAll('[data-county]').forEach(el => el.classList.toggle('hover', el.dataset.county === id))
+    if (map && map.isStyleLoaded()) CB.map.setHover(map, id)
+  }
+  function paintMap() {
+    if (map && map.isStyleLoaded()) {
+      CB.map.paintRamp(map, tercValues(), TERC_LAYER, TERC_LAYER.domain)
+      CB.map.setSelected(map, st.scope, { dimOthers: false })
+    }
+    if (canvasCtl) canvasCtl.redraw()
+  }
+
+  function renderMain() {
+    const b4 = document.getElementById('band-4')
+    b4.innerHTML = `<div style="display:flex;flex:1;min-height:0;width:100%">
+      <div class="col col-list" style="width:300px;flex:none" id="county-list-host"></div>
+      <div class="col" style="flex:1;position:relative" id="map-col">
+        ${st.forced === 'loading' ? `<div style="padding:14px;height:100%">${CB.ui.skelBlock(420)}</div>`
+          : `<div class="map-wrap" id="map-wrap-host"><div id="map"></div>
+             <div class="map-note">Tercile below-normal share · Issue ${st.issueId}</div></div>`}
+      </div>
+      <div class="outlook-rail" id="outlook-rail"></div>
+    </div>`
+    renderList()
+    document.getElementById('outlook-rail').innerHTML = railHtml()
+    if (st.forced !== 'loading') {
+      const ens = D.ensemble[st.region]
+      const fanEl = document.getElementById('fan-chart')
+      if (fanEl && ens) requestAnimationFrame(() => CB.charts.ensembleFan(fanEl, {
+        members: ens.members, mean: ens.mean, p10: ens.p10, p90: ens.p90,
+        months: ens.months, threshold: threshold(),
+      }))
+      const tercEl = document.getElementById('tercile-bars')
+      const f = fcOf(st.scope, st.month)
+      if (tercEl && f && f.terciles) CB.charts.terciles(tercEl, { terciles: f.terciles })
+    }
+    if (st.forced === 'loading' || mapFailed) {
+      if (mapFailed) document.getElementById('map-col').innerHTML =
+        `<div style="display:flex;align-items:center;justify-content:center;height:100%">${CB.ui.emptyState({ icon: 'warn', title: 'Map unavailable', body: 'WebGL could not be initialised in this browser.' })}</div>`
+      return
+    }
+    try {
+      map = CB.map.create(document.getElementById('map'))
+      map.on('load', paintMap)
+      CB.map.onCountyHover(map, id => setHover(id))
+      CB.map.onCountyClick(map, id => {
+        st.scope = id
+        S.set({ scope: id })
+        const c = D.counties.find(x => x.id === id)
+        if (c && D.ensemble[c.regionId]) { st.region = c.regionId; S.set({ region: st.region }) }
+        render()
+      })
+      const wrap = document.getElementById('map-wrap-host')
+      canvasCtl = CB.map.fieldCanvas(map, wrap, () => tercValues(), () => TERC_LAYER, () => TERC_LAYER.domain)
+      CB.map.controls(wrap, map)
+      const cells = TERC_LAYER.colourRamp.map(c => `<span style="background:${c}"></span>`).join('')
+      wrap.insertAdjacentHTML('beforeend', `<div class="legend-strip">
+        <span class="kbd-hint">P(below-normal rainfall)</span>
+        <div class="legend-cells">${cells}</div>
+        <div class="legend-labels"><span>0</span>${TERC_LAYER.classBreaks.map(b => `<span>${b}</span>`).join('')}<span>1</span></div>
+      </div>`)
+    } catch (err) {
+      mapFailed = true
+      renderMain()
+    }
+  }
+
+  let scrub
+  function renderScrubber() {
+    scrub = CB.ui.timeScrubber(document.getElementById('scrubber'), {
+      periods: ['1M', '3M', '1Y'],
+      period: st.period,
+      months: monthsOf().map(m => ({ value: m, label: F.monthShort(m), hasData: true })),
+      selected: st.month,
+      onPeriodChange: p => { st.period = p; S.set({ period: p }) },
+      onSelect: m => { st.month = m; S.set({ month: m }); renderList(); paintMap(); renderRailOnly() },
+    })
+    document.getElementById('meta-line').textContent =
+      `Issue ${st.issueId} · ${issue().run.labelVersion} · thr ${threshold()}`
+  }
+  function renderRailOnly() {
+    document.getElementById('outlook-rail').innerHTML = railHtml()
+    const ens = D.ensemble[st.region]
+    const fanEl = document.getElementById('fan-chart')
+    if (fanEl && ens) requestAnimationFrame(() => CB.charts.ensembleFan(fanEl, {
+      members: ens.members, mean: ens.mean, p10: ens.p10, p90: ens.p90,
+      months: ens.months, threshold: threshold(),
+    }))
+    const tercEl = document.getElementById('tercile-bars')
+    const f = fcOf(st.scope, st.month)
+    if (tercEl && f && f.terciles) CB.charts.terciles(tercEl, { terciles: f.terciles })
+  }
+  document.addEventListener('cb:month-step', e => {
+    const ms = monthsOf()
+    const i = ms.indexOf(st.month)
+    const next = ms[Math.max(0, Math.min(ms.length - 1, i + e.detail.dir))]
+    if (next !== st.month) {
+      st.month = next
+      S.set({ month: next })
+      scrub.set(null, next)
+      renderList(); paintMap(); renderRailOnly()
+    }
+  })
+
+  function render() {
+    if (map) { try { map.remove() } catch {} map = null }
+    if (canvasCtl) { canvasCtl.destroy(); canvasCtl = null }
+    renderChips()
+    renderScrubber()
+    renderMain()
+  }
+  render()
+})()
+</script>
+</body>
+</html>
