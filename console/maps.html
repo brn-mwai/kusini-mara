@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maps — Cascade Bridge</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/console.css">
+</head>
+<body>
+<nav class="rail" id="rail"></nav>
+<main class="console">
+  <header class="band band-1">
+    <span class="page-title">Maps</span>
+    <span class="vsep"></span>
+    <nav class="tabs">
+      <a class="tab active" href="maps.html">Layer Explorer</a>
+      <a class="tab" href="maps-issues.html">Forecast Issues</a>
+      <a class="tab" id="tab-saved" href="maps.html">Saved Views</a>
+    </nav>
+    <span class="grow"></span>
+    <button class="btn btn-teal" id="btn-new-view"></button>
+  </header>
+  <div class="band band-2">
+    <label class="search" id="search-box"></label>
+    <button class="btn btn-icon" id="btn-filter" title="Filter"></button>
+    <label class="select" id="issue-select"></label>
+    <button class="btn btn-icon btn-ghost" id="btn-overflow" title="More"></button>
+  </div>
+  <div class="band band-3" id="band-3" style="position:relative">
+    <div id="layer-chips" style="display:flex;gap:8px;align-items:center;min-width:0;overflow-x:auto"></div>
+    <span class="grow" style="flex:1"></span>
+    <div id="mode-toggle"></div>
+  </div>
+  <section class="band band-4" id="band-4" style="position:relative"></section>
+  <footer class="band band-5">
+    <div id="scrubber" style="display:flex;align-items:center;gap:12px"></div>
+    <div class="meta-footer">
+      <span class="kbd-hint"><kbd>1</kbd>–<kbd>4</kbd> mode &nbsp;<kbd>&#8592;</kbd><kbd>&#8594;</kbd> month</span>
+      <span id="meta-issue" class="num"></span>
+    </div>
+  </footer>
+</main>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/format.js"></script>
+<script src="assets/shell.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/components.js"></script>
+<script src="assets/map.js"></script>
+<script>
+(() => {
+  const D = CB_DATA, F = CB.fmt, S = CB.state
+  CB.shell.init({ page: 'maps' })
+
+  const pad2 = n => String(n).padStart(2, '0')
+  const LAYERS = Object.fromEntries(D.layers.map(l => [l.id, l]))
+  const MODES = ['single', 'multi', 'slider', 'overlay']
+  const PROTO_DATA = new Set([...Object.keys(D.layerValues), 'prob', 'agreement', 'p10', 'p90', 'tercile_below'])
+
+  const st = {
+    issueId: D.issues[S.get('issue')] ? S.get('issue') : '2026-08',
+    month: null,
+    layers: (S.get('layers') || 'prob,vci3m').split(',').filter(id => LAYERS[id] && PROTO_DATA.has(id)),
+    mode: MODES.includes(S.get('mode')) ? S.get('mode') : 'single',
+    scope: D.counties.some(c => c.id === S.get('scope')) ? S.get('scope') : null,
+    period: ['1M', '3M', '1Y'].includes(S.get('period')) ? S.get('period') : '3M',
+    forced: ['empty', 'loading'].includes(S.get('state')) ? S.get('state') : null,
+    ranges: {},
+    opacity: {},
+    pickerOpen: false,
+    query: '',
+  }
+  if (st.forced === 'empty') st.layers = []
+  if (!st.layers.length && st.forced !== 'empty') st.layers = ['prob']
+  if (st.mode === 'slider' && st.layers.length !== 2) st.mode = 'single'
+
+  const issue = () => D.issues[st.issueId]
+  const monthsOf = () => [...new Set(issue().forecasts.map(f => f.validYear + '-' + pad2(f.validMonth)))]
+  st.month = monthsOf().includes(S.get('month')) ? S.get('month') : monthsOf()[1] || monthsOf()[0]
+  const threshold = () => Number(S.get('threshold')) || issue().config.threshold
+
+  const fcOf = (cid, month) => issue().forecasts.find(f => f.countyId === cid && f.validYear + '-' + pad2(f.validMonth) === month)
+
+  function valuesFor(layerId, month) {
+    const layer = LAYERS[layerId]
+    if (layer.group === 'forecast') {
+      const out = {}
+      for (const c of D.counties) {
+        const f = fcOf(c.id, month)
+        if (!c.hasModelCoverage || !f) { out[c.id] = null; continue }
+        out[c.id] = layerId === 'p10' ? f.probP10 : layerId === 'p90' ? f.probP90
+          : layerId === 'agreement' ? f.ensembleAgreement
+          : layerId === 'tercile_below' ? (f.terciles ? f.terciles.below : null)
+          : f.droughtProb
+      }
+      return out
+    }
+    const lv = D.layerValues[layerId]
+    if (!lv) return Object.fromEntries(D.counties.map(c => [c.id, null]))
+    return Object.fromEntries(D.counties.map(c => [c.id, lv.values[c.id] ? lv.values[c.id].value : null]))
+  }
+  const monthLabelFor = layerId => LAYERS[layerId].group === 'forecast'
+    ? 'Valid ' + F.ym(st.month) + ' · Issue ' + st.issueId
+    : 'Observed as of ' + F.ym(D.layerValues[layerId]?.asOf?.slice(0, 7) || '2026-08')
+  const rangeOf = id => st.ranges[id] || [...LAYERS[id].domain]
+
+  document.getElementById('btn-new-view').innerHTML = CB.icon('plus') + 'New view'
+  document.getElementById('btn-new-view').addEventListener('click', () => CB.toast('Saved views are not part of this prototype'))
+  document.getElementById('tab-saved').addEventListener('click', e => { e.preventDefault(); CB.toast('Saved views are not part of this prototype') })
+  document.getElementById('btn-filter').innerHTML = CB.icon('filter')
+  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-overflow').innerHTML = CB.icon('more')
+  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('search-box').innerHTML =
+    CB.icon('search') + '<input id="search-input" type="search" placeholder="Search layer, county">'
+  document.getElementById('search-input').addEventListener('input', e => {
+    st.query = e.target.value.trim().toLowerCase()
+    if (!st.pickerOpen && st.query) openPicker()
+    else if (st.pickerOpen) renderPicker()
+  })
+  document.getElementById('issue-select').innerHTML =
+    `<select id="issue-sel">${Object.keys(D.issues).map(id =>
+      `<option value="${id}"${id === st.issueId ? ' selected' : ''}>Issue ${id} · ${D.issues[id].status}</option>`).join('')}</select>` + CB.icon('chevD', 'sm')
+  document.getElementById('issue-sel').addEventListener('change', e => {
+    st.issueId = e.target.value
+    const ms = monthsOf()
+    if (!ms.includes(st.month)) st.month = ms[1] || ms[0]
+    S.set({ issue: st.issueId, month: st.month })
+    render()
+  })
+
+  function writeLayers() { S.set({ layers: st.layers.join(',') || null }) }
+
+  function chipsHtml() {
+    return st.layers.map(id =>
+      `<span class="chip">${CB.esc(LAYERS[id].label)}
+        <button class="chip-x" data-close="${id}" id="btn-layer-close-${id}" title="Remove">${CB.icon('x', 'sm')}</button></span>`).join('') +
+      `<button class="chip chip-add" id="btn-layer-add">${CB.icon('plus', 'sm')}Add layer</button>`
+  }
+
+  function renderChips() {
+    const host = document.getElementById('layer-chips')
+    host.innerHTML = chipsHtml()
+    host.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => {
+      st.layers = st.layers.filter(x => x !== b.dataset.close)
+      if (st.mode === 'slider' && st.layers.length !== 2) st.mode = 'single'
+      writeLayers(); S.set({ mode: st.mode })
+      render()
+    }))
+    document.getElementById('btn-layer-add').addEventListener('click', e => {
+      e.stopPropagation()
+      st.pickerOpen ? closePicker() : openPicker()
+    })
+  }
+
+  function renderModeToggle() {
+    const host = document.getElementById('mode-toggle')
+    host.innerHTML = ''
+    host.appendChild(CB.ui.viewModeToggle({
+      value: st.mode,
+      disabled: st.layers.length === 2 ? [] : ['slider'],
+      onChange: setMode,
+    }))
+  }
+
+  function setMode(mode) {
+    if (mode === 'slider' && st.layers.length !== 2) {
+      if (st.layers.length === 1 && st.layers[0] === 'prob') {
+        st.layers.push('vci3m'); writeLayers()
+        CB.toast('Added VCI3M as the observed side')
+      } else { CB.toast('Slider needs exactly 2 active layers'); return }
+    }
+    st.mode = mode
+    S.set({ mode })
+    render()
+  }
+  document.addEventListener('cb:mode', e => setMode(e.detail.mode))
+
+  const GROUP_LABEL = { forecast: 'Forecast', observed: 'Observed', bridge: 'Bridge output', error: 'Error', context: 'Context' }
+  function renderPicker() {
+    closePicker(false)
+    const groups = ['forecast', 'observed', 'bridge', 'error', 'context']
+    let html = '<div class="picker-pop" id="picker">'
+    for (const g of groups) {
+      const items = D.layers.filter(l => l.group === g &&
+        (!st.query || l.label.toLowerCase().includes(st.query) || l.id.includes(st.query)))
+      if (!items.length) continue
+      html += `<div class="picker-group">${GROUP_LABEL[g]}</div>`
+      for (const l of items) {
+        const added = st.layers.includes(l.id)
+        const hasData = PROTO_DATA.has(l.id)
+        html += `<button class="picker-item${added ? ' added' : ''}" data-pick="${l.id}" ${hasData ? '' : 'data-nodata="1"'}>
+          <span class="swatch" style="background:${l.colourRamp[Math.floor(l.colourRamp.length / 2)]}"></span>
+          ${CB.esc(l.label)}
+          <span class="pi-unit num">${hasData ? CB.esc(l.unit) : 'no prototype data'}</span>
+        </button>`
+      }
+    }
+    html += '</div>'
+    document.getElementById('band-3').insertAdjacentHTML('beforeend', html)
+    document.getElementById('picker').addEventListener('click', e => {
+      const b = e.target.closest('[data-pick]')
+      if (!b) return
+      if (b.dataset.nodata) { CB.toast('This context layer ships without prototype data'); return }
+      const id = b.dataset.pick
+      if (st.layers.includes(id)) st.layers = st.layers.filter(x => x !== id)
+      else st.layers.push(id)
+      if (st.mode === 'slider' && st.layers.length !== 2) st.mode = 'single'
+      writeLayers(); S.set({ mode: st.mode })
+      render()
+      openPicker()
+    })
+  }
+  function openPicker() { st.pickerOpen = true; renderPicker() }
+  function closePicker(reset = true) {
+    document.getElementById('picker')?.remove()
+    if (reset) st.pickerOpen = false
+  }
+  document.addEventListener('click', e => {
+    if (st.pickerOpen && !e.target.closest('#picker') && !e.target.closest('#btn-layer-add') && !e.target.closest('#search-box')) closePicker()
+  })
+
+  let maps = [], canvases = [], panels = [], mapFailed = false
+  function teardown() {
+    for (const c of canvases) c.destroy()
+    for (const m of maps) { try { m.remove() } catch {} }
+    maps = []; canvases = []; panels = []
+  }
+
+  function mountMap(el, layerId) {
+    const map = CB.map.create(el)
+    const paint = () => CB.map.paintRamp(map, valuesFor(layerId, st.month), LAYERS[layerId], rangeOf(layerId))
+    map.on('load', () => { paint(); if (st.scope) CB.map.setSelected(map, st.scope, { dimOthers: false }) })
+    CB.map.onCountyHover(map, id => { for (const m of maps) if (m.isStyleLoaded()) CB.map.setHover(m, id) })
+    CB.map.onCountyClick(map, id => {
+      st.scope = st.scope === id ? null : id
+      S.set({ scope: st.scope })
+      for (const m of maps) if (m.isStyleLoaded()) CB.map.setSelected(m, st.scope, { dimOthers: false })
+      renderPanels()
+    })
+    maps.push(map)
+    return { map, paint }
+  }
+
+  function attachField(map, wrapEl, layerId) {
+    canvases.push(CB.map.fieldCanvas(map,
+      wrapEl,
+      () => valuesFor(layerId, st.month),
+      () => LAYERS[layerId],
+      () => rangeOf(layerId)))
+  }
+
+  function panelFor(layerId, align, host) {
+    const el = CB.ui.layerPanel({
+      collapsed: window.matchMedia('(max-width: 760px)').matches,
+      layer: LAYERS[layerId],
+      hist: D.histograms[layerId] || { bins: [], counts: [], stats: { primary: { value: F.DASH, label: '' }, secondary: { value: F.DASH, label: '' } } },
+      align,
+      monthLabel: monthLabelFor(layerId),
+      scopeLabel: st.scope ? D.counties.find(c => c.id === st.scope).name : 'All counties',
+      range: rangeOf(layerId),
+      onRangeChange: r => { st.ranges[layerId] = r; repaintLayer(layerId) },
+      onSwapLayer: nid => {
+        if (!PROTO_DATA.has(nid)) { CB.toast('No prototype data for that layer'); render(); return }
+        st.layers = st.layers.map(x => (x === layerId ? nid : x))
+        writeLayers(); render()
+      },
+      onClose: () => {
+        st.layers = st.layers.filter(x => x !== layerId)
+        if (st.mode === 'slider' && st.layers.length !== 2) st.mode = 'single'
+        writeLayers(); S.set({ mode: st.mode }); render()
+      },
+    })
+    host.appendChild(el)
+    panels.push(el)
+  }
+
+  let painters = {}
+  function repaintLayer(layerId) {
+    for (const p of painters[layerId] || []) p()
+    for (const c of canvases) c.redraw()
+  }
+  function repaintAll() {
+    for (const arr of Object.values(painters)) for (const p of arr) p()
+    for (const c of canvases) c.redraw()
+  }
+
+  function renderPanels() {
+    for (const p of panels) p.remove()
+    panels = []
+    const b4 = document.getElementById('band-4')
+    if (st.mode === 'single' && st.layers[0]) panelFor(st.layers[0], 'left', b4)
+    else if (st.mode === 'slider' && st.layers.length === 2) {
+      panelFor(st.layers[0], 'left', b4)
+      panelFor(st.layers[1], 'right', b4)
+    } else if (st.mode === 'overlay' && st.layers[0]) panelFor(st.layers[0], 'left', b4)
+  }
+
+  function renderMain() {
+    teardown()
+    painters = {}
+    const b4 = document.getElementById('band-4')
+    b4.innerHTML = ''
+    if (st.forced === 'loading') {
+      b4.innerHTML = `<div style="flex:1;padding:14px;display:flex;flex-direction:column;gap:10px">
+        ${CB.ui.skelBlock(38)}<div class="skel" style="flex:1"></div></div>`
+      return
+    }
+    if (!st.layers.length) {
+      b4.innerHTML = `<div style="flex:1;display:flex;align-items:center;justify-content:center">
+        ${CB.ui.emptyState({ icon: 'maps', title: 'No layers active', body: 'Press + in the layer bar to add a forecast or observed layer to the map.' })}</div>`
+      return
+    }
+    if (mapFailed) {
+      b4.innerHTML = `<div style="flex:1;display:flex;align-items:center;justify-content:center">
+        ${CB.ui.emptyState({ icon: 'warn', title: 'Map unavailable', body: 'WebGL could not be initialised in this browser.' })}</div>`
+      return
+    }
+    try {
+      if (st.mode === 'single' || (st.mode === 'overlay' && st.layers.length === 1)) {
+        const wrap = CB.el('<div class="map-wrap"><div id="m0"></div></div>')
+        b4.appendChild(wrap)
+        const { map, paint } = mountMap(wrap.querySelector('#m0'), st.layers[0])
+        painters[st.layers[0]] = [paint]
+        attachField(map, wrap, st.layers[0])
+        CB.map.controls(wrap, map)
+        wrap.insertAdjacentHTML('beforeend', `<div class="map-note">Boundaries: geoBoundaries KEN ADM1 · county fills from JSON, blurred field is illustrative</div>`)
+      } else if (st.mode === 'multi') {
+        const ids = st.layers.slice(0, 4)
+        const wrap = CB.el(`<div class="map-wrap"><div class="map-grid ${ids.length > 2 ? 'g4' : 'g2'}"></div></div>`)
+        b4.appendChild(wrap)
+        const grid = wrap.querySelector('.map-grid')
+        ids.forEach((id, i) => {
+          const tile = CB.el(`<div class="tile"><div class="tile-map" id="mt${i}"></div>
+            <span class="tile-label">${CB.esc(LAYERS[id].label)}</span></div>`)
+          grid.appendChild(tile)
+          const { map, paint } = mountMap(tile.querySelector('.tile-map'), id)
+          ;(painters[id] = painters[id] || []).push(paint)
+          attachField(map, tile, id)
+        })
+        CB.map.sync(maps)
+        CB.map.controls(wrap, maps[0])
+      } else if (st.mode === 'slider') {
+        const [la, lb] = st.layers
+        const wrap = CB.el('<div class="map-wrap"><div id="split-host" style="position:absolute;inset:0"></div></div>')
+        b4.appendChild(wrap)
+        const split = CB.map.splitSlider(wrap.querySelector('#split-host'))
+        const a = mountMap(split.elA, la)
+        const bm = mountMap(split.elB, lb)
+        painters[la] = [a.paint]
+        ;(painters[lb] = painters[lb] || []).push(bm.paint)
+        attachField(a.map, wrap.querySelector('.split-a'), la)
+        attachField(bm.map, wrap.querySelector('.split-b'), lb)
+        CB.map.sync(maps)
+        CB.map.controls(wrap, a.map)
+        const tagVal = id => {
+          if (!st.scope) return ''
+          const v = valuesFor(id, st.month)[st.scope]
+          return v === null || v === undefined ? '' : ` · <b class="num">${LAYERS[id].domain[1] <= 1 ? F.prob(v) : F.num1(v)}</b>`
+        }
+        wrap.insertAdjacentHTML('beforeend',
+          `<div class="split-tag tag-a">${LAYERS[la].group === 'forecast' ? 'Forecast' : 'Observed'} · <b>${CB.esc(LAYERS[la].label)}</b>${tagVal(la)}</div>
+           <div class="split-tag tag-b">${LAYERS[lb].group === 'forecast' ? 'Forecast' : 'Observed'} · <b>${CB.esc(LAYERS[lb].label)}</b>${tagVal(lb)}</div>`)
+      } else {
+        const wrap = CB.el('<div class="map-wrap"><div id="m0"></div></div>')
+        b4.appendChild(wrap)
+        const base = st.layers[0]
+        const { map, paint } = mountMap(wrap.querySelector('#m0'), base)
+        painters[base] = [paint]
+        for (const id of st.layers) attachField(map, wrap, id)
+        CB.map.controls(wrap, map)
+        const rows = st.layers.map(id => `<div class="op-row">
+            <span class="swatch" style="width:10px;height:10px;border-radius:3px;background:${LAYERS[id].colourRamp[3] || LAYERS[id].colourRamp[0]}"></span>
+            <label>${CB.esc(LAYERS[id].label)}</label>
+            <input type="range" min="0" max="100" value="${Math.round((st.opacity[id] ?? 0.8) * 100)}" data-op="${id}">
+          </div>`).join('')
+        wrap.insertAdjacentHTML('beforeend', `<div class="opacity-panel"><div style="font-size:11px;font-weight:650;color:var(--text-dim)">Layer opacity</div>${rows}</div>`)
+        wrap.querySelector('.opacity-panel').addEventListener('input', e => {
+          const id = e.target.dataset.op
+          if (!id) return
+          st.opacity[id] = Number(e.target.value) / 100
+          if (id === base && map.isStyleLoaded()) map.setPaintProperty('county-fill', 'fill-opacity', 0.62 * st.opacity[id] + 0.06)
+          const idx = st.layers.indexOf(id)
+          if (canvases[idx]) canvases[idx].canvasOpacity = st.opacity[id]
+          canvases.forEach((c, i) => { const cid = st.layers[i]; if (cid === id) c.redraw() })
+        })
+      }
+    } catch (err) {
+      mapFailed = true
+      renderMain()
+      return
+    }
+    renderPanels()
+  }
+
+  let scrub
+  function renderScrubber() {
+    const host = document.getElementById('scrubber')
+    scrub = CB.ui.timeScrubber(host, {
+      periods: ['1M', '3M', '1Y'],
+      period: st.period,
+      months: monthsOf().map(m => ({ value: m, label: F.monthShort(m), hasData: true })),
+      selected: st.month,
+      onPeriodChange: p => { st.period = p; S.set({ period: p }) },
+      onSelect: m => { st.month = m; S.set({ month: m }); repaintAll(); renderPanels(); renderMeta() },
+    })
+  }
+  document.addEventListener('cb:month-step', e => {
+    const ms = monthsOf()
+    const i = ms.indexOf(st.month)
+    const next = ms[Math.max(0, Math.min(ms.length - 1, i + e.detail.dir))]
+    if (next !== st.month) {
+      st.month = next
+      S.set({ month: next })
+      scrub.set(null, next)
+      repaintAll(); renderPanels(); renderMeta()
+    }
+  })
+
+  function renderMeta() {
+    const i = issue()
+    document.getElementById('meta-issue').textContent =
+      `Issue ${i.id} · ${i.run.labelVersion} · thr ${threshold()} · ${F.hashShort(i.contentHash)}`
+  }
+
+  function render() {
+    renderChips()
+    renderModeToggle()
+    renderScrubber()
+    renderMeta()
+    renderMain()
+  }
+
+  render()
+})()
+</script>
+</body>
+</html>

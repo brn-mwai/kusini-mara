@@ -1,0 +1,992 @@
+{
+ "vci3m": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 29.1,
+   "delta": -4.4,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": 31.4,
+    "delta": -4.2
+   },
+   "marsabit": {
+    "value": 34.8,
+    "delta": -2.1
+   },
+   "samburu": {
+    "value": 41.2,
+    "delta": -1.8
+   },
+   "isiolo": {
+    "value": 37.2,
+    "delta": -1.4
+   },
+   "wajir": {
+    "value": 24.6,
+    "delta": -6.8
+   },
+   "mandera": {
+    "value": 22.1,
+    "delta": -7.9
+   },
+   "garissa": {
+    "value": 26.9,
+    "delta": -5.5
+   },
+   "kitui": {
+    "value": 16.8,
+    "delta": -9.3
+   },
+   "makueni": {
+    "value": 18.4,
+    "delta": -8.1
+   },
+   "machakos": {
+    "value": 21.7,
+    "delta": -6.2
+   },
+   "tharaka_nithi": {
+    "value": 44.6,
+    "delta": -0.9
+   }
+  }
+ },
+ "ndvi": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 0.4,
+   "delta": -0.03,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": 0.38,
+    "delta": -0.02
+   },
+   "marsabit": {
+    "value": 0.4,
+    "delta": -0.01
+   },
+   "samburu": {
+    "value": 0.43,
+    "delta": -0.01
+   },
+   "isiolo": {
+    "value": 0.4,
+    "delta": -0.01
+   },
+   "wajir": {
+    "value": 0.33,
+    "delta": -0.03
+   },
+   "mandera": {
+    "value": 0.31,
+    "delta": -0.03
+   },
+   "garissa": {
+    "value": 0.34,
+    "delta": -0.02
+   },
+   "kitui": {
+    "value": 0.26,
+    "delta": -0.04
+   },
+   "makueni": {
+    "value": 0.28,
+    "delta": -0.03
+   },
+   "machakos": {
+    "value": 0.3,
+    "delta": -0.02
+   },
+   "tharaka_nithi": {
+    "value": 0.44,
+    "delta": 0
+   }
+  }
+ },
+ "ndvi_anom": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": -0.1,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": -0.08,
+    "delta": null
+   },
+   "marsabit": {
+    "value": -0.07,
+    "delta": null
+   },
+   "samburu": {
+    "value": -0.04,
+    "delta": null
+   },
+   "isiolo": {
+    "value": -0.04,
+    "delta": null
+   },
+   "wajir": {
+    "value": -0.1,
+    "delta": null
+   },
+   "mandera": {
+    "value": -0.11,
+    "delta": null
+   },
+   "garissa": {
+    "value": -0.09,
+    "delta": null
+   },
+   "kitui": {
+    "value": -0.13,
+    "delta": null
+   },
+   "makueni": {
+    "value": -0.12,
+    "delta": null
+   },
+   "machakos": {
+    "value": -0.11,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": -0.03,
+    "delta": null
+   }
+  }
+ },
+ "chirps_precip": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 22.5,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": 28.5,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 31.9,
+    "delta": null
+   },
+   "samburu": {
+    "value": 33.1,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 26,
+    "delta": null
+   },
+   "wajir": {
+    "value": 16.8,
+    "delta": null
+   },
+   "mandera": {
+    "value": 13.1,
+    "delta": null
+   },
+   "garissa": {
+    "value": 18.5,
+    "delta": null
+   },
+   "kitui": {
+    "value": 14.8,
+    "delta": null
+   },
+   "makueni": {
+    "value": 15.4,
+    "delta": null
+   },
+   "machakos": {
+    "value": 17.5,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": 32.4,
+    "delta": null
+   }
+  }
+ },
+ "rain_anom": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": -22.3,
+   "delta": -6,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": -18,
+    "delta": -4
+   },
+   "marsabit": {
+    "value": -12,
+    "delta": -3
+   },
+   "samburu": {
+    "value": -8,
+    "delta": -2
+   },
+   "isiolo": {
+    "value": -9,
+    "delta": -2
+   },
+   "wajir": {
+    "value": -31,
+    "delta": -8
+   },
+   "mandera": {
+    "value": -35,
+    "delta": -9
+   },
+   "garissa": {
+    "value": -28,
+    "delta": -7
+   },
+   "kitui": {
+    "value": -38,
+    "delta": -9
+   },
+   "makueni": {
+    "value": -34,
+    "delta": -8
+   },
+   "machakos": {
+    "value": -26,
+    "delta": -6
+   },
+   "tharaka_nithi": {
+    "value": -6,
+    "delta": -1
+   }
+  }
+ },
+ "spi3": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": -1.1,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": -0.9,
+    "delta": null
+   },
+   "marsabit": {
+    "value": -0.8,
+    "delta": null
+   },
+   "samburu": {
+    "value": -0.7,
+    "delta": null
+   },
+   "isiolo": {
+    "value": -0.8,
+    "delta": null
+   },
+   "wajir": {
+    "value": -1.4,
+    "delta": null
+   },
+   "mandera": {
+    "value": -1.4,
+    "delta": null
+   },
+   "garissa": {
+    "value": -1.3,
+    "delta": null
+   },
+   "kitui": {
+    "value": -1.3,
+    "delta": null
+   },
+   "makueni": {
+    "value": -1.4,
+    "delta": null
+   },
+   "machakos": {
+    "value": -1.2,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": -0.5,
+    "delta": null
+   }
+  }
+ },
+ "spi6": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": -0.7,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": -0.7,
+    "delta": null
+   },
+   "marsabit": {
+    "value": -0.4,
+    "delta": null
+   },
+   "samburu": {
+    "value": -0.4,
+    "delta": null
+   },
+   "isiolo": {
+    "value": -0.5,
+    "delta": null
+   },
+   "wajir": {
+    "value": -0.9,
+    "delta": null
+   },
+   "mandera": {
+    "value": -0.8,
+    "delta": null
+   },
+   "garissa": {
+    "value": -0.7,
+    "delta": null
+   },
+   "kitui": {
+    "value": -0.8,
+    "delta": null
+   },
+   "makueni": {
+    "value": -0.9,
+    "delta": null
+   },
+   "machakos": {
+    "value": -0.8,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": -0.3,
+    "delta": null
+   }
+  }
+ },
+ "lst_day": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 33.2,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": 32,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 33,
+    "delta": null
+   },
+   "samburu": {
+    "value": 29.9,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 30.2,
+    "delta": null
+   },
+   "wajir": {
+    "value": 33.7,
+    "delta": null
+   },
+   "mandera": {
+    "value": 34.8,
+    "delta": null
+   },
+   "garissa": {
+    "value": 33.5,
+    "delta": null
+   },
+   "kitui": {
+    "value": 37.4,
+    "delta": null
+   },
+   "makueni": {
+    "value": 36.8,
+    "delta": null
+   },
+   "machakos": {
+    "value": 34.3,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": 29.2,
+    "delta": null
+   }
+  }
+ },
+ "lst_anom": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 1.4,
+   "delta": 0.4,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": 1.2,
+    "delta": 0.4
+   },
+   "marsabit": {
+    "value": 0.9,
+    "delta": 0.3
+   },
+   "samburu": {
+    "value": 0.5,
+    "delta": 0.2
+   },
+   "isiolo": {
+    "value": 0.7,
+    "delta": 0.2
+   },
+   "wajir": {
+    "value": 1.7,
+    "delta": 0.5
+   },
+   "mandera": {
+    "value": 1.9,
+    "delta": 0.6
+   },
+   "garissa": {
+    "value": 1.5,
+    "delta": 0.5
+   },
+   "kitui": {
+    "value": 2.4,
+    "delta": 0.7
+   },
+   "makueni": {
+    "value": 2.1,
+    "delta": 0.6
+   },
+   "machakos": {
+    "value": 1.8,
+    "delta": 0.5
+   },
+   "tharaka_nithi": {
+    "value": 0.3,
+    "delta": 0.1
+   }
+  }
+ },
+ "soil_moisture": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 13.9,
+   "delta": -1.1,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": 14.3,
+    "delta": -0.5
+   },
+   "marsabit": {
+    "value": 15.1,
+    "delta": -0.3
+   },
+   "samburu": {
+    "value": 18.7,
+    "delta": -0.2
+   },
+   "isiolo": {
+    "value": 16,
+    "delta": -0.2
+   },
+   "wajir": {
+    "value": 12,
+    "delta": -0.8
+   },
+   "mandera": {
+    "value": 11.3,
+    "delta": -0.9
+   },
+   "garissa": {
+    "value": 12.7,
+    "delta": -0.7
+   },
+   "kitui": {
+    "value": 11.4,
+    "delta": -1.1
+   },
+   "makueni": {
+    "value": 10.6,
+    "delta": -1
+   },
+   "machakos": {
+    "value": 13.4,
+    "delta": -0.7
+   },
+   "tharaka_nithi": {
+    "value": 17.6,
+    "delta": -0.1
+   }
+  }
+ },
+ "soil_moisture_50": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 18.3,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² monitored"
+  },
+  "values": {
+   "turkana": {
+    "value": 18.6,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 20.6,
+    "delta": null
+   },
+   "samburu": {
+    "value": 22.2,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 20.8,
+    "delta": null
+   },
+   "wajir": {
+    "value": 16.5,
+    "delta": null
+   },
+   "mandera": {
+    "value": 16.8,
+    "delta": null
+   },
+   "garissa": {
+    "value": 16.2,
+    "delta": null
+   },
+   "kitui": {
+    "value": 14.6,
+    "delta": null
+   },
+   "makueni": {
+    "value": 15,
+    "delta": null
+   },
+   "machakos": {
+    "value": 16.2,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": 24,
+    "delta": null
+   }
+  }
+ },
+ "bridge_rain": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 24.2,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² forecast"
+  },
+  "values": {
+   "turkana": {
+    "value": 32.5,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 37.2,
+    "delta": null
+   },
+   "samburu": {
+    "value": 32.3,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 40.6,
+    "delta": null
+   },
+   "wajir": {
+    "value": 15.3,
+    "delta": null
+   },
+   "mandera": {
+    "value": 11.3,
+    "delta": null
+   },
+   "garissa": {
+    "value": 16.4,
+    "delta": null
+   },
+   "kitui": {
+    "value": 6.6,
+    "delta": null
+   },
+   "makueni": {
+    "value": 20.6,
+    "delta": null
+   },
+   "machakos": {
+    "value": 20.9,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": 32.8,
+    "delta": null
+   }
+  }
+ },
+ "bridge_ndvi": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 0.3,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² forecast"
+  },
+  "values": {
+   "turkana": {
+    "value": 0.34,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 0.35,
+    "delta": null
+   },
+   "samburu": {
+    "value": 0.38,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 0.37,
+    "delta": null
+   },
+   "wajir": {
+    "value": 0.3,
+    "delta": null
+   },
+   "mandera": {
+    "value": 0.27,
+    "delta": null
+   },
+   "garissa": {
+    "value": 0.32,
+    "delta": null
+   },
+   "kitui": {
+    "value": 0.26,
+    "delta": null
+   },
+   "makueni": {
+    "value": 0.26,
+    "delta": null
+   },
+   "machakos": {
+    "value": 0.28,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": 0.4,
+    "delta": null
+   }
+  }
+ },
+ "bridge_lst": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 33.9,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² forecast"
+  },
+  "values": {
+   "turkana": {
+    "value": 32.9,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 32,
+    "delta": null
+   },
+   "samburu": {
+    "value": 31.4,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 31.2,
+    "delta": null
+   },
+   "wajir": {
+    "value": 35.5,
+    "delta": null
+   },
+   "mandera": {
+    "value": 36,
+    "delta": null
+   },
+   "garissa": {
+    "value": 33.5,
+    "delta": null
+   },
+   "kitui": {
+    "value": 37.9,
+    "delta": null
+   },
+   "makueni": {
+    "value": 36.1,
+    "delta": null
+   },
+   "machakos": {
+    "value": 34.7,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": 32,
+    "delta": null
+   }
+  }
+ },
+ "fc_minus_obs": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": null,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² verified"
+  },
+  "values": {
+   "turkana": {
+    "value": 0.071,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 0.071,
+    "delta": null
+   },
+   "samburu": {
+    "value": null,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 0.071,
+    "delta": null
+   },
+   "wajir": {
+    "value": 0.19,
+    "delta": null
+   },
+   "mandera": {
+    "value": 0.19,
+    "delta": null
+   },
+   "garissa": {
+    "value": -0.81,
+    "delta": null
+   },
+   "kitui": {
+    "value": -0.388,
+    "delta": null
+   },
+   "makueni": {
+    "value": -0.388,
+    "delta": null
+   },
+   "machakos": {
+    "value": 0.612,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": null,
+    "delta": null
+   }
+  }
+ },
+ "abs_error": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 0.397,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² verified"
+  },
+  "values": {
+   "turkana": {
+    "value": 0.071,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 0.071,
+    "delta": null
+   },
+   "samburu": {
+    "value": null,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 0.071,
+    "delta": null
+   },
+   "wajir": {
+    "value": 0.19,
+    "delta": null
+   },
+   "mandera": {
+    "value": 0.19,
+    "delta": null
+   },
+   "garissa": {
+    "value": 0.81,
+    "delta": null
+   },
+   "kitui": {
+    "value": 0.388,
+    "delta": null
+   },
+   "makueni": {
+    "value": 0.388,
+    "delta": null
+   },
+   "machakos": {
+    "value": 0.612,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": null,
+    "delta": null
+   }
+  }
+ },
+ "brier_contrib": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 0.158,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km² verified"
+  },
+  "values": {
+   "turkana": {
+    "value": 0.005,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 0.005,
+    "delta": null
+   },
+   "samburu": {
+    "value": null,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 0.005,
+    "delta": null
+   },
+   "wajir": {
+    "value": 0.036,
+    "delta": null
+   },
+   "mandera": {
+    "value": 0.036,
+    "delta": null
+   },
+   "garissa": {
+    "value": 0.656,
+    "delta": null
+   },
+   "kitui": {
+    "value": 0.151,
+    "delta": null
+   },
+   "makueni": {
+    "value": 0.151,
+    "delta": null
+   },
+   "machakos": {
+    "value": 0.375,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": null,
+    "delta": null
+   }
+  }
+ },
+ "population": {
+  "asOf": "2026-08-01",
+  "summary": {
+   "mean": 59,
+   "delta": null,
+   "totalAreaKm2": 360153,
+   "areaLabel": "km²"
+  },
+  "values": {
+   "turkana": {
+    "value": 13,
+    "delta": null
+   },
+   "marsabit": {
+    "value": 6,
+    "delta": null
+   },
+   "samburu": {
+    "value": 15,
+    "delta": null
+   },
+   "isiolo": {
+    "value": 11,
+    "delta": null
+   },
+   "wajir": {
+    "value": 14,
+    "delta": null
+   },
+   "mandera": {
+    "value": 33,
+    "delta": null
+   },
+   "garissa": {
+    "value": 19,
+    "delta": null
+   },
+   "kitui": {
+    "value": 37,
+    "delta": null
+   },
+   "makueni": {
+    "value": 123,
+    "delta": null
+   },
+   "machakos": {
+    "value": 229,
+    "delta": null
+   },
+   "tharaka_nithi": {
+    "value": 149,
+    "delta": null
+   }
+  }
+ }
+}

@@ -1,0 +1,699 @@
+[
+  {
+    "id": "st-001",
+    "name": "Lodwar Water Point",
+    "kind": "water_point",
+    "countyId": "turkana",
+    "coords": [
+      35.274,
+      4.129
+    ],
+    "installedAt": "2021-04-18",
+    "lastReadingAt": "2026-08-11T05:00:00Z",
+    "active": true,
+    "signalPct": 87,
+    "batteryPct": 55,
+    "freshnessPct": 86,
+    "status": "reporting"
+  },
+  {
+    "id": "st-002",
+    "name": "Kakuma Observer Post",
+    "kind": "observer",
+    "countyId": "turkana",
+    "coords": [
+      35.761,
+      2.652
+    ],
+    "installedAt": "2022-08-01",
+    "lastReadingAt": "2026-08-10T22:00:00Z",
+    "active": true,
+    "signalPct": 63,
+    "batteryPct": null,
+    "freshnessPct": 97,
+    "status": "reporting"
+  },
+  {
+    "id": "st-003",
+    "name": "Lokichar Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "turkana",
+    "coords": [
+      35.51,
+      1.907
+    ],
+    "installedAt": "2018-10-15",
+    "lastReadingAt": "2026-08-11T07:00:00Z",
+    "active": true,
+    "signalPct": 37,
+    "batteryPct": 33,
+    "freshnessPct": 97,
+    "status": "reporting"
+  },
+  {
+    "id": "st-004",
+    "name": "Kalokol AWS",
+    "kind": "weather",
+    "countyId": "turkana",
+    "coords": [
+      35.865,
+      2.686
+    ],
+    "installedAt": "2017-07-17",
+    "lastReadingAt": "2026-08-11T08:00:00Z",
+    "active": true,
+    "signalPct": 50,
+    "batteryPct": 68,
+    "freshnessPct": 86,
+    "status": "reporting"
+  },
+  {
+    "id": "st-005",
+    "name": "Lokitaung Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "turkana",
+    "coords": [
+      35.749,
+      4.146
+    ],
+    "installedAt": "2019-04-03",
+    "lastReadingAt": "2026-08-11T04:00:00Z",
+    "active": true,
+    "signalPct": 75,
+    "batteryPct": 71,
+    "freshnessPct": 94,
+    "status": "reporting"
+  },
+  {
+    "id": "st-006",
+    "name": "Marsabit Town Observer Post",
+    "kind": "observer",
+    "countyId": "marsabit",
+    "coords": [
+      36.883,
+      3.711
+    ],
+    "installedAt": "2018-02-01",
+    "lastReadingAt": "2026-08-10T14:00:00Z",
+    "active": true,
+    "signalPct": 57,
+    "batteryPct": null,
+    "freshnessPct": 91,
+    "status": "reporting"
+  },
+  {
+    "id": "st-007",
+    "name": "Moyale Water Point",
+    "kind": "water_point",
+    "countyId": "marsabit",
+    "coords": [
+      38.489,
+      2.051
+    ],
+    "installedAt": "2019-09-06",
+    "lastReadingAt": "2026-08-02T08:00:00Z",
+    "active": true,
+    "signalPct": 66,
+    "batteryPct": 82,
+    "freshnessPct": 40,
+    "status": "stale"
+  },
+  {
+    "id": "st-008",
+    "name": "Loiyangalani Observer Post",
+    "kind": "observer",
+    "countyId": "marsabit",
+    "coords": [
+      37.823,
+      3.658
+    ],
+    "installedAt": "2019-08-10",
+    "lastReadingAt": "2026-08-10T21:00:00Z",
+    "active": true,
+    "signalPct": 79,
+    "batteryPct": null,
+    "freshnessPct": 87,
+    "status": "reporting"
+  },
+  {
+    "id": "st-009",
+    "name": "North Horr AWS",
+    "kind": "weather",
+    "countyId": "marsabit",
+    "coords": [
+      38.377,
+      3.234
+    ],
+    "installedAt": "2021-04-03",
+    "lastReadingAt": "2026-06-13T08:00:00Z",
+    "active": false,
+    "signalPct": null,
+    "batteryPct": null,
+    "freshnessPct": 17,
+    "status": "offline"
+  },
+  {
+    "id": "st-010",
+    "name": "Maralal Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "samburu",
+    "coords": [
+      37.492,
+      2.015
+    ],
+    "installedAt": "2023-02-28",
+    "lastReadingAt": "2026-08-10T23:00:00Z",
+    "active": true,
+    "signalPct": 46,
+    "batteryPct": 73,
+    "freshnessPct": 95,
+    "status": "reporting"
+  },
+  {
+    "id": "st-011",
+    "name": "Baragoi Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "samburu",
+    "coords": [
+      37.09,
+      1.147
+    ],
+    "installedAt": "2018-08-25",
+    "lastReadingAt": "2026-08-11T02:00:00Z",
+    "active": true,
+    "signalPct": 55,
+    "batteryPct": 79,
+    "freshnessPct": 89,
+    "status": "reporting"
+  },
+  {
+    "id": "st-012",
+    "name": "Wamba Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "samburu",
+    "coords": [
+      37.575,
+      1.388
+    ],
+    "installedAt": "2022-11-26",
+    "lastReadingAt": "2026-08-10T18:00:00Z",
+    "active": true,
+    "signalPct": 48,
+    "batteryPct": 65,
+    "freshnessPct": 91,
+    "status": "reporting"
+  },
+  {
+    "id": "st-013",
+    "name": "Isiolo Town Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "isiolo",
+    "coords": [
+      37.458,
+      1.276
+    ],
+    "installedAt": "2019-05-01",
+    "lastReadingAt": "2026-08-07T16:00:00Z",
+    "active": true,
+    "signalPct": 48,
+    "batteryPct": 95,
+    "freshnessPct": 58,
+    "status": "stale"
+  },
+  {
+    "id": "st-014",
+    "name": "Merti Observer Post",
+    "kind": "observer",
+    "countyId": "isiolo",
+    "coords": [
+      37.639,
+      0.576
+    ],
+    "installedAt": "2020-06-12",
+    "lastReadingAt": "2026-08-11T03:00:00Z",
+    "active": true,
+    "signalPct": 76,
+    "batteryPct": null,
+    "freshnessPct": 89,
+    "status": "reporting"
+  },
+  {
+    "id": "st-015",
+    "name": "Garbatulla Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "isiolo",
+    "coords": [
+      38.779,
+      0.781
+    ],
+    "installedAt": "2021-08-07",
+    "lastReadingAt": "2026-08-10T20:00:00Z",
+    "active": true,
+    "signalPct": 55,
+    "batteryPct": 42,
+    "freshnessPct": 88,
+    "status": "reporting"
+  },
+  {
+    "id": "st-016",
+    "name": "Wajir Town Water Point",
+    "kind": "water_point",
+    "countyId": "wajir",
+    "coords": [
+      39.588,
+      1.235
+    ],
+    "installedAt": "2017-04-02",
+    "lastReadingAt": "2026-08-07T12:00:00Z",
+    "active": true,
+    "signalPct": 70,
+    "batteryPct": 36,
+    "freshnessPct": 54,
+    "status": "stale"
+  },
+  {
+    "id": "st-017",
+    "name": "Eldas AWS",
+    "kind": "weather",
+    "countyId": "wajir",
+    "coords": [
+      40.208,
+      2.789
+    ],
+    "installedAt": "2018-11-15",
+    "lastReadingAt": "2026-08-06T11:00:00Z",
+    "active": true,
+    "signalPct": 85,
+    "batteryPct": 87,
+    "freshnessPct": 53,
+    "status": "stale"
+  },
+  {
+    "id": "st-018",
+    "name": "Habaswein Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "wajir",
+    "coords": [
+      40.091,
+      2.569
+    ],
+    "installedAt": "2021-12-14",
+    "lastReadingAt": "2026-08-11T01:00:00Z",
+    "active": true,
+    "signalPct": 87,
+    "batteryPct": 83,
+    "freshnessPct": 95,
+    "status": "reporting"
+  },
+  {
+    "id": "st-019",
+    "name": "Tarbaj Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "wajir",
+    "coords": [
+      39.397,
+      1.235
+    ],
+    "installedAt": "2023-12-23",
+    "lastReadingAt": "2026-08-10T19:00:00Z",
+    "active": true,
+    "signalPct": 73,
+    "batteryPct": 83,
+    "freshnessPct": 97,
+    "status": "reporting"
+  },
+  {
+    "id": "st-020",
+    "name": "Mandera Town Water Point",
+    "kind": "water_point",
+    "countyId": "mandera",
+    "coords": [
+      40.65,
+      3.162
+    ],
+    "installedAt": "2019-12-18",
+    "lastReadingAt": "2026-08-04T10:00:00Z",
+    "active": true,
+    "signalPct": 55,
+    "batteryPct": 83,
+    "freshnessPct": 41,
+    "status": "stale"
+  },
+  {
+    "id": "st-021",
+    "name": "Banissa AWS",
+    "kind": "weather",
+    "countyId": "mandera",
+    "coords": [
+      40.227,
+      2.706
+    ],
+    "installedAt": "2024-11-14",
+    "lastReadingAt": "2026-08-10T18:00:00Z",
+    "active": true,
+    "signalPct": 77,
+    "batteryPct": 31,
+    "freshnessPct": 87,
+    "status": "reporting"
+  },
+  {
+    "id": "st-022",
+    "name": "Elwak Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "mandera",
+    "coords": [
+      40.262,
+      2.965
+    ],
+    "installedAt": "2022-10-22",
+    "lastReadingAt": "2026-08-10T21:00:00Z",
+    "active": true,
+    "signalPct": 47,
+    "batteryPct": 70,
+    "freshnessPct": 91,
+    "status": "reporting"
+  },
+  {
+    "id": "st-023",
+    "name": "Lafey AWS",
+    "kind": "weather",
+    "countyId": "mandera",
+    "coords": [
+      40.801,
+      3.178
+    ],
+    "installedAt": "2019-02-15",
+    "lastReadingAt": "2026-08-11T02:00:00Z",
+    "active": true,
+    "signalPct": 51,
+    "batteryPct": 60,
+    "freshnessPct": 92,
+    "status": "reporting"
+  },
+  {
+    "id": "st-024",
+    "name": "Garissa Town Water Point",
+    "kind": "water_point",
+    "countyId": "garissa",
+    "coords": [
+      40.003,
+      -1.182
+    ],
+    "installedAt": "2024-01-25",
+    "lastReadingAt": "2026-08-11T06:00:00Z",
+    "active": true,
+    "signalPct": 61,
+    "batteryPct": 58,
+    "freshnessPct": 84,
+    "status": "reporting"
+  },
+  {
+    "id": "st-025",
+    "name": "Dadaab Market Monitor",
+    "kind": "market",
+    "countyId": "garissa",
+    "coords": [
+      39.341,
+      -0.754
+    ],
+    "installedAt": "2021-02-28",
+    "lastReadingAt": "2026-08-10T18:00:00Z",
+    "active": true,
+    "signalPct": 80,
+    "batteryPct": 70,
+    "freshnessPct": 96,
+    "status": "reporting"
+  },
+  {
+    "id": "st-026",
+    "name": "Balambala AWS",
+    "kind": "weather",
+    "countyId": "garissa",
+    "coords": [
+      40.642,
+      -0.47
+    ],
+    "installedAt": "2017-01-08",
+    "lastReadingAt": "2026-08-11T07:00:00Z",
+    "active": true,
+    "signalPct": 75,
+    "batteryPct": 70,
+    "freshnessPct": 92,
+    "status": "reporting"
+  },
+  {
+    "id": "st-027",
+    "name": "Masalani Observer Post",
+    "kind": "observer",
+    "countyId": "garissa",
+    "coords": [
+      39.28,
+      -0.707
+    ],
+    "installedAt": "2023-07-06",
+    "lastReadingAt": "2026-08-11T03:00:00Z",
+    "active": true,
+    "signalPct": 92,
+    "batteryPct": null,
+    "freshnessPct": 99,
+    "status": "reporting"
+  },
+  {
+    "id": "st-028",
+    "name": "Garissa Town Rain Gauge 02",
+    "kind": "rain_gauge",
+    "countyId": "garissa",
+    "coords": [
+      40.144,
+      0.135
+    ],
+    "installedAt": "2023-04-14",
+    "lastReadingAt": "2026-06-16T08:00:00Z",
+    "active": false,
+    "signalPct": null,
+    "batteryPct": null,
+    "freshnessPct": 19,
+    "status": "offline"
+  },
+  {
+    "id": "st-029",
+    "name": "Kitui Town AWS",
+    "kind": "weather",
+    "countyId": "kitui",
+    "coords": [
+      38.501,
+      -1.461
+    ],
+    "installedAt": "2024-10-09",
+    "lastReadingAt": "2026-08-10T13:00:00Z",
+    "active": true,
+    "signalPct": 73,
+    "batteryPct": 70,
+    "freshnessPct": 98,
+    "status": "reporting"
+  },
+  {
+    "id": "st-030",
+    "name": "Mwingi AWS",
+    "kind": "weather",
+    "countyId": "kitui",
+    "coords": [
+      38.67,
+      -1.891
+    ],
+    "installedAt": "2019-07-24",
+    "lastReadingAt": "2026-08-06T16:00:00Z",
+    "active": true,
+    "signalPct": 72,
+    "batteryPct": 85,
+    "freshnessPct": 63,
+    "status": "stale"
+  },
+  {
+    "id": "st-031",
+    "name": "Mutomo Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "kitui",
+    "coords": [
+      38.145,
+      -0.724
+    ],
+    "installedAt": "2022-10-21",
+    "lastReadingAt": "2026-08-11T03:00:00Z",
+    "active": true,
+    "signalPct": 78,
+    "batteryPct": 34,
+    "freshnessPct": 97,
+    "status": "reporting"
+  },
+  {
+    "id": "st-032",
+    "name": "Kanyangi Observer Post",
+    "kind": "observer",
+    "countyId": "kitui",
+    "coords": [
+      38.374,
+      -1.611
+    ],
+    "installedAt": "2024-09-12",
+    "lastReadingAt": "2026-08-10T23:00:00Z",
+    "active": true,
+    "signalPct": 62,
+    "batteryPct": null,
+    "freshnessPct": 93,
+    "status": "reporting"
+  },
+  {
+    "id": "st-033",
+    "name": "Wote Water Point",
+    "kind": "water_point",
+    "countyId": "makueni",
+    "coords": [
+      37.845,
+      -2.657
+    ],
+    "installedAt": "2017-05-24",
+    "lastReadingAt": "2026-08-11T07:00:00Z",
+    "active": true,
+    "signalPct": 85,
+    "batteryPct": 71,
+    "freshnessPct": 84,
+    "status": "reporting"
+  },
+  {
+    "id": "st-034",
+    "name": "Makindu Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "makueni",
+    "coords": [
+      37.64,
+      -2.077
+    ],
+    "installedAt": "2022-11-25",
+    "lastReadingAt": "2026-08-10T15:00:00Z",
+    "active": true,
+    "signalPct": 56,
+    "batteryPct": 27,
+    "freshnessPct": 93,
+    "status": "reporting"
+  },
+  {
+    "id": "st-035",
+    "name": "Kibwezi Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "makueni",
+    "coords": [
+      37.814,
+      -2.449
+    ],
+    "installedAt": "2021-06-17",
+    "lastReadingAt": "2026-08-10T18:00:00Z",
+    "active": true,
+    "signalPct": 42,
+    "batteryPct": 79,
+    "freshnessPct": 94,
+    "status": "reporting"
+  },
+  {
+    "id": "st-036",
+    "name": "Machakos Town Observer Post",
+    "kind": "observer",
+    "countyId": "machakos",
+    "coords": [
+      37.144,
+      -1.544
+    ],
+    "installedAt": "2018-03-28",
+    "lastReadingAt": "2026-08-11T02:00:00Z",
+    "active": true,
+    "signalPct": 70,
+    "batteryPct": null,
+    "freshnessPct": 97,
+    "status": "reporting"
+  },
+  {
+    "id": "st-037",
+    "name": "Masinga Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "machakos",
+    "coords": [
+      37.461,
+      -1.56
+    ],
+    "installedAt": "2020-03-22",
+    "lastReadingAt": "2026-08-03T11:00:00Z",
+    "active": true,
+    "signalPct": 65,
+    "batteryPct": 30,
+    "freshnessPct": 38,
+    "status": "stale"
+  },
+  {
+    "id": "st-038",
+    "name": "Kangundo Market Monitor",
+    "kind": "market",
+    "countyId": "machakos",
+    "coords": [
+      37.331,
+      -1.055
+    ],
+    "installedAt": "2024-03-05",
+    "lastReadingAt": "2026-08-06T00:00:00Z",
+    "active": true,
+    "signalPct": 68,
+    "batteryPct": 71,
+    "freshnessPct": 43,
+    "status": "stale"
+  },
+  {
+    "id": "st-039",
+    "name": "Chuka Market Monitor",
+    "kind": "market",
+    "countyId": "tharaka_nithi",
+    "coords": [
+      37.653,
+      -0.304
+    ],
+    "installedAt": "2021-03-26",
+    "lastReadingAt": "2026-08-10T20:00:00Z",
+    "active": true,
+    "signalPct": 66,
+    "batteryPct": 76,
+    "freshnessPct": 83,
+    "status": "reporting"
+  },
+  {
+    "id": "st-040",
+    "name": "Marimanti Observer Post",
+    "kind": "observer",
+    "countyId": "tharaka_nithi",
+    "coords": [
+      37.857,
+      -0.258
+    ],
+    "installedAt": "2022-10-08",
+    "lastReadingAt": "2026-08-11T02:00:00Z",
+    "active": true,
+    "signalPct": 87,
+    "batteryPct": null,
+    "freshnessPct": 90,
+    "status": "reporting"
+  },
+  {
+    "id": "st-041",
+    "name": "Gatunga Rain Gauge",
+    "kind": "rain_gauge",
+    "countyId": "tharaka_nithi",
+    "coords": [
+      37.894,
+      -0.188
+    ],
+    "installedAt": "2017-02-28",
+    "lastReadingAt": "2026-08-10T15:00:00Z",
+    "active": true,
+    "signalPct": 48,
+    "batteryPct": 55,
+    "freshnessPct": 91,
+    "status": "reporting"
+  }
+]

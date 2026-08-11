@@ -1,0 +1,317 @@
+{
+  "labelVersion": "vci3m_v1",
+  "model": "cascade-gbm v0.4.1",
+  "period": {
+    "from": "2022-09",
+    "to": "2026-08"
+  },
+  "sampleCount": 423,
+  "positives": 87,
+  "metrics": {
+    "rocAuc": 0.68,
+    "prAuc": 0.52,
+    "brier": 0.171,
+    "brierSkillScore": 0.09,
+    "reliability": 0.81
+  },
+  "perCounty": [
+    {
+      "countyId": "turkana",
+      "rocAuc": 0.71,
+      "brier": 0.148
+    },
+    {
+      "countyId": "marsabit",
+      "rocAuc": 0.69,
+      "brier": 0.152
+    },
+    {
+      "countyId": "isiolo",
+      "rocAuc": 0.64,
+      "brier": 0.166
+    },
+    {
+      "countyId": "wajir",
+      "rocAuc": 0.66,
+      "brier": 0.171
+    },
+    {
+      "countyId": "mandera",
+      "rocAuc": 0.62,
+      "brier": 0.183
+    },
+    {
+      "countyId": "garissa",
+      "rocAuc": 0.59,
+      "brier": 0.194
+    },
+    {
+      "countyId": "kitui",
+      "rocAuc": 0.74,
+      "brier": 0.139
+    },
+    {
+      "countyId": "makueni",
+      "rocAuc": 0.72,
+      "brier": 0.144
+    },
+    {
+      "countyId": "machakos",
+      "rocAuc": 0.66,
+      "brier": 0.176
+    }
+  ],
+  "comparison": {
+    "issueId": "2026-07",
+    "validMonth": "2026-08",
+    "forecast": {
+      "title": "Forecast",
+      "sub": "Issue 2026-07, valid Aug 2026",
+      "histBins": [
+        0,
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.35,
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6,
+        0.65,
+        0.7,
+        0.75,
+        0.8,
+        0.85,
+        0.9,
+        0.95
+      ],
+      "histCounts": [
+        0,
+        1,
+        2,
+        2,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stats": [
+        {
+          "label": "Mean probability",
+          "value": "0.291"
+        },
+        {
+          "label": "Counties above threshold",
+          "value": "4 of 9"
+        },
+        {
+          "label": "Highest",
+          "value": "Kitui 0.612"
+        },
+        {
+          "label": "Lowest",
+          "value": "Turkana 0.071"
+        }
+      ]
+    },
+    "observed": {
+      "title": "Observed",
+      "sub": "VCI3M truth, Aug 2026",
+      "histBins": [
+        0,
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.35,
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6,
+        0.65,
+        0.7,
+        0.75,
+        0.8,
+        0.85,
+        0.9,
+        0.95
+      ],
+      "histCounts": [
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3
+      ],
+      "stats": [
+        {
+          "label": "Drought outcomes",
+          "value": "3 of 9"
+        },
+        {
+          "label": "Hits",
+          "value": "2"
+        },
+        {
+          "label": "Misses",
+          "value": "1 (Garissa)"
+        },
+        {
+          "label": "False alarms",
+          "value": "1 (Machakos)"
+        }
+      ]
+    },
+    "confusion": {
+      "hits": 2,
+      "misses": 1,
+      "falseAlarms": 1,
+      "correctNegatives": 5
+    },
+    "bigNumbers": {
+      "left": {
+        "label": "ROC AUC",
+        "value": "0.68"
+      },
+      "right": {
+        "label": "Brier Skill",
+        "value": "0.09"
+      }
+    }
+  },
+  "reliability": {
+    "bins": [
+      {
+        "predicted": 0.05,
+        "observed": 0.031,
+        "count": 96
+      },
+      {
+        "predicted": 0.15,
+        "observed": 0.108,
+        "count": 88
+      },
+      {
+        "predicted": 0.25,
+        "observed": 0.221,
+        "count": 64
+      },
+      {
+        "predicted": 0.35,
+        "observed": 0.312,
+        "count": 52
+      },
+      {
+        "predicted": 0.45,
+        "observed": 0.364,
+        "count": 38
+      },
+      {
+        "predicted": 0.55,
+        "observed": 0.517,
+        "count": 28
+      },
+      {
+        "predicted": 0.65,
+        "observed": 0.583,
+        "count": 21
+      },
+      {
+        "predicted": 0.75,
+        "observed": 0.706,
+        "count": 16
+      },
+      {
+        "predicted": 0.85,
+        "observed": 0.741,
+        "count": 12
+      },
+      {
+        "predicted": 0.95,
+        "observed": 0.882,
+        "count": 8
+      }
+    ]
+  },
+  "leadTime": {
+    "leads": [
+      {
+        "leadMonths": 1,
+        "rocAuc": 0.72,
+        "brierSkillScore": 0.13
+      },
+      {
+        "leadMonths": 2,
+        "rocAuc": 0.68,
+        "brierSkillScore": 0.09
+      },
+      {
+        "leadMonths": 3,
+        "rocAuc": 0.61,
+        "brierSkillScore": 0.04
+      }
+    ],
+    "climatologyAuc": 0.5
+  },
+  "baselines": [
+    {
+      "id": "climatology",
+      "label": "Climatology",
+      "brierSkillScore": 0
+    },
+    {
+      "id": "persistence",
+      "label": "Persistence",
+      "brierSkillScore": 0.03
+    },
+    {
+      "id": "enso_only",
+      "label": "ENSO only",
+      "brierSkillScore": 0.04
+    },
+    {
+      "id": "era5_only",
+      "label": "ERA5 only",
+      "brierSkillScore": 0.06
+    },
+    {
+      "id": "full",
+      "label": "Full model",
+      "brierSkillScore": 0.09
+    }
+  ]
+}

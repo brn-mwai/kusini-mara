@@ -371,7 +371,7 @@
         prob: ser.series.prob.slice(-n),
         p10: ser.series.p10.slice(-n),
         p90: ser.series.p90.slice(-n),
-        threshold: issue().config.threshold,
+        threshold: Number(S.get('threshold')) || issue().config.threshold,
         forecastFrom: Math.max(0, t.length - 3),
       }))
     }

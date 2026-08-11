@@ -1,0 +1,165 @@
+{
+  "organisation": {
+    "name": "NDMA Kenya — Cascade Bridge pilot",
+    "tenantId": "tn-ndma",
+    "region": "ASAL counties",
+    "plan": "Pilot",
+    "seats": 12,
+    "countiesCovered": 9,
+    "countiesTotal": 11
+  },
+  "members": [
+    {
+      "name": "Cascade Duty Analyst",
+      "email": "duty@cascadebridge.example",
+      "role": "Owner",
+      "lastActiveAt": "2026-08-11T07:40:00Z"
+    },
+    {
+      "name": "Akai Ekiru",
+      "email": "a.ekiru@turkana.go.ke",
+      "role": "County editor",
+      "lastActiveAt": "2026-08-10T16:22:00Z"
+    },
+    {
+      "name": "Joy Karimi",
+      "email": "j.karimi@aafund.example",
+      "role": "Tenant admin",
+      "lastActiveAt": "2026-08-09T11:05:00Z"
+    },
+    {
+      "name": "Peter Kyalo",
+      "email": "p.kyalo@redcross.or.ke",
+      "role": "Viewer",
+      "lastActiveAt": "2026-08-08T09:48:00Z"
+    },
+    {
+      "name": "Fatuma Abdi",
+      "email": "f.abdi@wajir.go.ke",
+      "role": "Field reporter",
+      "lastActiveAt": "2026-08-11T05:12:00Z"
+    },
+    {
+      "name": "Halake Galgalo",
+      "email": "h.galgalo@marsabit.go.ke",
+      "role": "Field reporter",
+      "lastActiveAt": "2026-08-07T14:31:00Z"
+    }
+  ],
+  "apiKeys": [
+    {
+      "id": "key-ingest",
+      "label": "Station ingest",
+      "prefix": "cbk_ing_4f21",
+      "createdAt": "2025-11-02",
+      "lastUsedAt": "2026-08-11T08:55:00Z",
+      "rateLimitRpm": 120,
+      "scopes": [
+        "stations:write"
+      ]
+    },
+    {
+      "id": "key-read",
+      "label": "County dashboard, public",
+      "prefix": "cbk_pub_9c07",
+      "createdAt": "2026-01-15",
+      "lastUsedAt": "2026-08-11T06:03:00Z",
+      "rateLimitRpm": 600,
+      "scopes": [
+        "issues:read",
+        "layers:read"
+      ]
+    },
+    {
+      "id": "key-cap",
+      "label": "CAP relay, MET",
+      "prefix": "cbk_cap_2ab8",
+      "createdAt": "2026-03-28",
+      "lastUsedAt": "2026-08-04T06:56:00Z",
+      "rateLimitRpm": 30,
+      "scopes": [
+        "alerts:read"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "src-seas5",
+      "name": "ECMWF SEAS5",
+      "kind": "Forecast GRIB",
+      "endpoint": "mars://seas5/monthly",
+      "freshnessHours": 168,
+      "staleAfterHours": 800,
+      "lastIngestAt": "2026-08-04T02:10:00Z",
+      "status": "ok"
+    },
+    {
+      "id": "src-chirps",
+      "name": "CHIRPS rainfall",
+      "kind": "Raster",
+      "endpoint": "s3://chirps/africa/monthly",
+      "freshnessHours": 26,
+      "staleAfterHours": 72,
+      "lastIngestAt": "2026-08-10T07:00:00Z",
+      "status": "ok"
+    },
+    {
+      "id": "src-modis",
+      "name": "MODIS NDVI / VCI3M",
+      "kind": "Raster",
+      "endpoint": "s3://modis/vci3m",
+      "freshnessHours": 54,
+      "staleAfterHours": 96,
+      "lastIngestAt": "2026-08-09T03:00:00Z",
+      "status": "ok"
+    },
+    {
+      "id": "src-era5",
+      "name": "ERA5 reanalysis",
+      "kind": "Reanalysis",
+      "endpoint": "cds://era5/monthly",
+      "freshnessHours": 210,
+      "staleAfterHours": 168,
+      "lastIngestAt": "2026-08-02T15:00:00Z",
+      "status": "stale"
+    },
+    {
+      "id": "src-stations",
+      "name": "County station network",
+      "kind": "Point ingest",
+      "endpoint": "/v1/stations/ingest",
+      "freshnessHours": 1,
+      "staleAfterHours": 24,
+      "lastIngestAt": "2026-08-11T08:55:00Z",
+      "status": "ok"
+    }
+  ],
+  "export": {
+    "schedules": [
+      {
+        "id": "exp-netcdf",
+        "format": "NetCDF",
+        "target": "s3://ndma-cascade/issues/",
+        "cadence": "On publish",
+        "lastRunAt": "2026-08-04T07:02:00Z",
+        "enabled": true
+      },
+      {
+        "id": "exp-geotiff",
+        "format": "GeoTIFF",
+        "target": "s3://ndma-cascade/tiles/",
+        "cadence": "On publish",
+        "lastRunAt": "2026-08-04T07:04:00Z",
+        "enabled": true
+      },
+      {
+        "id": "exp-cap",
+        "format": "CAP 1.2",
+        "target": "https://cap.meteo.go.ke/inbox",
+        "cadence": "On alert",
+        "lastRunAt": "2026-08-04T06:56:00Z",
+        "enabled": false
+      }
+    ]
+  }
+}

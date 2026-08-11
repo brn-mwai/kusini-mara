@@ -1,0 +1,359 @@
+[
+  {
+    "id": "al-015",
+    "issueId": "2026-08",
+    "countyId": "kitui",
+    "level": "emergency",
+    "firedAt": "2026-08-04T06:55:00Z",
+    "probability": 0.934,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "acked",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "cap",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "webhook",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-015</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-08-04T06:55:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought emergency, valid Sep 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Extreme</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.934</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-08</value></parameter>\n    <area><areaDesc>Kitui County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-014",
+    "issueId": "2026-08",
+    "countyId": "makueni",
+    "level": "emergency",
+    "firedAt": "2026-08-04T06:55:00Z",
+    "probability": 0.934,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "acked",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "cap",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-014</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-08-04T06:55:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought emergency, valid Sep 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Extreme</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.934</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-08</value></parameter>\n    <area><areaDesc>Makueni County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-013",
+    "issueId": "2026-08",
+    "countyId": "machakos",
+    "level": "emergency",
+    "firedAt": "2026-08-04T06:55:00Z",
+    "probability": 0.934,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "cap",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-013</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-08-04T06:55:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought emergency, valid Sep 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Extreme</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.934</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-08</value></parameter>\n    <area><areaDesc>Machakos County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-012",
+    "issueId": "2026-08",
+    "countyId": "wajir",
+    "level": "warning",
+    "firedAt": "2026-08-04T06:55:00Z",
+    "probability": 0.426,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "email",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "cap",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-012</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-08-04T06:55:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought warning, valid Oct 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Severe</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.426</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-08</value></parameter>\n    <area><areaDesc>Wajir County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-011",
+    "issueId": "2026-08",
+    "countyId": "mandera",
+    "level": "warning",
+    "firedAt": "2026-08-04T06:55:00Z",
+    "probability": 0.426,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "failed",
+        "at": "2026-08-04T06:55:00Z",
+        "error": "Carrier timeout after 3 retries"
+      },
+      {
+        "channel": "email",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-011</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-08-04T06:55:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought warning, valid Oct 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Severe</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.426</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-08</value></parameter>\n    <area><areaDesc>Mandera County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-010",
+    "issueId": "2026-08",
+    "countyId": "garissa",
+    "level": "warning",
+    "firedAt": "2026-08-04T06:55:00Z",
+    "probability": 0.426,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "email",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "cap",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-010</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-08-04T06:55:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought warning, valid Oct 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Severe</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.426</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-08</value></parameter>\n    <area><areaDesc>Garissa County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-009",
+    "issueId": "2026-08",
+    "countyId": "turkana",
+    "level": "watch",
+    "firedAt": "2026-08-04T06:55:00Z",
+    "probability": 0.337,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "acked",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "email",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-009</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-08-04T06:55:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought watch, valid Nov 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Moderate</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.337</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-08</value></parameter>\n    <area><areaDesc>Turkana County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-008",
+    "issueId": "2026-08",
+    "countyId": "marsabit",
+    "level": "watch",
+    "firedAt": "2026-08-04T06:55:00Z",
+    "probability": 0.337,
+    "deliveries": [
+      {
+        "channel": "email",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      },
+      {
+        "channel": "cap",
+        "state": "sent",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-008</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-08-04T06:55:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought watch, valid Nov 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Moderate</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.337</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-08</value></parameter>\n    <area><areaDesc>Marsabit County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-007",
+    "issueId": "2026-08",
+    "countyId": "isiolo",
+    "level": "watch",
+    "firedAt": "2026-08-04T06:55:00Z",
+    "probability": 0.337,
+    "deliveries": [
+      {
+        "channel": "email",
+        "state": "queued",
+        "at": "2026-08-04T06:55:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-007</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-08-04T06:55:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought watch, valid Nov 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Moderate</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.337</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-08</value></parameter>\n    <area><areaDesc>Isiolo County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-006",
+    "issueId": "2026-07",
+    "countyId": "kitui",
+    "level": "emergency",
+    "firedAt": "2026-07-03T07:30:00Z",
+    "probability": 0.612,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "acked",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      },
+      {
+        "channel": "cap",
+        "state": "sent",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      },
+      {
+        "channel": "webhook",
+        "state": "sent",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-006</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-07-03T07:30:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought emergency, valid Aug 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Extreme</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.612</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-07</value></parameter>\n    <area><areaDesc>Kitui County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-005",
+    "issueId": "2026-07",
+    "countyId": "makueni",
+    "level": "emergency",
+    "firedAt": "2026-07-03T07:30:00Z",
+    "probability": 0.612,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "acked",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      },
+      {
+        "channel": "cap",
+        "state": "sent",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-005</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-07-03T07:30:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought emergency, valid Aug 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Extreme</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.612</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-07</value></parameter>\n    <area><areaDesc>Makueni County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-004",
+    "issueId": "2026-07",
+    "countyId": "machakos",
+    "level": "emergency",
+    "firedAt": "2026-07-03T07:30:00Z",
+    "probability": 0.612,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "acked",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      },
+      {
+        "channel": "cap",
+        "state": "sent",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-004</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-07-03T07:30:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought emergency, valid Aug 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Extreme</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.612</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-07</value></parameter>\n    <area><areaDesc>Machakos County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-003",
+    "issueId": "2026-07",
+    "countyId": "wajir",
+    "level": "watch",
+    "firedAt": "2026-07-03T07:30:00Z",
+    "probability": 0.385,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "sent",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      },
+      {
+        "channel": "email",
+        "state": "sent",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-003</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-07-03T07:30:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought watch, valid Oct 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Moderate</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.385</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-07</value></parameter>\n    <area><areaDesc>Wajir County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-002",
+    "issueId": "2026-07",
+    "countyId": "mandera",
+    "level": "watch",
+    "firedAt": "2026-07-03T07:30:00Z",
+    "probability": 0.385,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "failed",
+        "at": "2026-07-03T07:30:00Z",
+        "error": "Carrier timeout after 3 retries"
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-002</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-07-03T07:30:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought watch, valid Oct 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Moderate</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.385</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-07</value></parameter>\n    <area><areaDesc>Mandera County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  },
+  {
+    "id": "al-001",
+    "issueId": "2026-07",
+    "countyId": "garissa",
+    "level": "watch",
+    "firedAt": "2026-07-03T07:30:00Z",
+    "probability": 0.385,
+    "deliveries": [
+      {
+        "channel": "sms",
+        "state": "sent",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      },
+      {
+        "channel": "email",
+        "state": "sent",
+        "at": "2026-07-03T07:30:00Z",
+        "error": null
+      }
+    ],
+    "capXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<alert xmlns=\"urn:oasis:names:tc:emergency:cap:1.2\">\n  <identifier>cb-al-001</identifier>\n  <sender>alerts@cascadebridge.example</sender>\n  <sent>2026-07-03T07:30:00Z</sent>\n  <status>Actual</status>\n  <msgType>Alert</msgType>\n  <scope>Public</scope>\n  <info>\n    <category>Met</category>\n    <event>Drought watch, valid Oct 2026</event>\n    <urgency>Expected</urgency>\n    <severity>Moderate</severity>\n    <certainty>Likely</certainty>\n    <parameter><valueName>probability</valueName><value>0.385</value></parameter>\n    <parameter><valueName>issue</valueName><value>2026-07</value></parameter>\n    <area><areaDesc>Garissa County, Kenya</areaDesc></area>\n  </info>\n</alert>"
+  }
+]

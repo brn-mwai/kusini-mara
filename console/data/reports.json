@@ -1,0 +1,656 @@
+[
+  {
+    "id": "rep-012",
+    "topic": "pasture",
+    "countyId": "kitui",
+    "ward": "Kanyangi",
+    "coords": [
+      38.611,
+      -1.132
+    ],
+    "observedAt": "2026-08-10T06:00:00Z",
+    "status": "active",
+    "verified": false,
+    "severity": 4,
+    "photos": [
+      {
+        "id": "rep-012-p1",
+        "url": "/v1/photos/rep-012-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-012-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-012-p2",
+        "url": "/v1/photos/rep-012-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-012-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      },
+      {
+        "id": "rep-012-p3",
+        "url": "/v1/photos/rep-012-p3.jpg",
+        "thumbUrl": "/v1/photos/rep-012-p3_thumb.jpg",
+        "width": 2048,
+        "height": 1536
+      },
+      {
+        "id": "rep-012-p4",
+        "url": "/v1/photos/rep-012-p4.jpg",
+        "thumbUrl": "/v1/photos/rep-012-p4_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-012-m1",
+        "authorId": "u-kyalo",
+        "authorName": "Peter Kyalo",
+        "avatarUrl": null,
+        "body": "Grass cover almost gone across the Kanyangi rangeland strip. Households report moving herds toward the Tana riverine belt two weeks earlier than usual. Browse still available on hilltops.",
+        "createdAt": "2026-08-10T08:00:00Z"
+      },
+      {
+        "id": "rep-012-m2",
+        "authorId": "u-analyst",
+        "authorName": "Cascade Duty Analyst",
+        "avatarUrl": null,
+        "body": "Consistent with the VCI3M drop for Kitui this month. Flagging for verification once the field officer uploads the transect photos.",
+        "createdAt": "2026-08-10T13:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 15.9,
+      "usedInLabelVersion": null
+    },
+    "title": "Pasture failure, Kanyangi rangeland"
+  },
+  {
+    "id": "rep-011",
+    "topic": "water_point",
+    "countyId": "marsabit",
+    "ward": "Loiyangalani",
+    "coords": [
+      37.369,
+      2.283
+    ],
+    "observedAt": "2026-08-09T06:00:00Z",
+    "status": "active",
+    "verified": false,
+    "severity": 5,
+    "photos": [
+      {
+        "id": "rep-011-p1",
+        "url": "/v1/photos/rep-011-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-011-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-011-p2",
+        "url": "/v1/photos/rep-011-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-011-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      },
+      {
+        "id": "rep-011-p3",
+        "url": "/v1/photos/rep-011-p3.jpg",
+        "thumbUrl": "/v1/photos/rep-011-p3_thumb.jpg",
+        "width": 2048,
+        "height": 1536
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-011-m1",
+        "authorId": "u-galgalo",
+        "authorName": "Halake Galgalo",
+        "avatarUrl": null,
+        "body": "Main community borehole down since Thursday. Pump motor burnt out and the standby generator has no fuel allocation. Around 400 households now trekking 11 km to the lake shore intake.",
+        "createdAt": "2026-08-09T08:00:00Z"
+      },
+      {
+        "id": "rep-011-m2",
+        "authorId": "u-analyst",
+        "authorName": "Cascade Duty Analyst",
+        "avatarUrl": null,
+        "body": "Escalated to the county water officer. Please log the queue length each morning if you can, it feeds the water stress indicator.",
+        "createdAt": "2026-08-09T13:00:00Z"
+      },
+      {
+        "id": "rep-011-m3",
+        "authorId": "u-galgalo",
+        "authorName": "Halake Galgalo",
+        "avatarUrl": null,
+        "body": "Queue this morning was roughly 3 hours at the shore intake. Two water trucks promised for the weekend.",
+        "createdAt": "2026-08-09T18:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": null,
+      "usedInLabelVersion": null
+    },
+    "title": "Borehole failure, Loiyangalani"
+  },
+  {
+    "id": "rep-010",
+    "topic": "livestock",
+    "countyId": "wajir",
+    "ward": "Eldas",
+    "coords": [
+      39.533,
+      2.611
+    ],
+    "observedAt": "2026-08-08T06:00:00Z",
+    "status": "active",
+    "verified": false,
+    "severity": 3,
+    "photos": [
+      {
+        "id": "rep-010-p1",
+        "url": "/v1/photos/rep-010-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-010-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-010-p2",
+        "url": "/v1/photos/rep-010-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-010-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      },
+      {
+        "id": "rep-010-p3",
+        "url": "/v1/photos/rep-010-p3.jpg",
+        "thumbUrl": "/v1/photos/rep-010-p3_thumb.jpg",
+        "width": 2048,
+        "height": 1536
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-010-m1",
+        "authorId": "u-abdi",
+        "authorName": "Fatuma Abdi",
+        "avatarUrl": null,
+        "body": "Cattle body condition score dropping fast along the Eldas corridor, mostly score 2 of 5 at the market today. Goats still holding. No unusual mortality yet.",
+        "createdAt": "2026-08-08T08:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 23.8,
+      "usedInLabelVersion": null
+    },
+    "title": "Livestock body condition declining, Eldas"
+  },
+  {
+    "id": "rep-009",
+    "topic": "migration",
+    "countyId": "turkana",
+    "ward": "Loima",
+    "coords": [
+      35.62,
+      3.856
+    ],
+    "observedAt": "2026-08-07T06:00:00Z",
+    "status": "active",
+    "verified": false,
+    "severity": 3,
+    "photos": [
+      {
+        "id": "rep-009-p1",
+        "url": "/v1/photos/rep-009-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-009-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-009-p2",
+        "url": "/v1/photos/rep-009-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-009-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-009-m1",
+        "authorId": "u-ekiru",
+        "authorName": "Akai Ekiru",
+        "avatarUrl": null,
+        "body": "Three large herds moved through Loima toward the Uganda border pasture this week. Elders say this is a month earlier than a normal year. Water points along the route still functional.",
+        "createdAt": "2026-08-07T08:00:00Z"
+      },
+      {
+        "id": "rep-009-m2",
+        "authorId": "u-analyst",
+        "authorName": "Cascade Duty Analyst",
+        "avatarUrl": null,
+        "body": "Matches the rainfall anomaly signal for Turkana at minus 18 percent. Keeping this thread open through the Nov forecast window.",
+        "createdAt": "2026-08-07T13:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 30.6,
+      "usedInLabelVersion": null
+    },
+    "title": "Early migration toward Uganda border"
+  },
+  {
+    "id": "rep-008",
+    "topic": "market",
+    "countyId": "mandera",
+    "ward": "Banissa",
+    "coords": [
+      41.218,
+      3.13
+    ],
+    "observedAt": "2026-08-06T06:00:00Z",
+    "status": "active",
+    "verified": false,
+    "severity": 2,
+    "photos": [
+      {
+        "id": "rep-008-p1",
+        "url": "/v1/photos/rep-008-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-008-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-008-p2",
+        "url": "/v1/photos/rep-008-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-008-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-008-m1",
+        "authorId": "u-hussein",
+        "authorName": "Adan Hussein",
+        "avatarUrl": null,
+        "body": "Goat prices down again at Banissa, sellers outnumber buyers roughly three to one. Traders citing poor body condition and transport cost to Mandera town.",
+        "createdAt": "2026-08-06T08:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 21.5,
+      "usedInLabelVersion": null
+    },
+    "title": "Goat prices falling at Banissa market"
+  },
+  {
+    "id": "rep-007",
+    "topic": "crop",
+    "countyId": "makueni",
+    "ward": "Kibwezi",
+    "coords": [
+      38.032,
+      -1.987
+    ],
+    "observedAt": "2026-08-05T06:00:00Z",
+    "status": "active",
+    "verified": false,
+    "severity": 4,
+    "photos": [
+      {
+        "id": "rep-007-p1",
+        "url": "/v1/photos/rep-007-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-007-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-007-p2",
+        "url": "/v1/photos/rep-007-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-007-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      },
+      {
+        "id": "rep-007-p3",
+        "url": "/v1/photos/rep-007-p3.jpg",
+        "thumbUrl": "/v1/photos/rep-007-p3_thumb.jpg",
+        "width": 2048,
+        "height": 1536
+      },
+      {
+        "id": "rep-007-p4",
+        "url": "/v1/photos/rep-007-p4.jpg",
+        "thumbUrl": "/v1/photos/rep-007-p4_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-007-m1",
+        "authorId": "u-mwende",
+        "authorName": "Grace Mwende",
+        "avatarUrl": null,
+        "body": "Green gram fields around Kibwezi have failed almost completely, maybe one field in ten will harvest anything. Farmers ploughing in the residue for fodder.",
+        "createdAt": "2026-08-05T08:00:00Z"
+      },
+      {
+        "id": "rep-007-m2",
+        "authorId": "u-kyalo",
+        "authorName": "Peter Kyalo",
+        "avatarUrl": null,
+        "body": "Attached transect photos from the irrigation scheme boundary going east. The contrast with the irrigated plots is stark.",
+        "createdAt": "2026-08-05T13:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 17.7,
+      "usedInLabelVersion": null
+    },
+    "title": "Green gram crop failure, Kibwezi"
+  },
+  {
+    "id": "rep-006",
+    "topic": "pasture",
+    "countyId": "garissa",
+    "ward": "Balambala",
+    "coords": [
+      40.31,
+      -0.902
+    ],
+    "observedAt": "2026-08-03T06:00:00Z",
+    "status": "active",
+    "verified": false,
+    "severity": 3,
+    "photos": [
+      {
+        "id": "rep-006-p1",
+        "url": "/v1/photos/rep-006-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-006-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-006-p2",
+        "url": "/v1/photos/rep-006-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-006-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-006-m1",
+        "authorId": "u-hussein",
+        "authorName": "Adan Hussein",
+        "avatarUrl": null,
+        "body": "Pasture north of Balambala thinning quickly. Herders concentrating along the Tana. County grass reserve at Sankuri opened early.",
+        "createdAt": "2026-08-03T08:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 26.1,
+      "usedInLabelVersion": null
+    },
+    "title": "Pasture thinning north of Balambala"
+  },
+  {
+    "id": "rep-005",
+    "topic": "water_point",
+    "countyId": "isiolo",
+    "ward": "Merti",
+    "coords": [
+      38.457,
+      0.63
+    ],
+    "observedAt": "2026-08-01T06:00:00Z",
+    "status": "active",
+    "verified": false,
+    "severity": 2,
+    "photos": [
+      {
+        "id": "rep-005-p1",
+        "url": "/v1/photos/rep-005-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-005-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-005-p2",
+        "url": "/v1/photos/rep-005-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-005-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-005-m1",
+        "authorId": "u-lemayan",
+        "authorName": "Sein Lemayan",
+        "avatarUrl": null,
+        "body": "River flow at the Merti intake noticeably below normal for August. Pump still operating on reduced hours. No conflict reported at the point yet.",
+        "createdAt": "2026-08-01T08:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 36.4,
+      "usedInLabelVersion": null
+    },
+    "title": "Ewaso flow low at Merti intake"
+  },
+  {
+    "id": "rep-004",
+    "topic": "pasture",
+    "countyId": "kitui",
+    "ward": "Mwingi North",
+    "coords": [
+      38.367,
+      -1.496
+    ],
+    "observedAt": "2026-07-26T06:00:00Z",
+    "status": "resolved",
+    "verified": true,
+    "severity": 4,
+    "photos": [
+      {
+        "id": "rep-004-p1",
+        "url": "/v1/photos/rep-004-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-004-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-004-p2",
+        "url": "/v1/photos/rep-004-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-004-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      },
+      {
+        "id": "rep-004-p3",
+        "url": "/v1/photos/rep-004-p3.jpg",
+        "thumbUrl": "/v1/photos/rep-004-p3_thumb.jpg",
+        "width": 2048,
+        "height": 1536
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-004-m1",
+        "authorId": "u-kyalo",
+        "authorName": "Peter Kyalo",
+        "avatarUrl": null,
+        "body": "Browse depleted across the transect, goats moving into hilltop thicket that is normally reserved for the late dry season.",
+        "createdAt": "2026-07-26T08:00:00Z"
+      },
+      {
+        "id": "rep-004-m2",
+        "authorId": "u-analyst",
+        "authorName": "Cascade Duty Analyst",
+        "avatarUrl": null,
+        "body": "Verified against the VCI3M pixel window for Mwingi North, estimate 16.2 against a county mean of 16.8. Folding into the vci3m_v1 label set for August.",
+        "createdAt": "2026-07-26T13:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 16.2,
+      "usedInLabelVersion": "vci3m_v1"
+    },
+    "title": "Browse depletion, Mwingi North"
+  },
+  {
+    "id": "rep-003",
+    "topic": "livestock",
+    "countyId": "garissa",
+    "ward": "Dadaab",
+    "coords": [
+      39.887,
+      -0.462
+    ],
+    "observedAt": "2026-07-21T06:00:00Z",
+    "status": "resolved",
+    "verified": true,
+    "severity": 3,
+    "photos": [
+      {
+        "id": "rep-003-p1",
+        "url": "/v1/photos/rep-003-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-003-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-003-p2",
+        "url": "/v1/photos/rep-003-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-003-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-003-m1",
+        "authorId": "u-hussein",
+        "authorName": "Adan Hussein",
+        "avatarUrl": null,
+        "body": "Body condition around Dadaab host community at score 2 to 3, water trucking has stabilised the situation since the last report.",
+        "createdAt": "2026-07-21T08:00:00Z"
+      },
+      {
+        "id": "rep-003-m2",
+        "authorId": "u-analyst",
+        "authorName": "Cascade Duty Analyst",
+        "avatarUrl": null,
+        "body": "Verified and closed. Matches the July issue miss for Garissa, this ground report is exactly the kind of signal the bridge model needs.",
+        "createdAt": "2026-07-21T13:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 25.4,
+      "usedInLabelVersion": "vci3m_v1"
+    },
+    "title": "Livestock condition, Dadaab host community"
+  },
+  {
+    "id": "rep-002",
+    "topic": "market",
+    "countyId": "machakos",
+    "ward": "Masinga",
+    "coords": [
+      37.278,
+      -1.314
+    ],
+    "observedAt": "2026-07-16T06:00:00Z",
+    "status": "resolved",
+    "verified": true,
+    "severity": 2,
+    "photos": [
+      {
+        "id": "rep-002-p1",
+        "url": "/v1/photos/rep-002-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-002-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-002-m1",
+        "authorId": "u-karimi",
+        "authorName": "Joy Karimi",
+        "avatarUrl": null,
+        "body": "Maize prices at Masinga easing back after the July spike, supply coming in from the irrigated schemes. Livestock market volumes normal.",
+        "createdAt": "2026-07-16T08:00:00Z"
+      },
+      {
+        "id": "rep-002-m2",
+        "authorId": "u-analyst",
+        "authorName": "Cascade Duty Analyst",
+        "avatarUrl": null,
+        "body": "Verified. Noting for the record that the July forecast over-called Machakos, this thread supports the false-alarm classification.",
+        "createdAt": "2026-07-16T13:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": 22,
+      "usedInLabelVersion": "vci3m_v1"
+    },
+    "title": "Maize price spike easing, Masinga"
+  },
+  {
+    "id": "rep-001",
+    "topic": "water_point",
+    "countyId": "samburu",
+    "ward": "Baragoi",
+    "coords": [
+      36.947,
+      1.728
+    ],
+    "observedAt": "2026-07-11T06:00:00Z",
+    "status": "resolved",
+    "verified": true,
+    "severity": 3,
+    "photos": [
+      {
+        "id": "rep-001-p1",
+        "url": "/v1/photos/rep-001-p1.jpg",
+        "thumbUrl": "/v1/photos/rep-001-p1_thumb.jpg",
+        "width": 1600,
+        "height": 1200
+      },
+      {
+        "id": "rep-001-p2",
+        "url": "/v1/photos/rep-001-p2.jpg",
+        "thumbUrl": "/v1/photos/rep-001-p2_thumb.jpg",
+        "width": 1200,
+        "height": 1600
+      }
+    ],
+    "messages": [
+      {
+        "id": "rep-001-m1",
+        "authorId": "u-lemayan",
+        "authorName": "Sein Lemayan",
+        "avatarUrl": null,
+        "body": "Hand-dug wells along the Baragoi lugga recharged after the late July showers, queue times back to normal.",
+        "createdAt": "2026-07-11T08:00:00Z"
+      },
+      {
+        "id": "rep-001-m2",
+        "authorId": "u-analyst",
+        "authorName": "Cascade Duty Analyst",
+        "avatarUrl": null,
+        "body": "Verified and closed. Samburu sits outside model coverage, so ground reports like this are the only label source we have there.",
+        "createdAt": "2026-07-11T13:00:00Z"
+      }
+    ],
+    "labelContribution": {
+      "vci3mEstimate": null,
+      "usedInLabelVersion": "vci3m_v1"
+    },
+    "title": "Seasonal wells recharged, Baragoi"
+  }
+]

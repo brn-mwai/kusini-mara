@@ -1,0 +1,71 @@
+[
+  {
+    "id": "trg-turkana",
+    "tenantId": "tn-turkana",
+    "tenantName": "Turkana County DRM",
+    "levels": {
+      "advisory": 0.15,
+      "watch": 0.25,
+      "warning": 0.4,
+      "emergency": 0.6
+    },
+    "channels": [
+      "sms",
+      "email",
+      "cap"
+    ],
+    "updatedAt": "2026-07-18T10:12:00Z",
+    "updatedBy": "Akai Ekiru"
+  },
+  {
+    "id": "trg-ndma",
+    "tenantId": "tn-ndma",
+    "tenantName": "NDMA National",
+    "levels": {
+      "advisory": 0.2,
+      "watch": 0.3,
+      "warning": 0.45,
+      "emergency": 0.65
+    },
+    "channels": [
+      "cap",
+      "email"
+    ],
+    "updatedAt": "2026-06-30T08:45:00Z",
+    "updatedBy": "Cascade Duty Analyst"
+  },
+  {
+    "id": "trg-aaf",
+    "tenantId": "tn-aaf",
+    "tenantName": "Anticipatory Action Fund",
+    "levels": {
+      "advisory": 0.2,
+      "watch": 0.35,
+      "warning": 0.5,
+      "emergency": 0.7
+    },
+    "channels": [
+      "webhook",
+      "email"
+    ],
+    "updatedAt": "2026-08-02T14:03:00Z",
+    "updatedBy": "Joy Karimi"
+  },
+  {
+    "id": "trg-krc",
+    "tenantId": "tn-krc",
+    "tenantName": "Kenya Red Cross, Eastern",
+    "levels": {
+      "advisory": 0.15,
+      "watch": 0.25,
+      "warning": 0.35,
+      "emergency": 0.55
+    },
+    "channels": [
+      "sms",
+      "webhook"
+    ],
+    "updatedAt": "2026-07-25T09:30:00Z",
+    "updatedBy": "Peter Kyalo"
+  }
+]

@@ -270,6 +270,60 @@
     "sourceIssueRequired": false
   },
   {
+    "id": "spi3",
+    "group": "observed",
+    "label": "SPI-3",
+    "unit": "SPI",
+    "domain": [
+      -3,
+      3
+    ],
+    "classBreaks": [
+      -2,
+      -1,
+      0,
+      1
+    ],
+    "colourRamp": [
+      "#B24A2C",
+      "#C97A3C",
+      "#D9A84E",
+      "#8FA96A",
+      "#4FA987"
+    ],
+    "reversed": true,
+    "tileUrl": "/v1/tiles/spi3/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "spi6",
+    "group": "observed",
+    "label": "SPI-6",
+    "unit": "SPI",
+    "domain": [
+      -3,
+      3
+    ],
+    "classBreaks": [
+      -2,
+      -1,
+      0,
+      1
+    ],
+    "colourRamp": [
+      "#B24A2C",
+      "#C97A3C",
+      "#D9A84E",
+      "#8FA96A",
+      "#4FA987"
+    ],
+    "reversed": true,
+    "tileUrl": "/v1/tiles/spi6/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
     "id": "lst_day",
     "group": "observed",
     "label": "LST day",
@@ -593,6 +647,33 @@
     ],
     "reversed": false,
     "tileUrl": "/v1/tiles/population/{issue}/{z}/{x}/{y}.png",
+    "legendKind": "continuous",
+    "sourceIssueRequired": false
+  },
+  {
+    "id": "soil_moisture_50",
+    "group": "observed",
+    "label": "Soil moisture, 50 cm",
+    "unit": "% vol",
+    "domain": [
+      0,
+      45
+    ],
+    "classBreaks": [
+      8,
+      15,
+      25,
+      35
+    ],
+    "colourRamp": [
+      "#39474F",
+      "#3E6B7A",
+      "#4C93A6",
+      "#63BDC9",
+      "#8FE3DD"
+    ],
+    "reversed": false,
+    "tileUrl": "/v1/tiles/soil_moisture_50/{issue}/{z}/{x}/{y}.png",
     "legendKind": "continuous",
     "sourceIssueRequired": false
   }
