@@ -23,7 +23,23 @@ type Tokens = {
 
 let cachedTokens: Tokens | null = null;
 
+const SSR_TOKENS: Tokens = {
+  series: [],
+  gridLine: "",
+  axisLabel: "",
+  text: "",
+  card: "",
+  danger: "",
+  success: "",
+  warning: "",
+  fontSans: "",
+  fontMono: "",
+};
+
 function readTokens(): Tokens {
+  // Option builders may run during SSR; the Chart itself only mounts on the
+  // client, where the options are rebuilt with the real token values.
+  if (typeof window === "undefined") return SSR_TOKENS;
   if (cachedTokens) return cachedTokens;
   const s = getComputedStyle(document.documentElement);
   const get = (name: string) => s.getPropertyValue(name).trim();
