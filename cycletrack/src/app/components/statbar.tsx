@@ -3,8 +3,8 @@
 // Horizontal proportional bar split into labelled segments, legend beneath.
 // Colours come from the chart token series so screens never pick their own.
 
-import { useEffect, useState } from "react";
 import { Mono } from "./ui";
+import { useIsClient } from "@/lib/use-client";
 
 function seriesTokens(): string[] {
   const s = getComputedStyle(document.documentElement);
@@ -18,11 +18,10 @@ export function StatBar({
   segments: { label: string; value: number }[];
   formatValue?: (v: number) => string;
 }) {
-  const [colors, setColors] = useState<string[]>([]);
-  useEffect(() => setColors(seriesTokens()), []);
+  const isClient = useIsClient();
   const total = segments.reduce((s, x) => s + x.value, 0);
-  if (colors.length === 0)
-    return <div className="skeleton h-3 w-full rounded-full" />;
+  if (!isClient) return <div className="skeleton h-3 w-full rounded-full" />;
+  const colors = seriesTokens();
   const fmt = formatValue ?? ((v: number) => String(v));
   return (
     <div>

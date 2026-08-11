@@ -62,7 +62,12 @@ export function Shell({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => setDrawerOpen(false), [pathname]);
+  // Close the mobile drawer whenever navigation changes the path.
+  const [drawerPath, setDrawerPath] = useState(pathname);
+  if (drawerPath !== pathname) {
+    setDrawerPath(pathname);
+    setDrawerOpen(false);
+  }
 
   const crumb = breadcrumbFor(consoleKey, pathname);
   const clerk = clerkEnabled(consoleKey);

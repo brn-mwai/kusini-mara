@@ -1,0 +1,25 @@
+{
+  "name": "CycleTrack Field",
+  "short_name": "CT Field",
+  "description": "Collection crew app for the CycleTrack battery network.",
+  "start_url": "/field",
+  "scope": "/field",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F8FA",
+  "theme_color": "#FF6200",
+  "icons": [
+    {
+      "src": "/field-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/field-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

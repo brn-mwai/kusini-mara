@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
-import { MapPin, Package } from "@phosphor-icons/react";
+import { Package } from "@phosphor-icons/react";
 import { MapCanvas, type MapMarker } from "@/app/components/map-canvas";
 import { SidePanel } from "@/app/components/side-panel";
 import { Badge, Mono, PageHeader, Skeleton } from "@/app/components/ui";

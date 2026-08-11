@@ -229,12 +229,11 @@ export function DataTable<Row>({
                       <Skeleton className="size-4" />
                     </td>
                   ) : null}
-                  {columns.map((col) => (
+                  {columns.map((col, ci) => (
                     <td key={col.key} className="h-[52px] px-4">
+                      {/* Vary widths so the shimmer reads as content. */}
                       <Skeleton
-                        className="h-3.5"
-                        // Vary widths so the shimmer reads as content.
-                        // eslint-disable-next-line react-hooks/exhaustive-deps
+                        className={`h-3.5 ${ci % 3 === 0 ? "w-24" : ci % 3 === 1 ? "w-16" : "w-20"}`}
                       />
                     </td>
                   ))}

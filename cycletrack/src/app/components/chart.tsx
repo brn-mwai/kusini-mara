@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
+import { useIsClient } from "@/lib/use-client";
 
 // One Chart component applies the house theme; screens describe data only and
 // never pick colours. All colour values come from the token block in
@@ -74,8 +74,7 @@ export function Chart({
   height?: number;
   ariaLabel?: string;
 }) {
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
+  const ready = useIsClient();
   if (!ready) return <div style={{ height }} className="skeleton" />;
   const t = readTokens();
   return (
