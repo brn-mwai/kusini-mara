@@ -240,13 +240,15 @@ CB.ui.layerPanel = (opts) => {
           <div><span class="num">${hist.stats.secondary.value}</span><label>${CB.esc(hist.stats.secondary.label)}</label></div>
         </div>
       </div>`
-    const svg = el.querySelector('.lp-plot')
-    svg.querySelectorAll('.lp-handle').forEach(h => {
+    el.querySelectorAll('.lp-handle').forEach(h => {
       h.addEventListener('pointerdown', ev => {
         ev.preventDefault()
-        h.setPointerCapture(ev.pointerId)
         const which = h.dataset.h
+        /* paint() replaces the svg mid-drag, so listeners must live on window
+           and re-measure the current svg on every move */
         const move = mv => {
+          const svg = el.querySelector('.lp-plot')
+          if (!svg) return
           const rect = svg.getBoundingClientRect()
           const y = ((mv.clientY - rect.top) / rect.height) * (plotH + 2 * padT)
           let v = Math.max(d0, Math.min(d1, vOf(y)))
@@ -257,12 +259,12 @@ CB.ui.layerPanel = (opts) => {
           raf = setTimeout(() => onRangeChange([...range]), 120)
         }
         const up = () => {
-          svg.removeEventListener('pointermove', move)
-          svg.removeEventListener('pointerup', up)
+          window.removeEventListener('pointermove', move)
+          window.removeEventListener('pointerup', up)
           onRangeChange([...range])
         }
-        svg.addEventListener('pointermove', move)
-        svg.addEventListener('pointerup', up)
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', up)
       })
     })
   }

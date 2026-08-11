@@ -383,8 +383,7 @@
           st.opacity[id] = Number(e.target.value) / 100
           if (id === base && map.isStyleLoaded()) map.setPaintProperty('county-fill', 'fill-opacity', 0.62 * st.opacity[id] + 0.06)
           const idx = st.layers.indexOf(id)
-          if (canvases[idx]) canvases[idx].canvasOpacity = st.opacity[id]
-          canvases.forEach((c, i) => { const cid = st.layers[i]; if (cid === id) c.redraw() })
+          if (canvases[idx]) canvases[idx].setOpacity(st.opacity[id])
         })
       }
     } catch (err) {

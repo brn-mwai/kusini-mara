@@ -249,7 +249,12 @@ CB.map.fieldCanvas = (map, wrapEl, getValues, getLayer, getRange) => {
   map.on('resize', draw)
   map.on('load', draw)
   draw()
-  return { redraw: draw, destroy: () => { canvas.remove(); map.off('move', draw); map.off('resize', draw) } }
+  return {
+    redraw: draw,
+    canvas,
+    setOpacity: o => { canvas.style.opacity = o },
+    destroy: () => { canvas.remove(); map.off('move', draw); map.off('resize', draw) },
+  }
 }
 
 CB.map.stationLayer = (map, stations, { onHover, onClick } = {}) => {
