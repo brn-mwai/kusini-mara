@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field Reports — Cascade Bridge</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/console.css">
+<style>
+.cols-3.rep { grid-template-columns: 330px minmax(360px, 1fr) 300px; }
+.county-row .thumb.ph { border-style: dashed; flex-direction: column; gap: 2px; color: var(--text-faint); font-size: 9px; }
+.county-row .thumb.ph svg.ic { width: 16px; height: 16px; }
+.topic-line { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.topic-line svg.ic { width: 12px; height: 12px; }
+.county-row .meta { color: var(--text-faint); font-size: 11px; margin-top: 2px; }
+.vbadge { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: var(--normal); font-weight: 600; white-space: nowrap; }
+.vbadge.dim { color: var(--text-faint); font-weight: 500; }
+.vbadge svg.ic { width: 12px; height: 12px; }
+.topic-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.thread-head-block { padding: 12px 16px; border-bottom: 1px solid var(--hairline); display: flex; flex-direction: column; gap: 8px; flex: none; }
+.thread-head-block h2 { font-size: 17px; font-weight: 650; }
+.thread-sub { color: var(--text-dim); font-size: 11.5px; }
+.thread-flags { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.label-note { display: flex; align-items: center; gap: 8px; border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent); background: color-mix(in srgb, var(--teal) 8%, transparent); color: var(--teal); border-radius: var(--radius); padding: 7px 10px; font-size: 11.5px; }
+.thread-msgs { padding: 14px 16px; }
+#btn-verify.on { color: var(--teal); border-color: var(--teal-dim); }
+.media-map { position: relative; height: 210px; flex: none; border-bottom: 1px solid var(--hairline); }
+.media-map #rep-map { position: absolute; inset: 0; }
+.media-head { padding: 12px 14px 6px; color: var(--text-dim); font-size: 11.5px; font-weight: 600; flex: none; }
+.pg-pad { padding: 4px 14px 16px; }
+.chip.topic-chip { cursor: pointer; height: 30px; padding: 0 12px; }
+.chip.topic-chip.on { border-color: var(--teal); color: var(--teal); }
+.chip.topic-chip svg.ic { width: 13px; height: 13px; }
+.create-grid { display: grid; grid-template-columns: 1fr 1fr 110px; gap: 0 14px; }
+.create-form .form-row { max-width: none; }
+.chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.offline-hint { color: var(--text-faint); font-size: 11px; margin: 10px 0 12px; }
+@media (max-width: 1100px) {
+  .cols-3.rep { grid-template-columns: 300px 1fr; }
+  .cols-3.rep .col-media { grid-column: 1 / -1; border-top: 1px solid var(--hairline); display: grid; grid-template-columns: 1fr 1fr; }
+  .cols-3.rep .col-media .media-map { height: 250px; border-bottom: none; border-right: 1px solid var(--hairline); }
+}
+@media (max-width: 760px) {
+  .cols-3.rep .col-media { display: block; }
+  .cols-3.rep .col-media .media-map { height: 220px; border-right: none; border-bottom: 1px solid var(--hairline); }
+  .create-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<nav class="rail" id="rail"></nav>
+<main class="console">
+  <header class="band band-1">
+    <span class="page-title">Field Reports</span>
+    <span class="vsep"></span>
+    <nav class="tabs">
+      <a class="tab" id="tab-active" href="reports.html">Active</a>
+      <a class="tab" id="tab-resolved" href="reports.html?status=resolved">Resolved</a>
+    </nav>
+    <span class="grow"></span>
+    <button class="btn btn-teal" id="btn-report-add"></button>
+  </header>
+  <div class="band band-2">
+    <label class="search" id="search-box"></label>
+    <button class="btn btn-icon" id="btn-filter" title="Filter"></button>
+    <label class="select" id="scope-select"></label>
+    <div id="view-toggle"></div>
+    <button class="btn btn-icon btn-ghost" id="btn-overflow" title="More"></button>
+  </div>
+  <section class="band band-4" id="band-4"></section>
+</main>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/format.js"></script>
+<script src="assets/shell.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/components.js"></script>
+<script src="assets/map.js"></script>
+<script>
+(() => {
+  const D = CB_DATA, F = CB.fmt, S = CB.state
+  CB.shell.init({ page: 'reports' })
+
+  const TOPICS = {
+    pasture: { label: 'Pasture', icon: 'vegetation', color: '#4FA987' },
+    water_point: { label: 'Water point', icon: 'rainfall', color: '#63BDC9' },
+    livestock: { label: 'Livestock condition', icon: 'counties', color: '#D9A84E' },
+    migration: { label: 'Migration', icon: 'locate', color: '#8F7AB2' },
+    market: { label: 'Market price', icon: 'scorecard', color: '#C97A3C' },
+    crop: { label: 'Crop failure', icon: 'soil', color: '#B24A2C' },
+  }
+  const topicOf = t => TOPICS[t] || { label: t, icon: 'reports', color: 'var(--text-dim)' }
+  const county = id => D.counties.find(c => c.id === id)
+  const sevClass = s => (s >= 4 ? 'drought' : s === 3 ? 'watch' : 'normal')
+  const sevPill = s => `<span class="pill pill-${sevClass(s)} num">S${s}</span>`
+  const dtime = iso => `${Number(iso.slice(8, 10))} ${F.monthShort(iso)} · ${iso.slice(11, 16)}`
+  const dshort = iso => `${Number(iso.slice(8, 10))} ${F.monthShort(iso)}`
+
+  const st = {
+    status: S.get('status') === 'resolved' ? 'resolved' : 'active',
+    scope: D.counties.some(c => c.id === S.get('scope')) ? S.get('scope') : 'all',
+    view: S.get('view') === 'grid' ? 'grid' : 'list',
+    report: S.get('report') || null,
+    forced: ['empty', 'loading'].includes(S.get('state')) ? S.get('state') : null,
+    query: '',
+  }
+  const local = { reports: [], msgs: {}, verified: {} }
+
+  const allReports = () => [...local.reports, ...D.reports]
+  const filtered = () => {
+    if (st.forced === 'empty') return []
+    return allReports()
+      .filter(r =>
+        r.status === st.status &&
+        (st.scope === 'all' || r.countyId === st.scope) &&
+        (!st.query || (r.title + ' ' + topicOf(r.topic).label + ' ' + (county(r.countyId)?.name || '')).toLowerCase().includes(st.query)))
+      .sort((a, b) => (a.observedAt < b.observedAt ? 1 : -1))
+  }
+  const isVerified = r => local.verified[r.id] ?? r.verified
+  function selReport() {
+    if (st.forced === 'empty') return null
+    return allReports().find(x => x.id === st.report) || filtered()[0] || null
+  }
+
+  document.getElementById('btn-report-add').innerHTML = CB.icon('plus') + 'Add report'
+  document.getElementById('btn-report-add').addEventListener('click', openCreate)
+  document.getElementById('btn-filter').innerHTML = CB.icon('filter')
+  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-overflow').innerHTML = CB.icon('more')
+  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('search-box').innerHTML =
+    CB.icon('search') + '<input id="search-input" type="search" placeholder="Search report, topic, county">'
+  document.getElementById('search-input').addEventListener('input', e => {
+    st.query = e.target.value.trim().toLowerCase()
+    renderMain()
+  })
+  document.getElementById('scope-select').innerHTML =
+    `<select id="scope-sel"><option value="all">All counties</option>${D.counties.map(c =>
+      `<option value="${c.id}"${c.id === st.scope ? ' selected' : ''}>${CB.esc(c.name)}</option>`).join('')}</select>` + CB.icon('chevD', 'sm')
+  document.getElementById('scope-sel').addEventListener('change', e => {
+    st.scope = e.target.value
+    S.set({ scope: st.scope === 'all' ? null : st.scope })
+    renderMain()
+  })
+  document.getElementById('view-toggle').innerHTML =
+    `<div class="segmented">
+      <button data-v="list" id="btn-view-list">${CB.icon('list', 'sm')}List</button>
+      <button data-v="grid" id="btn-view-grid">${CB.icon('grid', 'sm')}Grid</button>
+    </div>`
+  document.getElementById('view-toggle').addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]')
+    if (!b || b.dataset.v === st.view) return
+    st.view = b.dataset.v
+    S.set({ view: st.view === 'grid' ? 'grid' : null })
+    renderMain()
+  })
+  document.getElementById('tab-active').addEventListener('click', e => {
+    e.preventDefault(); st.status = 'active'; S.set({ status: null }); renderMain()
+  })
+  document.getElementById('tab-resolved').addEventListener('click', e => {
+    e.preventDefault(); st.status = 'resolved'; S.set({ status: 'resolved' }); renderMain()
+  })
+
+  function selectReport(id) {
+    st.report = id
+    S.set({ report: id })
+    renderMain()
+  }
+
+  function rowHtml(r) {
+    const t = topicOf(r.topic), c = county(r.countyId), sel = selReport()
+    const badge = r.queued
+      ? `<span class="pill pill-watch">Queued offline</span>`
+      : isVerified(r)
+        ? `<span class="vbadge">${CB.icon('check', 'sm')}Verified</span>`
+        : `<span class="vbadge dim">Unverified</span>`
+    return `<button class="county-row${sel && sel.id === r.id ? ' selected' : ''}" data-report="${r.id}" id="row-report-${r.id}">
+      <span class="thumb ph">${CB.icon('camera')}<span class="num">${r.photos.length}</span></span>
+      <span class="who">
+        <div class="topic-line" style="color:${t.color}">${CB.icon(t.icon, 'sm')}${CB.esc(t.label)}</div>
+        <div class="name">${CB.esc(r.title)}</div>
+        <div class="meta num">${dtime(r.observedAt)} · ${CB.esc(c ? c.name : r.countyId)}</div>
+      </span>
+      <span class="vals">${sevPill(r.severity)}${badge}</span>
+    </button>`
+  }
+
+  function listHtml() {
+    if (st.forced === 'loading') return `<div class="col-scroll">${CB.ui.skelRows(8)}</div>`
+    const rows = filtered()
+    const body = rows.length
+      ? rows.map(rowHtml).join('')
+      : CB.ui.emptyState({
+          icon: 'reports',
+          title: st.forced === 'empty' ? 'No field reports yet' : 'No reports match',
+          body: st.forced === 'empty'
+            ? 'Reports from county scouts appear here and become ground-truth labels.'
+            : 'Nothing matches that search under the current tab and county scope. Clear the search or widen the scope.',
+        })
+    return `<div class="list-head">${rows.length} reports · ${st.status === 'active' ? 'Active' : 'Resolved'}</div>
+      <div class="col-scroll" id="report-list">${body}</div>
+      <div class="list-foot"><button class="btn btn-teal btn-full" id="btn-report-add-foot">${CB.icon('plus')}Add report</button></div>`
+  }
+
+  function msgsHtml(r) {
+    const msgs = [...r.messages, ...(local.msgs[r.id] || [])]
+    if (!msgs.length) return CB.ui.emptyState({ icon: 'reports', title: 'No messages yet', body: 'Replies from scouts and analysts appear here.' })
+    return msgs.map(m => `<div class="msg">
+      ${CB.ui.avatarDisc(m.authorName)}
+      <div class="msg-body">
+        <div class="msg-head"><span class="m-name">${CB.esc(m.authorName)}</span><span class="m-time num">${dtime(m.createdAt)}</span></div>
+        <div class="msg-text">${CB.esc(m.body)}</div>
+      </div>
+    </div>`).join('')
+  }
+
+  function threadHtml(r) {
+    if (st.forced === 'loading') {
+      return `<div style="padding:16px;display:flex;flex-direction:column;gap:12px">${CB.ui.skelBlock(24)}${CB.ui.skelBlock(60)}${CB.ui.skelBlock(90)}${CB.ui.skelBlock(90)}</div>`
+    }
+    if (!r) return CB.ui.emptyState({ icon: 'reports', title: 'No report selected', body: 'Select a field report from the list to read its thread.' })
+    const t = topicOf(r.topic), c = county(r.countyId), ver = isVerified(r)
+    const lc = r.labelContribution || {}
+    const note = ver
+      ? `<div class="label-note">${CB.icon('check', 'sm')}<span class="num">VCI3M estimate ${F.num1(lc.vci3mEstimate)}</span><span>· ${lc.usedInLabelVersion ? 'used in <span class="num">' + CB.esc(lc.usedInLabelVersion) + '</span>' : 'not yet used in a label version'}</span></div>`
+      : ''
+    return `<div class="detail-head">
+        <span class="topic-dot" style="background:${t.color}"></span>
+        <span style="font-weight:600;font-size:12.5px">${CB.esc(t.label)}</span>
+        <span class="grow"></span>
+        <button class="btn${ver ? ' on' : ''}" id="btn-verify">${CB.icon('check')}${ver ? 'Verified' : 'Mark as verified'}</button>
+        <button class="btn btn-icon btn-ghost" id="btn-thread-more" title="More">${CB.icon('more')}</button>
+      </div>
+      <div class="thread-head-block">
+        <h2>${CB.esc(r.title)}</h2>
+        <div class="thread-sub num">${CB.esc(c ? c.name : r.countyId)} · ${CB.esc(r.ward || F.DASH)} · ${F.coord(r.coords)}</div>
+        <div class="thread-flags">${sevPill(r.severity)}
+          ${r.queued ? '<span class="pill pill-watch">Queued offline</span>' : ''}
+          <span class="vbadge${ver ? '' : ' dim'}">${ver ? CB.icon('check', 'sm') : ''}${ver ? 'Verified ground truth' : 'Awaiting verification'}</span>
+        </div>
+        ${note}
+      </div>
+      <div class="col-scroll"><div class="thread thread-msgs" id="thread-msgs">${msgsHtml(r)}</div></div>
+      <div class="composer">
+        <button class="btn btn-icon btn-ghost" id="btn-attach" title="Attach">${CB.icon('attach')}</button>
+        <textarea id="composer-input" rows="1" placeholder="Reply to this thread — Enter to send"></textarea>
+        <button class="btn btn-icon btn-ghost" id="btn-mic" title="Voice note">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9.5" y="4" width="5" height="10" rx="2.5"/><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3.5M9 20.5h6"/></svg>
+        </button>
+      </div>`
+  }
+
+  function mediaHtml(r) {
+    if (st.forced === 'loading') {
+      return `<div style="padding:14px;display:flex;flex-direction:column;gap:12px">${CB.ui.skelBlock(200)}${CB.ui.skelBlock(120)}${CB.ui.skelBlock(120)}</div>`
+    }
+    if (!r) return CB.ui.emptyState({ icon: 'camera', title: 'No media', body: 'Photos and the report location appear here once a report is selected.' })
+    return `<div class="media-map" id="media-map-wrap"><div id="rep-map"></div><div class="map-note">geoBoundaries KEN ADM1 · report location</div></div>
+      <div class="col-scroll">
+        <div class="media-head">Photos · <span class="num">${r.photos.length}</span></div>
+        ${r.photos.length
+          ? `<div class="photo-grid pg-pad">${r.photos.map(p => CB.ui.photoTile(p)).join('')}</div>`
+          : CB.ui.emptyState({ icon: 'camera', title: 'No photos', body: 'This report was filed without photos.' })}
+      </div>`
+  }
+
+  function cardHtml(r) {
+    const t = topicOf(r.topic), c = county(r.countyId)
+    const badge = r.queued
+      ? '<span class="pill pill-watch">Queued offline</span>'
+      : isVerified(r)
+        ? `<span class="vbadge">${CB.icon('check', 'sm')}Verified</span>`
+        : '<span class="vbadge dim">Unverified</span>'
+    return `<button class="card" data-report="${r.id}">
+      <div class="card-thumb" style="color:var(--text-faint)">${CB.icon('camera')}<span class="num" style="margin-left:8px;font-size:11px">${r.photos.length} photos</span></div>
+      <div class="card-body">
+        <div class="card-title-row"><span class="dot" style="background:${t.color}"></span><span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${CB.esc(r.title)}</span><span class="when num" style="white-space:nowrap">${dshort(r.observedAt)}</span></div>
+        <div class="chip-row"><span class="chip">${CB.esc(c ? c.name : r.countyId)}</span><span class="chip">${CB.esc(t.label)}</span></div>
+      </div>
+      <div class="card-foot">${sevPill(r.severity)}${badge}<span style="margin-left:auto" class="num">${r.observedAt.slice(11, 16)}</span></div>
+    </button>`
+  }
+
+  function gridHtml() {
+    if (st.forced === 'loading') return `<div class="cards">${Array.from({ length: 6 }, () => CB.ui.skelBlock(190)).join('')}</div>`
+    const rows = filtered()
+    if (!rows.length) {
+      return `<div style="width:100%;display:flex;align-items:center;justify-content:center">${CB.ui.emptyState({
+        icon: 'reports',
+        title: st.forced === 'empty' ? 'No field reports yet' : 'No reports match',
+        body: st.forced === 'empty'
+          ? 'Reports from county scouts appear here and become ground-truth labels.'
+          : 'Nothing matches that search under the current tab and county scope.',
+      })}</div>`
+    }
+    return `<div class="cards">${rows.map(cardHtml).join('')}</div>`
+  }
+
+  let repMap = null, repMapFor = null, mapFailed = false
+  function dropMap() {
+    if (repMap) { try { repMap.remove() } catch {} }
+    repMap = null; repMapFor = null
+  }
+  function mountRepMap(el, r) {
+    const c = county(r.countyId)
+    const wrap = document.getElementById('media-map-wrap')
+    if (mapFailed || !c) {
+      wrap.innerHTML = CB.ui.emptyState({ icon: 'warn', title: 'Map unavailable', body: 'WebGL could not be initialised in this browser. The coordinates above still locate the report.' })
+      return
+    }
+    try {
+      repMap = CB.map.create(el, { bounds: [[c.bbox[0], c.bbox[1]], [c.bbox[2], c.bbox[3]]], padding: 20 })
+      repMapFor = r.id
+      const sl = CB.map.stationLayer(repMap, [{ id: 'rep-loc', kind: 'observer', status: 'reporting', coords: r.coords }])
+      repMap.on('load', () => {
+        CB.map.setSelected(repMap, r.countyId)
+        sl.setSelected('rep-loc')
+      })
+    } catch (err) {
+      mapFailed = true
+      dropMap()
+      wrap.innerHTML = CB.ui.emptyState({ icon: 'warn', title: 'Map unavailable', body: 'WebGL could not be initialised in this browser. The coordinates above still locate the report.' })
+    }
+  }
+
+  function renderMain() {
+    document.getElementById('tab-active').classList.toggle('active', st.status === 'active')
+    document.getElementById('tab-resolved').classList.toggle('active', st.status === 'resolved')
+    document.getElementById('btn-view-list').classList.toggle('active', st.view === 'list')
+    document.getElementById('btn-view-grid').classList.toggle('active', st.view === 'grid')
+    const band4 = document.getElementById('band-4')
+    const r = selReport()
+
+    if (st.view === 'grid') {
+      dropMap()
+      band4.innerHTML = gridHtml()
+      band4.querySelectorAll('.card[data-report]').forEach(card => card.addEventListener('click', () => {
+        st.view = 'list'
+        S.set({ view: null })
+        selectReport(card.dataset.report)
+      }))
+      return
+    }
+
+    band4.innerHTML = `<div class="cols-3 rep">
+      <div class="col col-list">${listHtml()}</div>
+      <div class="col col-detail">${threadHtml(r)}</div>
+      <div class="col col-media">${mediaHtml(r)}</div>
+    </div>`
+
+    band4.querySelectorAll('[data-report]').forEach(row =>
+      row.addEventListener('click', () => selectReport(row.dataset.report)))
+    document.getElementById('btn-report-add-foot')?.addEventListener('click', openCreate)
+    document.getElementById('btn-thread-more')?.addEventListener('click', () => CB.toast('Not wired in this prototype'))
+    document.getElementById('btn-attach')?.addEventListener('click', () => CB.toast('Attachments are not wired in this prototype'))
+    document.getElementById('btn-mic')?.addEventListener('click', () => CB.toast('Voice notes are not wired in this prototype'))
+    document.getElementById('btn-verify')?.addEventListener('click', () => {
+      const next = !isVerified(r)
+      local.verified[r.id] = next
+      CB.toast(next ? 'Marked as verified — in memory only in this prototype' : 'Verification cleared (in memory)')
+      renderMain()
+    })
+    const ta = document.getElementById('composer-input')
+    if (ta && r) {
+      ta.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' || e.shiftKey) return
+        e.preventDefault()
+        const text = ta.value.trim()
+        if (!text) return
+        ;(local.msgs[r.id] = local.msgs[r.id] || []).push({
+          id: 'local-m' + Date.now(), authorName: 'You', body: text, createdAt: new Date().toISOString(),
+        })
+        ta.value = ''
+        const host = document.getElementById('thread-msgs')
+        host.innerHTML = msgsHtml(r)
+        host.parentElement.scrollTop = host.parentElement.scrollHeight
+      })
+    }
+
+    const mapEl = document.getElementById('rep-map')
+    if (mapEl && r && st.forced !== 'loading') {
+      if (repMap && repMapFor === r.id) {
+        mapEl.replaceWith(repMap.getContainer())
+        repMap.resize()
+      } else {
+        dropMap()
+        mountRepMap(mapEl, r)
+      }
+    } else if (!mapEl) {
+      dropMap()
+    }
+  }
+
+  function openCreate() {
+    const draft = {
+      topic: 'pasture',
+      countyId: st.scope !== 'all' ? st.scope : D.counties[0].id,
+      ward: '',
+      severity: '3',
+      photos: [
+        { id: 'draft-p1', width: 1600, height: 1200 },
+        { id: 'draft-p2', width: 1200, height: 1600 },
+      ],
+    }
+    const chips = Object.entries(TOPICS).map(([id, t]) =>
+      `<button class="chip topic-chip${id === draft.topic ? ' on' : ''}" data-topic="${id}">${CB.icon(t.icon, 'sm')}${CB.esc(t.label)}</button>`).join('') +
+      `<button class="chip topic-chip" data-newtopic>${CB.icon('plus', 'sm')}New topic</button>`
+    const body = CB.el(`<div class="create-form">
+      <div class="chip-wrap" id="draft-topics">${chips}</div>
+      <div class="create-grid">
+        <div class="form-row"><label>County</label>
+          <select id="draft-county">${D.counties.map(c =>
+            `<option value="${c.id}"${c.id === draft.countyId ? ' selected' : ''}>${CB.esc(c.name)}</option>`).join('')}</select></div>
+        <div class="form-row"><label>Ward</label><input id="draft-ward" type="text" placeholder="e.g. Kanyangi"></div>
+        <div class="form-row"><label>Severity</label>
+          <select id="draft-sev">${[1, 2, 3, 4, 5].map(s =>
+            `<option value="${s}"${String(s) === draft.severity ? ' selected' : ''}>S${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="photo-grid" id="draft-photos"></div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn" id="draft-camera">${CB.icon('camera')}Camera</button>
+        <button class="btn" id="draft-library">${CB.icon('grid')}Photo Library</button>
+      </div>
+      <div class="offline-hint">Reports queue on this device and sync when signal returns. Verified reports become ground-truth labels.</div>
+      <button class="btn btn-teal btn-full" id="draft-save">Save report</button>
+    </div>`)
+
+    const paintPhotos = () => {
+      const host = body.querySelector('#draft-photos')
+      host.innerHTML = draft.photos.length
+        ? draft.photos.map(p => CB.ui.photoTile(p, { del: true })).join('')
+        : CB.ui.emptyState({ icon: 'camera', title: 'No photos attached', body: 'Use Camera or Photo Library to add placeholder tiles.' })
+      host.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+        draft.photos = draft.photos.filter(p => p.id !== b.dataset.del)
+        paintPhotos()
+      }))
+    }
+    paintPhotos()
+
+    body.querySelector('#draft-topics').addEventListener('click', e => {
+      if (e.target.closest('[data-newtopic]')) { CB.toast('Custom topics are not wired in this prototype'); return }
+      const b = e.target.closest('[data-topic]')
+      if (!b) return
+      draft.topic = b.dataset.topic
+      body.querySelectorAll('[data-topic]').forEach(x => x.classList.toggle('on', x.dataset.topic === draft.topic))
+    })
+    body.querySelector('#draft-camera').addEventListener('click', () => CB.toast('Camera capture is not wired in this prototype'))
+    body.querySelector('#draft-library').addEventListener('click', () => CB.toast('Photo library is not wired in this prototype'))
+
+    const dlg = CB.ui.dialog({ title: 'Add field report', body, wide: true })
+
+    body.querySelector('#draft-save').addEventListener('click', () => {
+      draft.countyId = body.querySelector('#draft-county').value
+      draft.ward = body.querySelector('#draft-ward').value.trim()
+      draft.severity = body.querySelector('#draft-sev').value
+      const c = county(draft.countyId)
+      const rep = {
+        id: 'local-' + (local.reports.length + 1),
+        topic: draft.topic,
+        countyId: draft.countyId,
+        ward: draft.ward || null,
+        coords: c.centroid,
+        observedAt: new Date().toISOString(),
+        status: 'active',
+        verified: false,
+        severity: Number(draft.severity),
+        photos: draft.photos,
+        messages: [],
+        labelContribution: { vci3mEstimate: null, usedInLabelVersion: null },
+        title: topicOf(draft.topic).label + ' — ' + (draft.ward || c.name),
+        queued: true,
+      }
+      local.reports.unshift(rep)
+      dlg.close()
+      st.status = 'active'
+      st.report = rep.id
+      if (st.scope !== 'all' && st.scope !== rep.countyId) st.scope = 'all'
+      S.set({ status: null, report: rep.id, scope: st.scope === 'all' ? null : st.scope })
+      const sel = document.getElementById('scope-sel')
+      if (sel) sel.value = st.scope
+      CB.toast('Saved to local queue (prototype)')
+      renderMain()
+    })
+  }
+
+  renderMain()
+})()
+</script>
+</body>
+</html>

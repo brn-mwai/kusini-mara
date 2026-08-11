@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triggers — Cascade Bridge</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/console.css">
+<style>
+.trig-split { display: flex; width: 100%; min-height: 0; }
+.trig-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.trig-rail { width: 300px; flex: none; border-left: 1px solid var(--hairline); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+table.matrix tbody tr { cursor: pointer; }
+table.matrix tbody tr:hover td { background: color-mix(in srgb, var(--surface) 60%, transparent); }
+table.matrix tbody tr.selected td { background: var(--surface); }
+table.matrix tbody td:first-child { position: relative; }
+table.matrix tbody tr.selected td:first-child::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--teal); }
+.tenant-cell .t-name { font-weight: 600; font-size: 13px; }
+.tenant-chips { display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap; }
+.chip-ch { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border: 1px solid var(--hairline); border-radius: 999px; font-size: 9.5px; font-weight: 650; letter-spacing: 0.05em; color: var(--text-dim); }
+.tenant-meta { color: var(--text-faint); font-size: 10.5px; margin-top: 4px; }
+.save-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--hairline); background: var(--surface); flex: none; }
+.save-bar[hidden] { display: none; }
+.save-note { color: var(--watch); font-size: 12px; font-weight: 550; }
+.save-bar .grow { flex: 1; }
+.rail-sec-title { font-weight: 650; font-size: 13px; }
+.rail-sub { color: var(--text-faint); font-size: 11px; }
+.rail-tenant { font-size: 12px; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--hairline); padding-bottom: 8px; }
+.fire-row { display: flex; gap: 9px; padding: 9px 0; border-bottom: 1px solid color-mix(in srgb, var(--hairline) 55%, transparent); }
+.fire-row .lvl-dot { margin-top: 4px; flex: none; margin-right: 0; }
+.fire-main { flex: 1; min-width: 0; }
+.fire-head { display: flex; align-items: baseline; gap: 8px; }
+.fire-lvl { font-weight: 600; font-size: 12.5px; }
+.fire-thr { color: var(--text-faint); font-size: 10.5px; }
+.fire-count { margin-left: auto; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.fire-names { color: var(--text-dim); font-size: 11px; margin-top: 2px; line-height: 1.5; }
+.rail-mini { display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+.fire-p-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--hairline) 35%, transparent); }
+.fire-none { color: var(--text-dim); font-size: 11.5px; }
+.rail-note { color: var(--text-faint); font-size: 10.5px; line-height: 1.5; margin-top: auto; padding-top: 10px; }
+.plans-col { display: flex; flex-direction: column; width: 100%; min-height: 0; }
+.plans-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--hairline); flex: none; flex-wrap: wrap; }
+.plans { padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; overflow-y: auto; align-content: start; flex: 1; }
+.plan-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--hairline); font-weight: 650; font-size: 13px; }
+.plan-head .lvl-dot { margin-right: 0; }
+.plan-head .grow { flex: 1; }
+.plan-thr { color: var(--text-dim); font-size: 11px; font-weight: 550; }
+.plan-ol { margin: 0; padding: 12px 14px 14px 30px; display: flex; flex-direction: column; gap: 8px; color: var(--text-dim); font-size: 12.5px; }
+.plan-ol li::marker { color: var(--text-faint); font-family: var(--mono); font-size: 11px; }
+.g-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--hairline); flex: none; flex-wrap: wrap; }
+.g-legend { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 11px; margin-left: auto; }
+.g-legend i { width: 14px; height: 8px; border-radius: 3px; display: inline-block; }
+.g-legend .g-leg-line { width: 0; height: 12px; border-left: 1.5px dashed var(--text-dim); border-radius: 0; }
+.trig-gantt { grid-template-columns: 200px repeat(4, minmax(104px, 1fr)); }
+.g-head { padding: 9px 10px; color: var(--text-dim); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--hairline); position: relative; white-space: nowrap; }
+.g-head.g-mh { border-left: 1px solid color-mix(in srgb, var(--hairline) 45%, transparent); }
+.g-label .g-thumb { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--surface); border: 1px solid var(--hairline); border-radius: 6px; flex: none; }
+.trig-gantt .g-label { font-weight: 550; }
+@media (max-width: 900px) { .trig-gantt { grid-template-columns: 140px repeat(4, minmax(78px, 1fr)); } }
+@media (max-width: 760px) {
+  .trig-split { flex-direction: column; }
+  .trig-main { flex: none; }
+  .trig-main .col-scroll { overflow: visible; }
+  .trig-rail { width: auto; border-left: none; border-top: 1px solid var(--hairline); }
+  .rail-note { margin-top: 0; }
+}
+</style>
+</head>
+<body>
+<nav class="rail" id="rail"></nav>
+<main class="console">
+  <header class="band band-1">
+    <span class="page-title">Triggers</span>
+    <span class="vsep"></span>
+    <nav class="tabs">
+      <a class="tab" id="tab-thresholds" data-tab="thresholds" href="triggers.html">Thresholds</a>
+      <a class="tab" id="tab-plans" data-tab="plans" href="triggers.html?tab=plans">Action Plans</a>
+      <a class="tab" id="tab-timeline" data-tab="timeline" href="triggers.html?tab=timeline">Timeline</a>
+      <a class="tab" id="tab-recipients" data-tab="recipients" href="triggers.html?tab=recipients">Recipients</a>
+    </nav>
+    <span class="grow"></span>
+    <button class="btn btn-teal" id="btn-trigger-add"></button>
+  </header>
+  <div class="band band-2">
+    <label class="search" id="search-box"></label>
+    <button class="btn btn-icon" id="btn-filter" title="Filter"></button>
+    <label class="select" id="scope-select"></label>
+    <button class="btn btn-icon btn-ghost" id="btn-overflow" title="More"></button>
+  </div>
+  <section class="band band-4" id="band-4"></section>
+  <footer class="band band-5">
+    <div class="month-pills" id="month-pills"></div>
+    <div class="meta-footer">
+      <span class="kbd-hint"><kbd>[</kbd> rail &nbsp;<kbd>&#8592;</kbd><kbd>&#8594;</kbd> month</span>
+      <span id="meta-issue" class="num"></span>
+    </div>
+  </footer>
+</main>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/format.js"></script>
+<script src="assets/shell.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/components.js"></script>
+<script src="assets/map.js"></script>
+<script>
+(() => {
+  const D = CB_DATA, F = CB.fmt, S = CB.state
+  CB.shell.init({ page: 'triggers' })
+
+  const pad2 = n => String(n).padStart(2, '0')
+  const PROB_LAYER = D.layers.find(l => l.id === 'prob')
+  const LEVELS = ['advisory', 'watch', 'warning', 'emergency']
+  const LEVEL_LABEL = { advisory: 'Advisory', watch: 'Watch', warning: 'Warning', emergency: 'Emergency' }
+  const CH_LABEL = { sms: 'SMS', email: 'Email', cap: 'CAP', webhook: 'Webhook' }
+  const TABS = ['thresholds', 'plans', 'timeline', 'recipients']
+  const issue = D.issues['2026-08']
+  const months = [...new Set(issue.forecasts.map(f => f.validYear + '-' + pad2(f.validMonth)))]
+  const covered = D.counties.filter(c => c.hasModelCoverage)
+
+  const st = {
+    tab: TABS.includes(S.get('tab')) ? S.get('tab') : 'thresholds',
+    month: months.includes(S.get('month')) ? S.get('month') : (months.includes('2026-10') ? '2026-10' : months[0]),
+    tenant: null,
+    scope: 'all',
+    query: '',
+    forced: ['empty', 'loading'].includes(S.get('state')) ? S.get('state') : null,
+  }
+  const tenantParam = S.get('tenant')
+  st.tenant = (D.triggers.find(t => t.tenantId === tenantParam || t.id === tenantParam) || D.triggers[0])?.id ?? null
+
+  const copyLevels = src => Object.fromEntries(D.triggers.map(t => [t.id, { ...src[t.id] }]))
+  const pristine = Object.fromEntries(D.triggers.map(t => [t.id, { ...t.levels }]))
+  let baseline = copyLevels(pristine)
+  let edited = copyLevels(pristine)
+
+  const trigOf = id => D.triggers.find(t => t.id === id)
+  const fc = (cid, month) => issue.forecasts.find(f => f.countyId === cid && f.validYear + '-' + pad2(f.validMonth) === month)
+  const scoped = () => (st.scope === 'all' ? covered : covered.filter(c => c.id === st.scope))
+  /* sanctioned comparison: simulates POST /v1/triggers/preview */
+  const firing = v => (v === null ? null : scoped().filter(c => { const f = fc(c.id, st.month); return f && f.droughtProb >= v }))
+  const chips = t => t.channels.map(ch => `<span class="chip-ch">${CH_LABEL[ch] || ch}</span>`).join('')
+  const anyDirty = () => D.triggers.some(t => LEVELS.some(l => edited[t.id][l] !== baseline[t.id][l]))
+
+  document.getElementById('btn-trigger-add').innerHTML = CB.icon('plus') + 'Add trigger'
+  document.getElementById('btn-trigger-add').addEventListener('click', () => CB.toast('Add trigger is not wired in this prototype'))
+  document.getElementById('btn-filter').innerHTML = CB.icon('filter')
+  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-overflow').innerHTML = CB.icon('more')
+  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('search-box').innerHTML =
+    CB.icon('search') + '<input id="search-input" type="search" placeholder="Search tenant, county, member">'
+  document.getElementById('search-input').addEventListener('input', e => {
+    st.query = e.target.value.trim().toLowerCase()
+    renderMain()
+  })
+  document.getElementById('scope-select').innerHTML =
+    `<select id="scope-sel"><option value="all">All counties</option>${covered.map(c =>
+      `<option value="${c.id}">${CB.esc(c.name)}</option>`).join('')}</select>` + CB.icon('chevD', 'sm')
+  document.getElementById('scope-sel').addEventListener('change', e => {
+    st.scope = e.target.value
+    renderMain()
+  })
+
+  document.querySelectorAll('.band-1 .tab').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault()
+    st.tab = a.dataset.tab
+    S.set({ tab: st.tab === 'thresholds' ? null : st.tab })
+    render()
+  }))
+
+  function selectTenant(id) {
+    st.tenant = id
+    S.set({ tenant: trigOf(id).tenantId })
+    document.querySelectorAll('tr[data-tenant]').forEach(tr => tr.classList.toggle('selected', tr.dataset.tenant === id))
+    renderRail()
+  }
+
+  function matrixHtml() {
+    const rows = D.triggers.filter(t => !st.query || t.tenantName.toLowerCase().includes(st.query))
+    if (!rows.length) {
+      return CB.ui.emptyState({ icon: 'triggers', title: 'No tenants match', body: 'Nothing matches that search. Clear the search to see all trigger tenants.' })
+    }
+    const head = `<tr><th>Tenant</th>${LEVELS.map(l =>
+      `<th class="lvl"><span class="lvl-dot lvl-${l}"></span>${LEVEL_LABEL[l]}</th>`).join('')}</tr>`
+    const body = rows.map(t => `<tr data-tenant="${t.id}" class="${t.id === st.tenant ? 'selected' : ''}" id="trow-${t.id}">
+        <td class="tenant-cell">
+          <div class="t-name">${CB.esc(t.tenantName)}</div>
+          <div class="tenant-chips">${chips(t)}</div>
+          <div class="tenant-meta num">Updated ${t.updatedAt.slice(0, 10)} · ${CB.esc(t.updatedBy)}</div>
+        </td>
+        ${LEVELS.map(l => {
+          const v = edited[t.id][l]
+          const dirty = v !== baseline[t.id][l]
+          return `<td class="lvl"><input class="matrix-cell num${dirty ? ' dirty' : ''}" type="number" step="0.01" min="0" max="1"
+            value="${v === null ? '' : v}" data-trig="${t.id}" data-lvl="${l}"
+            aria-label="${CB.esc(t.tenantName)} ${LEVEL_LABEL[l]} threshold"></td>`
+        }).join('')}
+      </tr>`).join('')
+    return `<div class="list-head">${rows.length} tenants · Issue <span class="num">${issue.id}</span> · valid <span class="num">${F.ym(st.month)}</span></div>
+      <div class="col-scroll"><div class="matrix-wrap"><table class="matrix"><thead>${head}</thead><tbody>${body}</tbody></table></div></div>
+      <div class="save-bar" id="save-bar" hidden>
+        <span class="save-note">Unsaved threshold changes</span>
+        <span class="grow"></span>
+        <button class="btn" id="btn-reset">Reset</button>
+        <button class="btn btn-teal" id="btn-save">Save</button>
+      </div>`
+  }
+
+  function railHtml() {
+    if (st.forced === 'empty' || !st.tenant) {
+      return CB.ui.emptyState({ icon: 'triggers', title: 'Nothing to preview', body: 'Firing previews appear here once a tenant has trigger levels configured.' })
+    }
+    const t = trigOf(st.tenant)
+    const lv = edited[t.id]
+    const rows = LEVELS.map(l => {
+      const v = lv[l]
+      const list = firing(v)
+      const count = list === null ? F.DASH : list.length + (list.length === 1 ? ' county' : ' counties')
+      const names = list === null ? 'Enter a threshold value' : list.length ? list.map(c => c.name).join(', ') : 'None'
+      return `<div class="fire-row">
+        <span class="lvl-dot lvl-${l}"></span>
+        <div class="fire-main">
+          <div class="fire-head"><span class="fire-lvl">${LEVEL_LABEL[l]}</span>
+            <span class="fire-thr num">&ge; ${v === null ? F.DASH : F.prob(v)}</span>
+            <span class="fire-count num">${count}</span></div>
+          <div class="fire-names">${CB.esc(names)}</div>
+        </div>
+      </div>`
+    }).join('')
+    let top = null
+    for (const l of [...LEVELS].reverse()) {
+      const list = firing(lv[l])
+      if (list && list.length) { top = { l, list }; break }
+    }
+    const mini = top
+      ? `<div class="rail-sec-title">Fires at ${LEVEL_LABEL[top.l]}</div>` + top.list.map(c =>
+          `<div class="fire-p-row"><span>${CB.esc(c.name)}</span><span class="num">P ${F.prob(fc(c.id, st.month).droughtProb)}</span></div>`).join('')
+      : `<div class="fire-none">No county reaches any configured level for ${F.ym(st.month)}.</div>`
+    const scopeNote = st.scope === 'all' ? '' : ' · ' + CB.esc(covered.find(c => c.id === st.scope)?.name || st.scope) + ' only'
+    return `<div class="rail-sec-title">Would fire now</div>
+      <div class="rail-sub num">Issue ${issue.id} · valid ${F.ym(st.month)}${scopeNote}</div>
+      <div class="rail-tenant">${CB.esc(t.tenantName)}</div>
+      <div class="fire-rows">${rows}</div>
+      <div class="rail-mini">${mini}</div>
+      <div class="rail-note">Live preview against the current cell values. Nothing is written until Save.</div>`
+  }
+
+  function renderRail() {
+    const el = document.getElementById('fire-rail')
+    if (el) el.innerHTML = railHtml()
+  }
+
+  function updateSaveBar() {
+    document.getElementById('save-bar')?.toggleAttribute('hidden', !anyDirty())
+  }
+
+  let deb = null
+  function onCell(e) {
+    const inp = e.target
+    const { trig, lvl } = inp.dataset
+    const raw = inp.value.trim()
+    let v = raw === '' ? null : Number(raw)
+    if (v !== null) v = Number.isNaN(v) ? null : Math.min(1, Math.max(0, v))
+    edited[trig][lvl] = v
+    inp.classList.toggle('dirty', v !== baseline[trig][lvl])
+    updateSaveBar()
+    clearTimeout(deb)
+    deb = setTimeout(renderRail, 150)
+  }
+
+  function onSave() {
+    baseline = copyLevels(edited)
+    document.querySelectorAll('.matrix-cell.dirty').forEach(i => i.classList.remove('dirty'))
+    updateSaveBar()
+    CB.toast('Thresholds saved — prototype keeps them in memory')
+  }
+
+  function onReset() {
+    edited = copyLevels(pristine)
+    renderMain()
+  }
+
+  function renderThresholds(band4) {
+    if (st.forced === 'loading') {
+      band4.innerHTML = `<div class="trig-split">
+        <div class="trig-main"><div style="padding:14px">${CB.ui.skelRows(4, 44)}</div></div>
+        <aside class="trig-rail">${CB.ui.skelBlock(18)}${CB.ui.skelBlock(180)}${CB.ui.skelBlock(120)}</aside></div>`
+      return
+    }
+    const empty = st.forced === 'empty'
+    band4.innerHTML = `<div class="trig-split">
+      <div class="trig-main">${empty
+        ? CB.ui.emptyState({ icon: 'triggers', title: 'No triggers configured', body: 'Tenant trigger thresholds appear here once an organisation defines its alert levels.' })
+        : matrixHtml()}</div>
+      <aside class="trig-rail" id="fire-rail"></aside>
+    </div>`
+    renderRail()
+    if (empty) return
+    band4.querySelectorAll('tbody tr[data-tenant]').forEach(tr => tr.addEventListener('click', e => {
+      if (e.target.closest('input')) return
+      selectTenant(tr.dataset.tenant)
+    }))
+    band4.querySelectorAll('.matrix-cell').forEach(inp => inp.addEventListener('input', onCell))
+    document.getElementById('btn-save')?.addEventListener('click', onSave)
+    document.getElementById('btn-reset')?.addEventListener('click', onReset)
+    updateSaveBar()
+  }
+
+  function renderPlans(band4) {
+    if (st.forced === 'loading') {
+      band4.innerHTML = `<div class="plans" style="width:100%">${CB.ui.skelBlock(180)}${CB.ui.skelBlock(180)}${CB.ui.skelBlock(180)}${CB.ui.skelBlock(180)}</div>`
+      return
+    }
+    if (st.forced === 'empty' || !st.tenant) {
+      band4.innerHTML = `<div style="flex:1;display:flex;align-items:center;justify-content:center">
+        ${CB.ui.emptyState({ icon: 'triggers', title: 'No action plans', body: 'Action plans are derived per tenant from its trigger levels and channels. Add a trigger first.' })}</div>`
+      return
+    }
+    const t = trigOf(st.tenant)
+    const chStr = t.channels.map(ch => CH_LABEL[ch] || ch).join(', ')
+    const hasCap = t.channels.includes('cap')
+    const STEPS = {
+      advisory: [
+        `Notify the duty officer via ${chStr}.`,
+        'Generate the county bulletin draft for analyst review.',
+      ],
+      watch: [
+        `Notify the county steering group via ${chStr}.`,
+        'Pre-position verification scouts in the counties that fire.',
+        'Attach the latest field reports to the bulletin.',
+      ],
+      warning: [
+        hasCap
+          ? 'Issue a CAP broadcast for every county above the warning level.'
+          : `Send the warning notice via ${chStr} — CAP is not configured for this tenant.`,
+        'Unlock the contingency budget line.',
+        `Confirm delivery receipts on ${chStr}.`,
+      ],
+      emergency: [
+        'Activate the anticipatory action fund.',
+        `Escalate to the national coordination cell via ${chStr}.`,
+        'Convene the county emergency operations centre.',
+      ],
+    }
+    const panels = LEVELS.map(l => `<div class="panel plan-panel">
+      <div class="plan-head"><span class="lvl-dot lvl-${l}"></span>${LEVEL_LABEL[l]}
+        <span class="grow"></span><span class="plan-thr num">P &ge; ${edited[t.id][l] === null ? F.DASH : F.prob(edited[t.id][l])}</span></div>
+      <ol class="plan-ol">${STEPS[l].map(s => `<li>${CB.esc(s)}</li>`).join('')}</ol>
+    </div>`).join('')
+    band4.innerHTML = `<div class="plans-col">
+      <div class="plans-toolbar">
+        <label class="select"><select id="plan-tenant">${D.triggers.map(x =>
+          `<option value="${x.id}"${x.id === st.tenant ? ' selected' : ''}>${CB.esc(x.tenantName)}</option>`).join('')}</select>${CB.icon('chevD', 'sm')}</label>
+        <div class="tenant-chips">${chips(t)}</div>
+        <span class="grow"></span>
+        <span class="rail-sub num">Updated ${t.updatedAt.slice(0, 10)} · ${CB.esc(t.updatedBy)}</span>
+      </div>
+      <div class="plans">${panels}</div>
+    </div>`
+    document.getElementById('plan-tenant').addEventListener('change', e => {
+      st.tenant = e.target.value
+      S.set({ tenant: trigOf(st.tenant).tenantId })
+      renderMain()
+    })
+  }
+
+  const GANTT_MONTHS = [issue.id, ...months]
+  const TODAY_PCT = ((11 / 31) * 100).toFixed(1)
+
+  function renderTimeline(band4) {
+    if (st.forced === 'loading') {
+      band4.innerHTML = `<div class="trig-split">
+        <div class="trig-main"><div style="padding:14px">${CB.ui.skelRows(6, 30)}</div></div>
+        <aside class="trig-rail">${CB.ui.skelBlock(18)}${CB.ui.skelBlock(220)}</aside></div>`
+      return
+    }
+    const rows = st.forced === 'empty' ? [] : scoped().filter(c => !st.query || c.name.toLowerCase().includes(st.query))
+    const header = `<div class="g-row"><div class="g-head">County</div>${GANTT_MONTHS.map(m =>
+      `<div class="g-head g-mh">${F.ym(m)}${m === issue.id ? `<span class="g-today" style="left:${TODAY_PCT}%"></span>` : ''}</div>`).join('')}</div>`
+    const body = rows.map(c => {
+      const cells = GANTT_MONTHS.map(m => {
+        if (m === issue.id) return `<div class="g-track"><span class="g-today" style="left:${TODAY_PCT}%" title="Today"></span></div>`
+        const f = fc(c.id, m)
+        const sig = f?.signal
+        if (sig === 'watch' || sig === 'drought') {
+          const col = sig === 'watch' ? 'var(--watch)' : 'var(--drought)'
+          return `<div class="g-track"><span class="g-bar" style="left:4px;right:4px;background:${col}">${CB.ui.SIGNAL_LABEL[sig]}</span></div>`
+        }
+        return `<div class="g-track"></div>`
+      }).join('')
+      const f = fc(c.id, st.month)
+      const color = CB.ui.colorForValue(PROB_LAYER, f?.droughtProb)
+      return `<div class="g-row"><div class="g-label"><span class="g-thumb">${CB.ui.countyThumb(c.id, color, 28)}</span>${CB.esc(c.name)}</div>${cells}</div>`
+    }).join('')
+    const gantt = rows.length
+      ? `<div class="gantt trig-gantt">${header}${body}</div>`
+      : CB.ui.emptyState({
+          icon: 'triggers',
+          title: st.forced === 'empty' ? 'No counties to plot' : 'No counties match',
+          body: st.forced === 'empty'
+            ? 'The timeline appears here once a model run covers at least one county.'
+            : 'Nothing matches that search in the selected scope. Clear the search or widen the scope.',
+        })
+    const ranked = (st.forced === 'empty' ? [] : scoped())
+      .map(c => ({ c, f: fc(c.id, st.month) }))
+      .filter(x => x.f)
+      .sort((a, b) => b.f.droughtProb - a.f.droughtProb)
+    const bars = ranked.length
+      ? ranked.map(x => CB.ui.metricBar({ label: x.c.name, value: x.f.droughtProb, max: 1, display: F.prob(x.f.droughtProb) })).join('')
+      : `<div class="fire-none">No forecast rows for this scope.</div>`
+    band4.innerHTML = `<div class="trig-split">
+      <div class="trig-main">
+        <div class="g-toolbar">
+          <div class="period-tabs" id="tl-periods">${['6M', '1Y', '2Y', '3Y', 'MAX'].map(p =>
+            `<button data-p="${p}" class="${p === '6M' ? 'active' : ''}">${p}</button>`).join('')}</div>
+          <span class="g-legend"><i style="background:var(--watch)"></i>Watch <i style="background:var(--drought)"></i>Drought <i class="g-leg-line"></i>Today</span>
+        </div>
+        <div class="col-scroll">${gantt}</div>
+      </div>
+      <aside class="trig-rail">
+        <div class="rail-sec-title">Ranked by P(drought)</div>
+        <div class="rail-sub num">Issue ${issue.id} · valid ${F.ym(st.month)}</div>
+        <div>${bars}</div>
+        <div class="rail-note">Phase bars use the forecast signal per valid month from issue ${issue.id}. Normal months draw nothing.</div>
+      </aside>
+    </div>`
+    document.getElementById('tl-periods').addEventListener('click', e => {
+      const b = e.target.closest('button[data-p]')
+      if (b && b.dataset.p !== '6M') CB.toast('Only the 6-month window has prototype data')
+    })
+  }
+
+  function renderRecipients(band4) {
+    if (st.forced === 'loading') {
+      band4.innerHTML = `<div style="padding:14px;width:100%">${CB.ui.skelRows(6, 26)}</div>`
+      return
+    }
+    const members = (st.forced === 'empty' ? [] : D.settings.members).filter(m =>
+      !st.query || (m.name + ' ' + m.email + ' ' + m.role).toLowerCase().includes(st.query))
+    if (!members.length) {
+      band4.innerHTML = `<div style="width:100%">${CB.ui.emptyState({
+        icon: 'settings',
+        title: st.forced === 'empty' ? 'No members yet' : 'No members match',
+        body: st.forced === 'empty'
+          ? 'Recipients appear here once members join the organisation in Settings.'
+          : 'Nothing matches that search. Clear the search to see all members.',
+      })}</div>`
+      return
+    }
+    const chFor = m => {
+      const set = []
+      for (const t of D.triggers) {
+        if (t.updatedBy !== m.name) continue
+        for (const ch of t.channels) if (!set.includes(ch)) set.push(ch)
+      }
+      return set
+    }
+    const body = members.map(m => {
+      const chs = chFor(m)
+      return `<tr>
+        <td><span style="display:inline-flex;align-items:center;gap:9px">${CB.ui.avatarDisc(m.name)}<b>${CB.esc(m.name)}</b></span></td>
+        <td class="num" style="color:var(--text-dim)">${CB.esc(m.email)}</td>
+        <td>${CB.esc(m.role)}</td>
+        <td>${chs.length ? `<span class="tenant-chips" style="margin-top:0">${chs.map(ch => `<span class="chip-ch">${CH_LABEL[ch] || ch}</span>`).join('')}</span>` : `<span style="color:var(--text-faint)">${F.DASH}</span>`}</td>
+        <td class="num" style="color:var(--text-dim)">${m.lastActiveAt.slice(0, 16).replace('T', ' ')}</td>
+      </tr>`
+    }).join('')
+    band4.innerHTML = `<div style="width:100%;display:flex;flex-direction:column;min-height:0">
+      <div class="list-head">${members.length} members · channels from the trigger each member maintains</div>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Member</th><th>Email</th><th>Role</th><th>Trigger channels</th><th>Last active</th></tr></thead>
+        <tbody>${body}</tbody></table></div>
+    </div>`
+  }
+
+  function renderBand5() {
+    const pills = months.map(m =>
+      `<button class="pill-btn num${m === st.month ? ' active' : ''}" data-month="${m}">${F.monthShort(m)}</button>`).join('')
+    document.getElementById('month-pills').innerHTML =
+      `<button class="btn btn-icon btn-ghost" data-step="-1" title="Previous month">${CB.icon('chevL')}</button>` +
+      pills +
+      `<button class="btn btn-icon btn-ghost" data-step="1" title="Next month">${CB.icon('chevR')}</button>`
+    document.getElementById('meta-issue').textContent =
+      `Issue ${issue.id} · ${issue.run.labelVersion} · ${F.hashShort(issue.contentHash)}`
+  }
+
+  function stepMonth(dir) {
+    const i = months.indexOf(st.month)
+    const next = months[Math.min(months.length - 1, Math.max(0, i + dir))]
+    if (next !== st.month) {
+      st.month = next
+      S.set({ month: next })
+      renderBand5()
+      renderMain()
+    }
+  }
+
+  function renderMain() {
+    const band4 = document.getElementById('band-4')
+    TABS.forEach(t => document.getElementById('tab-' + t).classList.toggle('active', st.tab === t))
+    if (st.tab === 'plans') renderPlans(band4)
+    else if (st.tab === 'timeline') renderTimeline(band4)
+    else if (st.tab === 'recipients') renderRecipients(band4)
+    else renderThresholds(band4)
+  }
+
+  function render() {
+    renderBand5()
+    renderMain()
+  }
+
+  document.getElementById('month-pills').addEventListener('click', e => {
+    const step = e.target.closest('[data-step]')
+    if (step) { stepMonth(Number(step.dataset.step)); return }
+    const pill = e.target.closest('[data-month]')
+    if (pill && pill.dataset.month !== st.month) {
+      st.month = pill.dataset.month
+      S.set({ month: st.month })
+      render()
+    }
+  })
+  document.addEventListener('cb:month-step', e => stepMonth(e.detail.dir))
+
+  render()
+})()
+</script>
+</body>
+</html>

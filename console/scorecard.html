@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scorecard — Cascade Bridge</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/console.css">
+<style>
+.band-1 .tab { white-space: nowrap; }
+#chart-lead .chart-svg { overflow: visible; }
+.sc-scroll { flex: 1; min-height: 0; overflow-y: auto; width: 100%; }
+.sc-wrap { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.sc-grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 14px; align-items: start; }
+.sk-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.sk-head h2 { font-size: 16px; font-weight: 650; }
+.sk-chip { margin-left: auto; height: 22px; font-size: 10.5px; color: var(--text-dim); padding: 0 9px; }
+.sk-meta-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--hairline) 55%, transparent); font-size: 12px; }
+.sk-meta-row .k { color: var(--text-dim); }
+.sk-bars { margin-top: 8px; }
+.sk-sub { margin: 14px 0 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+.sk-county { display: flex; align-items: center; gap: 10px; }
+.sk-county .metric-bar { flex: 1; min-width: 0; }
+.sk-county .thumb { width: 34px; height: 34px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--ground); display: flex; align-items: center; justify-content: center; flex: none; }
+.cmp { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.cmp-duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.cmp-panel { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.cmp-title { font-weight: 650; }
+.cmp-sub { color: var(--text-faint); font-size: 10.5px; margin-top: -8px; }
+.cmp-hist { height: 40px; }
+.mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.mini-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 0 3px; border: 1px solid color-mix(in srgb, var(--hairline) 55%, transparent); border-radius: 6px; background: var(--ground); }
+.mini-cell .mc-name { font-size: 9px; color: var(--text-dim); }
+.cmp-stats { border-top: 1px solid var(--hairline); padding-top: 8px; display: flex; flex-direction: column; gap: 5px; margin-top: auto; }
+.cmp-stat { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+.cmp-stat .k { color: var(--text-dim); }
+.cmp-stat .num { font-weight: 600; text-align: right; }
+.confusion { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); border-radius: var(--radius); overflow: hidden; }
+.conf-cell { background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.conf-cell .cc-num { font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.conf-cell .cc-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.conf-cell .cc-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.sc-below { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.health-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.hp { padding: 14px 16px; }
+.hp-title { font-weight: 650; margin-bottom: 10px; }
+.hp-note { color: var(--text-faint); font-size: 11px; margin-top: 10px; }
+.run-meta { color: var(--text-faint); font-size: 10px; margin: -2px 0 6px 128px; }
+.src-row { padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--hairline) 55%, transparent); }
+.src-row:last-child { border-bottom: none; }
+.src-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.src-name { font-weight: 600; font-size: 12.5px; }
+.src-kind { color: var(--text-faint); font-size: 10.5px; }
+.src-head .pill { margin-left: auto; }
+.src-track-row { display: flex; align-items: center; gap: 10px; }
+.src-hours { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.src-meta { color: var(--text-faint); font-size: 10px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lv-row { display: flex; gap: 12px; align-items: flex-start; }
+.lv-row .chip { flex: none; }
+.lv-body { font-size: 12px; line-height: 1.55; }
+.lv-body .dim { color: var(--text-dim); }
+.pit { display: flex; align-items: center; gap: 18px; }
+.pit-num { font-size: 34px; font-weight: 700; color: var(--normal); }
+.pit-label { font-weight: 650; }
+.pit-note { color: var(--text-dim); font-size: 11.5px; margin-top: 2px; max-width: 360px; }
+.ist { display: inline-flex; align-items: center; gap: 6px; text-transform: capitalize; }
+.ist .ist-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.ist-verified { color: var(--normal); }
+.ist-published { color: var(--teal); }
+.b2-meta { color: var(--text-faint); font-size: 11px; white-space: nowrap; }
+.empty-note { color: var(--text-faint); font-size: 11.5px; padding: 6px 0; }
+.print-meta { display: none; }
+@media (max-width: 900px) {
+  .sc-grid, .sc-below, .health-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .b2-meta { display: none; }
+}
+@media (max-width: 640px) {
+  .cmp-duo { grid-template-columns: 1fr; }
+  .confusion { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media print {
+  .sc-scroll { overflow: visible; }
+  .sc-wrap { padding: 0; gap: 0; }
+  .sc-grid, .sc-below, .health-grid { display: block; }
+  .sc-grid > *, .sc-below > .panel, .health-grid > .panel { margin-bottom: 14px; }
+  .cmp { gap: 0; }
+  .cmp > * { margin-bottom: 14px; }
+  .skill-card, .panel, .conf-cell, .big-number { background: #fff; border-color: #ddd; }
+  .skill-card, .panel, .confusion, .big-numbers, .table-wrap { break-inside: avoid; }
+  .confusion, .big-numbers { background: #ddd; border-color: #ddd; }
+  .mini-cell { background: #fff; border-color: #eee; }
+  .print-meta { display: block; color: #555; font-size: 11px; padding-bottom: 8px; margin-bottom: 14px; border-bottom: 1px solid #ddd; }
+  .sk-head h2, .cmp-title, .hp-title, .pit-label, .src-name, .lv-body { color: #111; }
+  .sk-meta-row .k, .cmp-stat .k, .mb-label, .bl-label, .cc-label, .mc-name, .sk-sub, .cmp-sub, .src-kind,
+  .src-hours, .hp-note, .pit-note, .src-meta, .run-meta, .bn-label, .empty-note, .lv-body .dim,
+  .chart-box .chart-title { color: #555; }
+  .mb-value, .cmp-stat .num, .cc-num, .bn-value, .sk-chip { color: #111; }
+  .sk-meta-row, .src-row { border-color: #eee; }
+  .mb-track { background: #eee; }
+  .mb-fill.mb-dim { background: #9aa7ad; }
+  .chip { background: #fff; border-color: #ddd; color: #555; }
+  .ist-verified, .pit-num { color: #2e7d5b; }
+  .ist-published { color: #0f766e; }
+  table.data td { color: #111; border-color: #eee; }
+}
+</style>
+</head>
+<body>
+<nav class="rail" id="rail"></nav>
+<main class="console">
+  <header class="band band-1">
+    <span class="page-title">Scorecard</span>
+    <span class="vsep"></span>
+    <nav class="tabs">
+      <a class="tab" id="tab-skill" data-tab="skill" href="scorecard.html">Skill</a>
+      <a class="tab" id="tab-issues" data-tab="issues" href="scorecard.html?tab=issues">Issue Review</a>
+      <a class="tab" id="tab-health" data-tab="health" href="scorecard.html?tab=health">Data Health</a>
+    </nav>
+    <span class="grow"></span>
+    <button class="btn btn-teal" id="btn-export"></button>
+  </header>
+  <div class="band band-2">
+    <label class="search" id="search-box"></label>
+    <label class="select" id="label-select"></label>
+    <button class="btn btn-icon btn-ghost" id="btn-overflow" title="More"></button>
+    <span class="b2-meta num" id="meta-issue"></span>
+  </div>
+  <section class="band band-4" id="band-4"></section>
+</main>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/format.js"></script>
+<script src="assets/shell.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/components.js"></script>
+<script src="assets/map.js"></script>
+<script>
+(() => {
+  const D = CB_DATA, F = CB.fmt, S = CB.state
+  CB.shell.init({ page: 'scorecard' })
+
+  const pad2 = n => String(n).padStart(2, '0')
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim()
+  const PROB_LAYER = D.layers.find(l => l.id === 'prob')
+  const TABS = ['skill', 'issues', 'health']
+  const sk = D.skill
+  const issueIds = Object.keys(D.issues).sort().reverse()
+  const latest = D.issues[issueIds[0]]
+  const county = id => D.counties.find(c => c.id === id)
+
+  const st = {
+    tab: TABS.includes(S.get('tab')) ? S.get('tab') : 'skill',
+    forced: ['empty', 'loading'].includes(S.get('state')) ? S.get('state') : null,
+    query: '',
+  }
+
+  document.getElementById('btn-export').innerHTML = CB.icon('external') + 'Export report'
+  document.getElementById('btn-export').addEventListener('click', () => window.print())
+  document.getElementById('btn-overflow').innerHTML = CB.icon('more')
+  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('search-box').innerHTML =
+    CB.icon('search') + '<input id="search-input" type="search" placeholder="Search county, issue, source">'
+  document.getElementById('search-input').addEventListener('input', e => {
+    st.query = e.target.value.trim().toLowerCase()
+    renderMain()
+  })
+  document.getElementById('label-select').innerHTML =
+    `<select id="label-sel"><option value="${sk.labelVersion}" selected>${sk.labelVersion}</option></select>` + CB.icon('chevD', 'sm')
+  document.getElementById('label-sel').addEventListener('change', () =>
+    CB.toast(sk.labelVersion + ' is the only label version in this prototype'))
+  document.getElementById('meta-issue').textContent =
+    `Issue ${latest.id} · ${latest.run.labelVersion} · ${F.hashShort(latest.contentHash)}`
+
+  document.querySelectorAll('.band-1 .tab').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault()
+    st.tab = a.dataset.tab
+    S.set({ tab: st.tab === 'skill' ? null : st.tab })
+    render()
+  }))
+
+  const printMeta = () =>
+    `<div class="print-meta num">Cascade Bridge Scorecard · ${sk.model} · label ${sk.labelVersion} · Issue ${latest.id} · ${F.hashShort(latest.contentHash)}</div>`
+
+  function metaRow(k, v) {
+    return `<div class="sk-meta-row"><span class="k">${CB.esc(k)}</span><span class="num">${v}</span></div>`
+  }
+
+  function skillCardHtml() {
+    const m = sk.metrics
+    const rows = sk.perCounty
+      .filter(pc => !st.query || county(pc.countyId).name.toLowerCase().includes(st.query))
+      .map(pc => `<div class="sk-county">
+        <span class="thumb">${CB.ui.countyThumb(pc.countyId, tok('--teal'), 30)}</span>
+        ${CB.ui.metricBar({ label: county(pc.countyId).name, value: pc.rocAuc, display: pc.rocAuc.toFixed(2) })}
+      </div>`).join('')
+    return `<div class="skill-card">
+      <div class="sk-head"><h2>Skill Report</h2><span class="chip sk-chip num">${F.ym(sk.period.from)} – ${F.ym(sk.period.to)}</span></div>
+      <div class="sk-meta">
+        ${metaRow('Model', CB.esc(sk.model))}
+        ${metaRow('Label version', CB.esc(sk.labelVersion))}
+        ${metaRow('Samples', F.int(sk.sampleCount))}
+        ${metaRow('Positives', F.int(sk.positives))}
+      </div>
+      <div class="sk-bars">
+        ${CB.ui.metricBar({ label: 'ROC AUC', value: m.rocAuc, display: m.rocAuc.toFixed(2) })}
+        ${CB.ui.metricBar({ label: 'PR AUC', value: m.prAuc, display: m.prAuc.toFixed(2) })}
+        ${CB.ui.metricBar({ label: 'Brier Skill', value: m.brierSkillScore, max: 1, display: m.brierSkillScore.toFixed(2) })}
+        ${CB.ui.metricBar({ label: 'Reliability', value: m.reliability, display: m.reliability.toFixed(2) })}
+      </div>
+      <div class="sk-sub">Per county · ROC AUC</div>
+      <div class="sk-counties">${rows || '<div class="empty-note">No county matches that search.</div>'}</div>
+    </div>`
+  }
+
+  function miniCells(kind) {
+    const per = D.issues['2026-07'].verification.perCounty
+    return per.map(pc => {
+      const c = county(pc.countyId)
+      const fill = kind === 'forecast'
+        ? CB.ui.rampColor(PROB_LAYER, pc.predicted)
+        : (pc.observed === 1 ? tok('--drought') : tok('--normal'))
+      const tip = kind === 'forecast'
+        ? `${c.name} · predicted ${F.prob(pc.predicted)}`
+        : `${c.name} · ${pc.observed === 1 ? 'drought observed' : 'no drought observed'}`
+      return `<div class="mini-cell" title="${CB.esc(tip)}">
+        ${CB.ui.countyThumb(pc.countyId, fill, 38)}
+        <span class="mc-name">${CB.esc(c.name)}</span>
+      </div>`
+    }).join('')
+  }
+
+  function cmpPanelHtml(key) {
+    const p = sk.comparison[key]
+    return `<div class="panel cmp-panel">
+      <div class="cmp-title">${CB.esc(p.title)}</div>
+      <div class="cmp-sub num">${CB.esc(p.sub)}</div>
+      <div class="cmp-hist" id="hist-${key}"></div>
+      <div class="mini-grid">${miniCells(key)}</div>
+      <div class="cmp-stats">${p.stats.map(s =>
+        `<div class="cmp-stat"><span class="k">${CB.esc(s.label)}</span><span class="num">${CB.esc(s.value)}</span></div>`).join('')}</div>
+    </div>`
+  }
+
+  function confusionHtml() {
+    const cf = sk.comparison.confusion
+    const cells = [
+      ['Hits', cf.hits, '--teal'],
+      ['Misses', cf.misses, '--drought'],
+      ['False alarms', cf.falseAlarms, '--watch'],
+      ['Correct negatives', cf.correctNegatives, '--normal'],
+    ]
+    return `<div class="confusion">${cells.map(([label, n, c]) =>
+      `<div class="conf-cell">
+        <span class="cc-num num"><span class="cc-dot" style="background:var(${c})"></span>${n}</span>
+        <span class="cc-label">${label}</span>
+      </div>`).join('')}</div>`
+  }
+
+  function bigNumbersHtml() {
+    const bn = sk.comparison.bigNumbers
+    return `<div class="big-numbers">
+      <div class="big-number"><span class="bn-value num">${CB.esc(bn.left.value)}</span><span class="bn-label">${CB.esc(bn.left.label)}</span></div>
+      <div class="big-number"><span class="bn-value num">${CB.esc(bn.right.value)}</span><span class="bn-label">${CB.esc(bn.right.label)}</span></div>
+    </div>`
+  }
+
+  function belowFoldHtml() {
+    return `<div class="sc-below">
+      <div class="panel chart-box"><div class="chart-title"><span>Reliability</span><span class="num">${sk.reliability.bins.length} bins</span></div><div id="chart-rel"></div></div>
+      <div class="panel chart-box"><div class="chart-title"><span>Skill against lead time</span><span class="num">ROC AUC</span></div><div id="chart-lead"></div></div>
+      <div class="panel chart-box"><div class="chart-title"><span>Against baselines</span><span class="num">Brier skill</span></div><div id="chart-base"></div></div>
+    </div>`
+  }
+
+  function skillHtml() {
+    if (st.forced === 'loading') {
+      return `<div class="sc-grid"><div>${CB.ui.skelBlock(430)}</div><div>${CB.ui.skelBlock(430)}</div></div>
+        <div class="sc-below"><div>${CB.ui.skelBlock(230)}</div><div>${CB.ui.skelBlock(230)}</div><div>${CB.ui.skelBlock(230)}</div></div>`
+    }
+    if (st.forced === 'empty') {
+      return CB.ui.emptyState({ icon: 'scorecard', title: 'No skill data yet', body: 'The skill report appears after at least one issue has been verified against VCI3M ground truth.' })
+    }
+    return `<div class="sc-grid">
+      ${skillCardHtml()}
+      <div class="cmp">
+        <div class="cmp-duo">${cmpPanelHtml('forecast')}${cmpPanelHtml('observed')}</div>
+        ${confusionHtml()}
+        ${bigNumbersHtml()}
+      </div>
+    </div>
+    ${belowFoldHtml()}`
+  }
+
+  function drawSkillCharts() {
+    const cmp = sk.comparison
+    const hf = document.getElementById('hist-forecast')
+    if (hf) CB.charts.histStrip(hf, { bins: cmp.forecast.histBins, counts: cmp.forecast.histCounts, layer: PROB_LAYER, height: 40 })
+    const ho = document.getElementById('hist-observed')
+    if (ho) CB.charts.histStrip(ho, { bins: cmp.observed.histBins, counts: cmp.observed.histCounts, layer: PROB_LAYER, height: 40 })
+    const rel = document.getElementById('chart-rel')
+    if (rel) CB.charts.reliabilityDiagram(rel, { bins: sk.reliability.bins })
+    const lead = document.getElementById('chart-lead')
+    if (lead) CB.charts.leadTime(lead, { leads: sk.leadTime.leads, climatologyAuc: sk.leadTime.climatologyAuc })
+    const base = document.getElementById('chart-base')
+    if (base) CB.charts.baselineBars(base, { baselines: sk.baselines })
+  }
+
+  function issueRecord(id) {
+    const iss = D.issues[id]
+    const months = [...new Set(iss.forecasts.map(f => f.validYear + '-' + pad2(f.validMonth)))]
+    let peak = iss.forecasts[0]
+    for (const f of iss.forecasts) if (f.droughtProb > peak.droughtProb) peak = f
+    return { id, iss, months, peak, peakCounty: county(peak.countyId) }
+  }
+
+  function issuesHtml() {
+    if (st.forced === 'loading') return `<div style="padding:14px;width:100%">${CB.ui.skelRows(3, 20)}</div>`
+    let recs = (st.forced === 'empty' ? [] : issueIds).map(issueRecord)
+      .filter(r => !st.query || r.id.includes(st.query) || r.peakCounty.name.toLowerCase().includes(st.query))
+    if (!recs.length) {
+      return CB.ui.emptyState({
+        icon: 'calendar',
+        title: st.forced === 'empty' ? 'No issues yet' : 'No issues match',
+        body: st.forced === 'empty'
+          ? 'Forecast issues appear here after the first model run publishes.'
+          : 'Nothing matches that search. Clear it to see all issues.',
+      })
+    }
+    const rows = recs.map(({ id, iss, months, peak, peakCounty }) => {
+      const v = iss.verification
+      const peakMonth = peak.validYear + '-' + pad2(peak.validMonth)
+      const outcome = v
+        ? `<span class="num">${v.hits}</span> ${v.hits === 1 ? 'hit' : 'hits'} · <span class="num">${v.misses}</span> ${v.misses === 1 ? 'miss' : 'misses'} · <span class="num">${v.falseAlarms}</span> ${v.falseAlarms === 1 ? 'false alarm' : 'false alarms'}`
+        : `Awaiting truth · <span class="num">${F.ym(months[months.length - 1])}</span>`
+      return `<tr data-issue="${id}" id="irow-${id}">
+        <td class="num">${id}</td>
+        <td class="num">${iss.initDate}</td>
+        <td>${CB.esc(peakCounty.name)} ${F.monthShort(peakMonth)} <span class="num">${F.prob(peak.droughtProb)}</span></td>
+        <td><span class="ist ist-${iss.status}"><span class="ist-dot"></span>${iss.status}</span></td>
+        <td class="r num">${v ? v.brier : '?'}</td>
+        <td>${outcome}</td>
+      </tr>`
+    }).join('')
+    return `<div class="table-wrap"><table class="data">
+      <thead><tr><th>Issue</th><th>Init date</th><th>Peak forecast</th><th>Status</th><th class="r">Brier</th><th>Outcome</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      <div class="empty-note">Every published issue lands here permanently. Brier reads ? until the valid months pass and VCI3M truth arrives.</div>`
+  }
+
+  function healthHtml() {
+    if (st.forced === 'loading') {
+      return `<div class="health-grid"><div>${CB.ui.skelBlock(180)}</div><div>${CB.ui.skelBlock(180)}</div><div>${CB.ui.skelBlock(120)}</div><div>${CB.ui.skelBlock(120)}</div></div>`
+    }
+    if (st.forced === 'empty') {
+      return CB.ui.emptyState({ icon: 'warn', title: 'No health data', body: 'Run and ingest health appears once the pipeline has executed at least once.' })
+    }
+    const coverage = issueIds.map(id => {
+      const run = D.issues[id].run
+      return CB.ui.metricBar({ label: 'Issue ' + id, value: run.featureCoverage, display: run.featureCoverage.toFixed(2) }) +
+        `<div class="run-meta num">${CB.esc(run.droughtModel)} · ${CB.esc(run.source)} · commit ${CB.esc(run.codeCommit)}</div>`
+    }).join('')
+    const sources = D.settings.sources
+      .filter(s => !st.query || (s.name + ' ' + s.kind).toLowerCase().includes(st.query))
+      .map(s => {
+        const pct = Math.min(100, (s.freshnessHours / s.staleAfterHours) * 100)
+        return `<div class="src-row">
+          <div class="src-head">
+            <span class="src-name">${CB.esc(s.name)}</span>
+            <span class="src-kind">${CB.esc(s.kind)}</span>
+            <span class="pill pill-${s.status === 'ok' ? 'normal' : 'watch'}"><span class="dot"></span>${s.status}</span>
+          </div>
+          <div class="src-track-row">
+            <span class="mb-track"><span class="mb-fill${s.status === 'ok' ? '' : ' mb-warn'}" style="width:${pct.toFixed(1)}%"></span></span>
+            <span class="src-hours num">${s.freshnessHours} h · stale after ${s.staleAfterHours} h</span>
+          </div>
+          <div class="src-meta num">Last ingest ${s.lastIngestAt.slice(0, 16).replace('T', ' ')} · ${CB.esc(s.endpoint)}</div>
+        </div>`
+      }).join('')
+    return `<div class="health-grid">
+      <div class="panel hp">
+        <div class="hp-title">Feature coverage per run</div>
+        ${coverage}
+        <div class="hp-note">Share of model inputs that were real at run time; the remainder was zero-filled and is flagged in the issue payload.</div>
+      </div>
+      <div class="panel hp">
+        <div class="hp-title">Ingest freshness</div>
+        ${sources || '<div class="empty-note">No source matches that search.</div>'}
+      </div>
+      <div class="panel hp">
+        <div class="hp-title">Label version history</div>
+        <div class="lv-row">
+          <span class="chip num">${CB.esc(sk.labelVersion)}</span>
+          <div class="lv-body">Current. Truth source for verification and for the <span class="num">${F.int(sk.sampleCount)}</span> training samples (<span class="num">${F.int(sk.positives)}</span> drought outcomes). Used by issues <span class="num">${issueIds.join(', ')}</span>.
+            <div class="dim">No earlier label versions exist; history begins here.</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel hp">
+        <div class="hp-title">Point-in-time discipline</div>
+        <div class="pit">
+          <span class="pit-num num">0</span>
+          <div>
+            <div class="pit-label">Point-in-time violations</div>
+            <div class="pit-note">Features are joined strictly as of each issue's init date. Any nonzero count here would invalidate the skill report above.</div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  }
+
+  function renderTabs() {
+    TABS.forEach(t => document.getElementById('tab-' + t).classList.toggle('active', st.tab === t))
+  }
+
+  function renderMain() {
+    const band4 = document.getElementById('band-4')
+    const inner = st.tab === 'skill' ? skillHtml() : st.tab === 'issues' ? issuesHtml() : healthHtml()
+    band4.innerHTML = `<div class="sc-scroll"><div class="sc-wrap">${printMeta()}${inner}</div></div>`
+    if (st.tab === 'skill' && !st.forced) requestAnimationFrame(drawSkillCharts)
+    if (st.tab === 'issues') {
+      band4.querySelectorAll('tr[data-issue]').forEach(tr =>
+        tr.addEventListener('click', () => { location.href = 'maps.html?issue=' + tr.dataset.issue }))
+    }
+  }
+
+  function render() {
+    renderTabs()
+    renderMain()
+  }
+
+  window.addEventListener('resize', () => {
+    if (st.tab === 'skill' && !st.forced) requestAnimationFrame(drawSkillCharts)
+  })
+  window.addEventListener('beforeprint', () => {
+    if (st.tab === 'skill' && !st.forced) drawSkillCharts()
+  })
+
+  render()
+})()
+</script>
+</body>
+</html>

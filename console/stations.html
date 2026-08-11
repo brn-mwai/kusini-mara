@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stations — Cascade Bridge</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="assets/console.css">
+<style>
+.list-head .grow { flex: 1; }
+.cnt-chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border: 1px solid var(--hairline); border-radius: 999px; font-size: 11px; font-weight: 550; color: var(--text-dim); white-space: nowrap; }
+.cnt-chip.good { color: var(--good); border-color: color-mix(in srgb, var(--normal) 40%, transparent); }
+.cnt-chip.warn { color: var(--watch); border-color: color-mix(in srgb, var(--watch) 40%, transparent); }
+.chip.kind-filter { padding: 0 12px; color: var(--text-dim); }
+.chip.kind-filter:hover { color: var(--text); }
+.chip.kind-filter.on { background: color-mix(in srgb, var(--teal) 14%, transparent); border-color: var(--teal-dim); color: var(--teal); }
+.k-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.station-row .kind-disc { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: none; }
+.station-row .kind-disc svg.ic { width: 16px; height: 16px; }
+.station-row .s-vals { display: flex; align-items: center; gap: 9px; flex: none; }
+.station-row .fresh { width: 38px; text-align: right; font-size: 12.5px; font-weight: 600; }
+.station-row .batt { width: 34px; text-align: right; font-size: 11px; color: var(--text-dim); }
+.station-row.offline .who .name, .station-row.offline .fresh { color: var(--text-dim); }
+.st-ic { display: flex; width: 16px; justify-content: center; }
+.st-ic.good { color: var(--good); }
+.st-ic.warn { color: var(--watch); }
+.st-ic.off { color: var(--text-faint); }
+.kind-chip { height: 24px; padding: 0 10px; font-size: 11px; color: var(--text-dim); gap: 7px; }
+.active-wrap { display: flex; align-items: center; gap: 8px; margin-left: auto; color: var(--text-dim); font-size: 12px; }
+.select.select-sm { height: 28px; padding: 0 9px; font-size: 12px; }
+.chart-legend { display: flex; gap: 14px; margin-top: 6px; font-size: 11px; color: var(--text-dim); }
+.chart-legend .lg-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 5px; }
+.proto-note { color: var(--text-faint); font-size: 10.5px; margin-top: 6px; }
+.delta-note { display: flex; align-items: center; gap: 7px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--hairline); font-size: 12px; color: var(--text-dim); }
+.delta-note .delta { font-size: 12.5px; font-weight: 600; }
+table.data .metric-bar { padding: 0; min-width: 150px; }
+table.data .metric-bar .mb-label { display: none; }
+td.nostations { color: var(--text-faint); font-style: italic; }
+</style>
+</head>
+<body>
+<nav class="rail" id="rail"></nav>
+<main class="console">
+  <header class="band band-1">
+    <span class="page-title">Stations</span>
+    <span class="vsep"></span>
+    <nav class="tabs">
+      <a class="tab" id="tab-activity" href="stations.html">Activity</a>
+      <a class="tab" id="tab-coverage" href="stations.html?view=coverage">Coverage</a>
+    </nav>
+    <span class="grow"></span>
+    <button class="btn btn-teal" id="btn-station-add"></button>
+  </header>
+  <div class="band band-2">
+    <label class="search" id="search-box"></label>
+    <button class="btn btn-icon" id="btn-filter" title="Filter"></button>
+    <label class="select" id="scope-select"></label>
+    <button class="btn btn-icon btn-ghost" id="btn-overflow" title="More"></button>
+  </div>
+  <div class="band band-3" id="band-3"></div>
+  <section class="band band-4" id="band-4"></section>
+</main>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/format.js"></script>
+<script src="assets/shell.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/components.js"></script>
+<script src="assets/map.js"></script>
+<script>
+(() => {
+  const D = CB_DATA, F = CB.fmt, S = CB.state
+  CB.shell.init({ page: 'stations' })
+
+  const KINDS = [
+    ['rain_gauge', 'Rain gauge', '#4C93A6', 'rainfall'],
+    ['weather', 'Weather', '#D9A84E', 'outlook'],
+    ['water_point', 'Water point', '#63BDC9', 'measure'],
+    ['market', 'Market', '#8F7AB2', 'scorecard'],
+    ['observer', 'Field observer', '#4FA987', 'reports'],
+  ]
+  const KIND = Object.fromEntries(KINDS.map(([id, label, color, icon]) => [id, { label, color, icon }]))
+  const PERIOD_POINTS = { '1W': 2, '1M': 5, '3M': 13, '6M': 26, '1Y': 26, '2Y': 26 }
+  const countyName = id => D.counties.find(c => c.id === id)?.name || id
+
+  const st = {
+    view: S.get('view') === 'coverage' ? 'coverage' : 'activity',
+    scope: D.counties.some(c => c.id === S.get('scope')) ? S.get('scope') : 'all',
+    kind: KIND[S.get('kind')] ? S.get('kind') : 'all',
+    station: null,
+    period: PERIOD_POINTS[S.get('period')] ? S.get('period') : '3M',
+    variable: null,
+    forced: ['empty', 'loading'].includes(S.get('state')) ? S.get('state') : null,
+    query: '',
+    hover: null,
+    activeOverride: {},
+  }
+
+  const visible = () => st.forced === 'empty' ? [] : D.stations.filter(s =>
+    (st.scope === 'all' || s.countyId === st.scope) &&
+    (st.kind === 'all' || s.kind === st.kind) &&
+    (!st.query || (s.name + ' ' + KIND[s.kind].label + ' ' + countyName(s.countyId)).toLowerCase().includes(st.query)))
+
+  st.station = D.stations.some(s => s.id === S.get('station')) ? S.get('station') : (visible()[0]?.id ?? null)
+
+  function relTime(iso) {
+    const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+    if (min < 1) return 'just now'
+    if (min < 60) return min + ' min ago'
+    const h = Math.floor(min / 60)
+    if (h < 24) return h + ' h ago'
+    const d = Math.floor(h / 24)
+    if (d < 60) return d + ' d ago'
+    const mo = Math.floor(d / 30)
+    if (mo < 24) return mo + ' mo ago'
+    return Math.floor(mo / 12) + ' y ago'
+  }
+  const absDate = iso => {
+    const d = new Date(iso)
+    return d.getUTCDate() + ' ' + F.MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear()
+  }
+
+  function signalBars(pct) {
+    const bars = pct === null ? 0 : pct >= 80 ? 4 : pct >= 55 ? 3 : pct >= 30 ? 2 : 1
+    let s = '<svg width="18" height="14" viewBox="0 0 18 14" aria-hidden="true">'
+    for (let i = 0; i < 4; i++) {
+      const h = 4 + i * 3
+      s += `<rect x="${i * 4.6}" y="${13 - h}" width="3.2" height="${h}" rx="1" fill="${i < bars ? 'var(--text-dim)' : 'var(--surface-2)'}"/>`
+    }
+    return s + '</svg>'
+  }
+
+  const statusIcon = s => s.status === 'reporting'
+    ? `<span class="st-ic good" title="Reporting">${CB.icon('check', 'sm')}</span>`
+    : s.status === 'stale'
+      ? `<span class="st-ic warn" title="Stale">${CB.icon('warn', 'sm')}</span>`
+      : `<span class="st-ic off" title="Offline">${CB.icon('x', 'sm')}</span>`
+
+  document.getElementById('btn-station-add').innerHTML = CB.icon('plus') + 'Add station'
+  document.getElementById('btn-station-add').addEventListener('click', () => CB.toast('Add station is not wired in this prototype'))
+  document.getElementById('btn-filter').innerHTML = CB.icon('filter')
+  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-overflow').innerHTML = CB.icon('more')
+  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('search-box').innerHTML =
+    CB.icon('search') + '<input id="search-input" type="search" placeholder="Search station, kind, county">'
+  document.getElementById('search-input').addEventListener('input', e => {
+    st.query = e.target.value.trim().toLowerCase()
+    render()
+  })
+  const scopes = [['all', 'All counties'], ...D.counties.map(c => [c.id, c.name])]
+  document.getElementById('scope-select').innerHTML =
+    `<select id="scope-sel">${scopes.map(([v, l]) =>
+      `<option value="${v}"${v === st.scope ? ' selected' : ''}>${l}</option>`).join('')}</select>` + CB.icon('chevD', 'sm')
+  document.getElementById('scope-sel').addEventListener('change', e => {
+    st.scope = e.target.value
+    S.set({ scope: st.scope === 'all' ? null : st.scope })
+    render()
+  })
+
+  document.getElementById('tab-activity').addEventListener('click', e => {
+    e.preventDefault(); st.view = 'activity'; S.set({ view: null }); render()
+  })
+  document.getElementById('tab-coverage').addEventListener('click', e => {
+    e.preventDefault(); st.view = 'coverage'; S.set({ view: 'coverage' }); render()
+  })
+
+  function renderChips() {
+    const defs = [['all', 'All'], ...KINDS.map(([id, label]) => [id, label])]
+    document.getElementById('band-3').innerHTML = defs.map(([v, l]) =>
+      `<button class="chip kind-filter${st.kind === v ? ' on' : ''}" data-kind="${v}" id="chip-kind-${v}">
+        ${v === 'all' ? '' : `<span class="k-dot" style="background:${KIND[v].color}"></span>`}${l}</button>`).join('')
+    document.getElementById('band-3').querySelectorAll('[data-kind]').forEach(b =>
+      b.addEventListener('click', () => {
+        st.kind = b.dataset.kind
+        S.set({ kind: st.kind === 'all' ? null : st.kind })
+        render()
+      }))
+  }
+
+  let map = null, stLayer = null, mapFailed = false, mapWrap = null
+  function ensureMap(container) {
+    if (map || mapFailed) return
+    try {
+      map = CB.map.create(container)
+      CB.map.controls(container.parentElement, map)
+      stLayer = CB.map.stationLayer(map, D.stations, {
+        onHover: id => setHover(id),
+        onClick: id => selectStation(id),
+      })
+      map.on('load', () => syncMap())
+    } catch (err) {
+      mapFailed = true
+      container.parentElement.innerHTML =
+        CB.ui.emptyState({ icon: 'warn', title: 'Map unavailable', body: 'WebGL could not be initialised in this browser. Station data remains available in the list and coverage table.' })
+    }
+  }
+  function syncMap() {
+    if (!map || !map.isStyleLoaded() || !map.getLayer('station-dots')) return
+    map.setFilter('station-dots', ['in', ['get', 'stationId'], ['literal', visible().map(s => s.id)]])
+    stLayer.setSelected(st.station)
+  }
+  function mountMapCol(colEl) {
+    if (!mapWrap) {
+      mapWrap = CB.el('<div class="map-wrap"><div id="map"></div><div class="map-note">Boundaries: geoBoundaries KEN ADM1 · dots: station registry, coloured by kind</div></div>')
+      colEl.appendChild(mapWrap)
+      ensureMap(mapWrap.querySelector('#map'))
+    } else {
+      colEl.appendChild(mapWrap)
+      if (map) { map.resize(); syncMap() }
+    }
+  }
+
+  function setHover(id) {
+    if (st.hover === id) return
+    st.hover = id
+    document.querySelectorAll('[data-station]').forEach(el =>
+      el.classList.toggle('hover', el.dataset.station === id))
+    if (stLayer && map && map.isStyleLoaded() && map.getLayer('station-dots')) stLayer.setHover(id)
+  }
+
+  function selectStation(id) {
+    st.station = id
+    S.set({ station: id })
+    renderMain()
+  }
+
+  function rowHtml(s) {
+    const k = KIND[s.kind]
+    return `<button class="county-row station-row${s.id === st.station ? ' selected' : ''}${s.status === 'offline' ? ' offline' : ''}"
+        id="row-station-${s.id}" data-station="${s.id}">
+      <span class="kind-disc" style="background:color-mix(in srgb, ${k.color} 18%, transparent);color:${k.color}">${CB.icon(k.icon)}</span>
+      <span class="who">
+        <div class="name">${CB.esc(s.name)}</div>
+        <div class="region">${k.label} · ${CB.esc(countyName(s.countyId))}</div>
+      </span>
+      <span class="s-vals">
+        <span class="fresh num">${s.freshnessPct}%</span>
+        <span class="batt num">${s.batteryPct === null ? F.DASH : s.batteryPct + '%'}</span>
+        ${signalBars(s.signalPct)}
+        ${statusIcon(s)}
+      </span>
+    </button>`
+  }
+
+  function listHtml() {
+    if (st.forced === 'loading') return `<div class="col-scroll">${CB.ui.skelRows(8, 36)}</div>`
+    const rows = visible()
+    const reporting = rows.filter(s => s.status === 'reporting')
+    const stale = rows.filter(s => s.status === 'stale')
+    const body = rows.length
+      ? rows.map(rowHtml).join('')
+      : CB.ui.emptyState({
+          icon: 'stations',
+          title: st.forced === 'empty' ? 'No stations yet' : 'No stations match',
+          body: st.forced === 'empty'
+            ? 'Stations appear here once gauges, sensors or field observers are registered for your counties.'
+            : 'Nothing matches that search with the current kind and county filters. Clear a filter to widen the list.',
+        })
+    return `<div class="list-head">
+        <span>${st.scope === 'all' ? 'All stations' : CB.esc(countyName(st.scope))} <b class="num">${rows.length}</b></span>
+        <span class="grow"></span>
+        <span class="cnt-chip good">${CB.icon('check', 'sm')}<span class="num">${reporting.length}</span> reporting</span>
+        <span class="cnt-chip warn">${CB.icon('warn', 'sm')}<span class="num">${stale.length}</span> stale</span>
+      </div>
+      <div class="col-scroll" id="station-list">${body}</div>
+      <div class="list-foot"><button class="btn btn-teal btn-full" id="btn-station-add-foot">${CB.icon('plus')}Add station</button></div>`
+  }
+
+  function deltaCallout(v) {
+    if (v === null || v === undefined) return `<span class="delta flat num">${F.DASH}</span>`
+    const dir = v > 0 ? 'up' : v < 0 ? 'down' : 'flat'
+    const icon = dir === 'up' ? CB.icon('up') : dir === 'down' ? CB.icon('down') : ''
+    return `<span class="delta ${dir} good-dir num">${icon}${F.pct(v)}</span>`
+  }
+
+  function detailHtml() {
+    if (st.forced === 'loading') {
+      return `<div class="detail-body">${CB.ui.skelBlock(28)}${CB.ui.skelBlock(70)}${CB.ui.skelBlock(64)}${CB.ui.skelBlock(240)}</div>`
+    }
+    const s = D.stations.find(x => x.id === st.station)
+    if (!s || st.forced === 'empty') {
+      return CB.ui.emptyState({ icon: 'stations', title: 'No station selected', body: 'Select a station from the list or the map to see its readings.' })
+    }
+    const k = KIND[s.kind]
+    const ser = D.stationSeries[s.id]
+    const active = st.activeOverride[s.id] ?? s.active
+    const head = `<div class="detail-head">
+        <button class="btn-ghost btn btn-icon" id="btn-station-close" title="Close">${CB.icon('x')}</button>
+        <button class="btn-ghost btn btn-icon" id="btn-station-collapse" title="Collapse">${CB.icon('collapse')}</button>
+        <span class="grow"></span>
+        <button class="btn-ghost btn btn-icon" id="btn-station-more" title="More">${CB.icon('more')}</button>
+      </div>`
+    const title = `<div class="detail-title">
+        <h2>${CB.esc(s.name)}</h2>
+        <div class="facts num">${F.coord(s.coords)}<br>${CB.esc(countyName(s.countyId))}</div>
+      </div>
+      <div class="detail-flags">
+        <span class="chip kind-chip"><span class="k-dot" style="background:${k.color}"></span>${k.label}</span>
+        ${statusIcon(s)}<span style="font-size:11px;color:var(--text-dim)">${s.status}</span>
+        <span class="active-wrap">Active
+          <button class="toggle${active ? ' on' : ''}" id="active-toggle" role="switch" aria-checked="${active}" aria-label="Active"></button>
+        </span>
+      </div>`
+    const lifeRows = `<div class="metric-rows">
+        <div class="metric-row"><span class="m-label">Installed</span>
+          <span class="m-value num">${absDate(s.installedAt)}<span class="unit">${relTime(s.installedAt)}</span></span></div>
+        <div class="metric-row"><span class="m-label">Last reading</span>
+          <span class="m-value num">${s.lastReadingAt === null ? 'No reading'
+            : absDate(s.lastReadingAt) + ' ' + s.lastReadingAt.slice(11, 16) + `<span class="unit">${relTime(s.lastReadingAt)}</span>`}</span></div>
+      </div>`
+    const health = `<div class="panel" style="padding:8px 14px">
+        ${CB.ui.progress({ label: 'Signal', pct: s.signalPct })}
+        ${CB.ui.progress({ label: 'Battery', pct: s.batteryPct })}
+      </div>`
+    if (!ser) {
+      return head + `<div class="detail-body">` + title + lifeRows + health +
+        CB.ui.emptyState({ icon: 'warn', title: 'No series', body: 'This station has no recorded series in the prototype data.' }) + `</div>`
+    }
+    const varIds = Object.keys(ser.vars)
+    const primary = ser.vars[st.variable] ? st.variable : (ser.vars[ser.latest.var] ? ser.latest.var : varIds[0])
+    const secondary = varIds.filter(v => v !== primary).slice(0, 1)
+    const periods = Object.keys(PERIOD_POINTS).map(p =>
+      `<button data-period="${p}" class="${p === st.period ? 'active' : ''}">${p}</button>`).join('')
+    const varSel = `<label class="select select-sm"><select id="var-select">${varIds.map(v =>
+      `<option value="${v}"${v === primary ? ' selected' : ''}>${CB.esc(ser.vars[v])}</option>`).join('')}</select>${CB.icon('chevD', 'sm')}</label>`
+    const legend = [primary, ...secondary].map((v, i) =>
+      `<span><span class="lg-dot" style="background:var(${i === 0 ? '--teal' : '--watch'})"></span>${CB.esc(ser.vars[v])}</span>`).join('')
+    const note = (st.period === '1Y' || st.period === '2Y')
+      ? `<div class="proto-note">series limited to 6 months of prototype data</div>` : ''
+    return head + `<div class="detail-body">` + title + lifeRows + health +
+      `<div class="panel chart-box">
+        <div class="chart-title">${varSel}<div class="period-tabs" id="period-tabs">${periods}</div></div>
+        <div id="series-chart"></div>
+        <div class="chart-legend">${legend}</div>
+        ${note}
+        <div class="delta-note">${deltaCallout(ser.latest.delta7dPct)}<span>${CB.esc(ser.vars[ser.latest.var] || ser.latest.var)} in the last 7 days</span></div>
+      </div>
+      </div>`
+  }
+
+  const KIND_COLS = KINDS.map(([id, label]) => ({ id, label }))
+  function coverageHtml() {
+    if (st.forced === 'loading') return `<div style="padding:14px;width:100%">${CB.ui.skelRows(9, 20)}</div>`
+    if (st.forced === 'empty') {
+      return `<div style="width:100%">${CB.ui.emptyState({ icon: 'stations', title: 'No stations yet', body: 'Coverage by county appears here once stations are registered.' })}</div>`
+    }
+    const rows = (st.scope === 'all' ? D.counties : D.counties.filter(c => c.id === st.scope)).map(c => {
+      const sts = visible().filter(s => s.countyId === c.id)
+      const reporting = sts.filter(s => s.status === 'reporting')
+      if (!sts.length) {
+        return `<tr><td>${CB.esc(c.name)}</td>
+          <td class="nostations" colspan="${KIND_COLS.length + 2}">No stations${st.kind !== 'all' || st.query ? ' match the current filters' : ' registered'}</td></tr>`
+      }
+      const kindCells = KIND_COLS.map(k => {
+        const n = sts.filter(s => s.kind === k.id).length
+        return `<td class="r num">${n === 0 ? F.DASH : n}</td>`
+      }).join('')
+      return `<tr>
+        <td>${CB.esc(c.name)}</td>
+        <td class="r num">${sts.length}</td>
+        ${kindCells}
+        <td>${CB.ui.metricBar({ label: '', value: reporting.length, max: sts.length, display: reporting.length + ' / ' + sts.length })}</td>
+      </tr>`
+    }).join('')
+    const head = `<th>County</th><th class="r">Stations</th>` +
+      KIND_COLS.map(k => `<th class="r">${k.label}</th>`).join('') +
+      `<th>Reporting share</th>`
+    return `<div class="table-wrap"><table class="data"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>`
+  }
+
+  function renderMain() {
+    const band4 = document.getElementById('band-4')
+    if (st.view === 'coverage') {
+      band4.innerHTML = coverageHtml()
+      return
+    }
+    band4.innerHTML = `<div class="cols-3">
+      <div class="col col-list">${listHtml()}</div>
+      <div class="col col-detail"><div class="col-scroll">${detailHtml()}</div></div>
+      <div class="col col-map" id="col-map"></div>
+    </div>`
+    band4.querySelectorAll('.station-row').forEach(row => {
+      row.addEventListener('click', () => selectStation(row.dataset.station))
+      row.addEventListener('mouseenter', () => setHover(row.dataset.station))
+      row.addEventListener('mouseleave', () => setHover(null))
+    })
+    document.getElementById('btn-station-add-foot')?.addEventListener('click', () => CB.toast('Add station is not wired in this prototype'))
+    document.getElementById('btn-station-close')?.addEventListener('click', () => {
+      st.station = null
+      S.set({ station: null })
+      renderMain()
+    })
+    document.getElementById('btn-station-collapse')?.addEventListener('click', () => CB.toast('Not wired in this prototype'))
+    document.getElementById('btn-station-more')?.addEventListener('click', () => CB.toast('Not wired in this prototype'))
+    document.getElementById('active-toggle')?.addEventListener('click', e => {
+      const s = D.stations.find(x => x.id === st.station)
+      if (!s) return
+      const next = !(st.activeOverride[s.id] ?? s.active)
+      st.activeOverride[s.id] = next
+      e.currentTarget.classList.toggle('on', next)
+      e.currentTarget.setAttribute('aria-checked', String(next))
+    })
+    document.getElementById('period-tabs')?.addEventListener('click', e => {
+      const b = e.target.closest('button[data-period]')
+      if (!b) return
+      st.period = b.dataset.period
+      S.set({ period: st.period })
+      renderMain()
+    })
+    document.getElementById('var-select')?.addEventListener('change', e => {
+      st.variable = e.target.value
+      renderMain()
+    })
+    const chartEl = document.getElementById('series-chart')
+    if (chartEl) {
+      const ser = D.stationSeries[st.station]
+      const varIds = Object.keys(ser.vars)
+      const primary = ser.vars[st.variable] ? st.variable : (ser.vars[ser.latest.var] ? ser.latest.var : varIds[0])
+      const secondary = varIds.filter(v => v !== primary).slice(0, 1)
+      const n = PERIOD_POINTS[st.period]
+      requestAnimationFrame(() => CB.charts.lineSeries(chartEl, {
+        t: ser.t.slice(-n),
+        series: [primary, ...secondary].map(v => ({ label: ser.vars[v], values: ser.series[v].slice(-n) })),
+      }))
+    }
+    const colMap = document.getElementById('col-map')
+    if (colMap) {
+      if (st.forced === 'loading') colMap.innerHTML = `<div style="padding:14px;height:100%">${CB.ui.skelBlock(420)}</div>`
+      else mountMapCol(colMap)
+    }
+  }
+
+  function render() {
+    document.getElementById('tab-activity').classList.toggle('active', st.view === 'activity')
+    document.getElementById('tab-coverage').classList.toggle('active', st.view === 'coverage')
+    renderChips()
+    renderMain()
+  }
+
+  window.addEventListener('resize', () => {
+    if (st.view === 'activity' && document.getElementById('series-chart')) renderMain()
+  })
+
+  render()
+})()
+</script>
+</body>
+</html>
