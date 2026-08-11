@@ -37,6 +37,7 @@
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -73,16 +74,69 @@
     f.countyId === countyId && f.validYear + '-' + pad2(f.validMonth) === month)
   const probDelta = countyId => D.series[countyId]?.latest.probDelta[st.month] ?? null
 
+  const signalFilter = new Set()
   const counties = () => D.counties.filter(c =>
     (st.region === 'all' || c.regionId === st.region) &&
+    (!signalFilter.size || signalFilter.has(fc(c.id, st.month)?.signal ?? 'no_coverage')) &&
     (!st.query || (c.name + ' ' + c.regionName).toLowerCase().includes(st.query)))
 
+  function openAddCounty() {
+    const regions = [...new Map(D.counties.map(c => [c.regionId, c.regionName]))]
+    const body = CB.el(`<div>
+      <div class="form-row"><label>County name</label><input id="ac-name" placeholder="e.g. Baringo"></div>
+      <div class="form-row"><label>Region</label><label class="select" style="width:100%">
+        <select id="ac-region" style="width:100%">${regions.map(([id, name]) => `<option value="${id}">${CB.esc(name)}</option>`).join('')}</select>${CB.icon('chevD', 'sm')}</label></div>
+      <div class="form-row"><label>Area km²</label><input id="ac-area" type="number" min="1" placeholder="11000"></div>
+      <div class="form-row"><label>Population</label><input id="ac-pop" type="number" min="0" placeholder="666763"></div>
+      <p class="kbd-hint" style="margin-bottom:12px">A new county starts without model coverage or boundary geometry — both arrive with the next model run.</p>
+      <button class="btn btn-teal btn-full" id="ac-save">${CB.icon('plus')}Add county</button>
+    </div>`)
+    const dlg = CB.ui.dialog({ title: 'Add county', body })
+    body.querySelector('#ac-save').addEventListener('click', () => {
+      const name = body.querySelector('#ac-name').value.trim()
+      if (!name) { CB.toast('Give the county a name'); return }
+      const id = name.toLowerCase().replace(/[^a-z]+/g, '_')
+      if (D.counties.some(c => c.id === id)) { CB.toast('That county already exists'); return }
+      const regionId = body.querySelector('#ac-region').value
+      const sibling = D.counties.find(c => c.regionId === regionId)
+      D.counties.push({
+        id, name, regionId, regionName: sibling.regionName,
+        areaKm2: Number(body.querySelector('#ac-area').value) || 0,
+        population: Number(body.querySelector('#ac-pop').value) || null,
+        centroid: sibling.centroid, bbox: sibling.bbox, hasModelCoverage: false,
+      })
+      dlg.close()
+      CB.toast('County added — the prototype keeps it in memory for this session')
+      renderMain()
+    })
+  }
+
   document.getElementById('btn-county-add').innerHTML = CB.icon('plus') + 'Add county'
-  document.getElementById('btn-county-add').addEventListener('click', () => CB.toast('Add county is not wired in this prototype'))
+  document.getElementById('btn-county-add').addEventListener('click', openAddCounty)
   document.getElementById('btn-filter').innerHTML = CB.icon('filter')
-  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-filter').addEventListener('click', e => {
+    CB.filterMenu(e.currentTarget, {
+      title: 'Signal',
+      options: [['drought', 'Drought'], ['watch', 'Watch'], ['normal', 'Normal'], ['no_coverage', 'No coverage']],
+      selected: signalFilter,
+      onChange: () => {
+        document.getElementById('btn-filter').classList.toggle('filter-on', signalFilter.size > 0)
+        renderMain()
+      },
+    })
+  })
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'download', label: 'Export CSV', action: () => {
+        const rows = [['county', 'region', 'probability', 'p10', 'p90', 'members_above', 'vci3m', 'signal', 'lead_months', 'issue'],
+          ...counties().map(tableRecord).map(r => [r.name, r.regionName, r.prob, r.p10, r.p90, r.members, r.vci, r.signal, r.lead, r.issue])]
+        CB.download(`counties-${st.issueId}-${st.month}.csv`, CB.csv(rows), 'text/csv')
+      } },
+      { icon: 'printer', label: 'Print', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search county, region, forecast">'
   document.getElementById('search-input').addEventListener('input', e => {
@@ -148,7 +202,7 @@
       : getComputedStyle(document.documentElement).getPropertyValue('--nocov').trim()
     return `<button class="county-row${c.id === st.scope ? ' selected' : ''}${c.hasModelCoverage ? '' : ' nocov'}"
         id="row-county-${c.id}" data-county="${c.id}">
-      <span class="thumb">${CB.ui.countyThumb(c.id, color)}</span>
+      <span class="thumb">${CB.ui.countyPath(c.id, 44) ? CB.ui.countyThumb(c.id, color) : CB.icon('counties')}</span>
       <span class="who">
         <div class="name">${CB.esc(c.name)}</div>
         <div class="region">${CB.esc(c.regionName)}</div>

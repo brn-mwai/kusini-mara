@@ -52,6 +52,7 @@
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -88,12 +89,47 @@
     return [c.id, c.hasModelCoverage && f && f.terciles ? f.terciles.below : null]
   }))
 
+  function exportPng() {
+    if (!map) { CB.toast('No map to export'); return }
+    const src = map.getCanvas()
+    const canvas = document.createElement('canvas')
+    canvas.width = src.width; canvas.height = src.height
+    canvas.getContext('2d').drawImage(src, 0, 0)
+    canvas.toBlob(blob => CB.download(`outlook-${st.issueId}-${st.month}.png`, blob))
+  }
+  const signalFilter = new Set()
   document.getElementById('btn-export').innerHTML = CB.icon('external') + 'Export outlook'
-  document.getElementById('btn-export').addEventListener('click', () => CB.toast('Export is not wired in this prototype'))
+  document.getElementById('btn-export').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'camera', label: 'Map as PNG', action: exportPng },
+      { icon: 'download', label: 'Ensemble JSON', action: () => CB.download(`ensemble-${st.region}.json`, JSON.stringify(D.ensemble[st.region], null, 2), 'application/json') },
+      { icon: 'download', label: 'Terciles CSV', action: () => {
+        const rows = [['county', 'month', 'below', 'near', 'above', 'prob', 'signal'],
+          ...issue().forecasts.filter(f => f.terciles).map(f =>
+            [f.countyId, f.validYear + '-' + pad2(f.validMonth), f.terciles.below, f.terciles.near, f.terciles.above, f.droughtProb, f.signal])]
+        CB.download(`terciles-${st.issueId}.csv`, CB.csv(rows), 'text/csv')
+      } },
+    ])
+  })
   document.getElementById('btn-filter').innerHTML = CB.icon('filter')
-  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-filter').addEventListener('click', e => {
+    CB.filterMenu(e.currentTarget, {
+      title: 'Signal',
+      options: [['drought', 'Drought'], ['watch', 'Watch'], ['normal', 'Normal'], ['no_coverage', 'No coverage']],
+      selected: signalFilter,
+      onChange: () => {
+        document.getElementById('btn-filter').classList.toggle('filter-on', signalFilter.size > 0)
+        renderList()
+      },
+    })
+  })
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'printer', label: 'Print', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search county, region">'
   document.getElementById('search-input').addEventListener('input', e => {
@@ -148,7 +184,9 @@
     if (!host) return
     if (st.forced === 'loading') { host.innerHTML = `<div class="col-scroll">${CB.ui.skelRows(8)}</div>`; return }
     const rows = st.forced === 'empty' ? [] :
-      D.counties.filter(c => !st.query || (c.name + ' ' + c.regionName).toLowerCase().includes(st.query))
+      D.counties.filter(c =>
+        (!signalFilter.size || signalFilter.has(fcOf(c.id, st.month)?.signal ?? 'no_coverage')) &&
+        (!st.query || (c.name + ' ' + c.regionName).toLowerCase().includes(st.query)))
     host.innerHTML = rows.length
       ? `<div class="list-head">Tercile below-normal · valid <span class="num">${F.ym(st.month)}</span></div>
          <div class="col-scroll">${rows.map(rowHtml).join('')}</div>`

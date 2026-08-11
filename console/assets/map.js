@@ -6,13 +6,23 @@ CB.map = (() => {
   function baseStyle() {
     const css = getComputedStyle(document.documentElement)
     const tok = n => css.getPropertyValue(n).trim()
+    const bm = CB_DATA.basemap
     return {
       version: 8,
       sources: {
         counties: { type: 'geojson', data: CB_DATA.geo, promoteId: 'countyId' },
+        'bm-countries': { type: 'geojson', data: bm.countries },
+        'bm-counties47': { type: 'geojson', data: bm.counties47 },
+        'bm-lakes': { type: 'geojson', data: bm.lakes },
+        'bm-rivers': { type: 'geojson', data: bm.rivers },
+        'bm-towns': { type: 'geojson', data: bm.towns },
       },
       layers: [
-        { id: 'bg', type: 'background', paint: { 'background-color': tok('--ground') } },
+        { id: 'bg', type: 'background', paint: { 'background-color': '#0A1116' } },
+        { id: 'bm-land', type: 'fill', source: 'bm-countries', paint: { 'fill-color': '#10181E' } },
+        { id: 'bm-kenya', type: 'fill', source: 'bm-counties47', paint: { 'fill-color': '#131D24' } },
+        { id: 'bm-borders', type: 'line', source: 'bm-countries', paint: { 'line-color': '#2C3B46', 'line-width': 1, 'line-dasharray': [4, 2] } },
+        { id: 'bm-counties47-line', type: 'line', source: 'bm-counties47', paint: { 'line-color': '#1D2932', 'line-width': 0.7 } },
         {
           id: 'county-fill', type: 'fill', source: 'counties',
           paint: {
@@ -28,6 +38,9 @@ CB.map = (() => {
             ],
           },
         },
+        { id: 'bm-lakes', type: 'fill', source: 'bm-lakes', paint: { 'fill-color': '#173648', 'fill-opacity': 0.94 } },
+        { id: 'bm-lakes-line', type: 'line', source: 'bm-lakes', paint: { 'line-color': '#28556B', 'line-width': 0.8 } },
+        { id: 'bm-rivers', type: 'line', source: 'bm-rivers', paint: { 'line-color': '#28556B', 'line-width': 0.9, 'line-opacity': 0.6 } },
         {
           id: 'county-line', type: 'line', source: 'counties',
           paint: {
@@ -43,8 +56,43 @@ CB.map = (() => {
             ],
           },
         },
+        { id: 'bm-towns', type: 'circle', source: 'bm-towns', paint: {
+          'circle-radius': ['case', ['==', ['get', 'tier'], 1], 3.2, ['==', ['get', 'tier'], 2], 2.5, 1.8],
+          'circle-color': '#9FB2BB',
+          'circle-opacity': 0.85,
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#0A1116',
+        } },
       ],
     }
+  }
+
+  /* town names as DOM markers: symbol layers need glyph fetches, which file://
+     blocks, so labels ride on markers instead */
+  function addTownLabels(map, container) {
+    const markers = []
+    for (const f of CB_DATA.basemap.towns.features) {
+      const el = document.createElement('div')
+      el.className = 'town-label t' + f.properties.tier
+      el.textContent = f.properties.name
+      markers.push({
+        tier: f.properties.tier,
+        marker: new maplibregl.Marker({ element: el, anchor: 'top' })
+          .setLngLat(f.geometry.coordinates).addTo(map),
+      })
+    }
+    const update = () => {
+      const z = map.getZoom()
+      const small = container.clientWidth < 430
+      for (const { tier, marker } of markers) {
+        const show = tier === 1 ? z >= 4.6 : tier === 2 ? (small ? z >= 6 : z >= 5.1) : z >= 6.2
+        marker.getElement().style.display = show && map.__townsOn !== false ? '' : 'none'
+      }
+    }
+    map.__updateTowns = update
+    map.on('zoom', update)
+    map.on('load', update)
+    update()
   }
 
   function create(container, opts = {}) {
@@ -56,9 +104,11 @@ CB.map = (() => {
       attributionControl: false,
       dragRotate: false,
       pitchWithRotate: false,
+      preserveDrawingBuffer: true,
       ...opts.mapOptions,
     })
     map.touchZoomRotate.disableRotation()
+    if (opts.towns !== false) addTownLabels(map, container)
     return map
   }
 
@@ -133,7 +183,8 @@ CB.map = (() => {
         if (document.fullscreenElement) document.exitFullscreen()
         else host.requestFullscreen?.()
       } else if (a === 'locate') map.fitBounds(KENYA_ASAL_BOUNDS, { padding: 24 })
-      else CB.toast('Not wired in this prototype')
+      else if (a === 'measure') CB.map.toggleMeasure(map, wrapEl, b)
+      else if (a === 'settings') CB.map.toggleBasemapPanel(map, wrapEl)
     })
     wrapEl.appendChild(el)
     return el
@@ -261,15 +312,16 @@ CB.map.stationLayer = (map, stations, { onHover, onClick } = {}) => {
   const KIND_COLOR = {
     rain_gauge: '#4C93A6', weather: '#D9A84E', water_point: '#63BDC9', market: '#8F7AB2', observer: '#4FA987',
   }
-  const fc = {
+  const toFc = list => ({
     type: 'FeatureCollection',
-    features: stations.map(s => ({
+    features: list.map(s => ({
       type: 'Feature',
       id: s.id,
       properties: { stationId: s.id, kind: s.kind, status: s.status, color: KIND_COLOR[s.kind] },
       geometry: { type: 'Point', coordinates: s.coords },
     })),
-  }
+  })
+  const fc = toFc(stations)
   const add = () => {
     if (map.getSource('stations')) return
     map.addSource('stations', { type: 'geojson', data: fc, promoteId: 'stationId' })
@@ -301,5 +353,105 @@ CB.map.stationLayer = (map, stations, { onHover, onClick } = {}) => {
     setHover: id => {
       for (const s of stations) map.setFeatureState({ source: 'stations', id: s.id }, { hover: s.id === id })
     },
+    refresh: list => {
+      stations = list
+      map.getSource('stations')?.setData(toFc(list))
+    },
   }
+}
+
+CB.map.toggleMeasure = (map, wrapEl, btn) => {
+  if (map.__measure) {
+    const m = map.__measure
+    map.off('click', m.onClick)
+    if (map.getLayer('measure-line')) map.removeLayer('measure-line')
+    if (map.getLayer('measure-pts')) map.removeLayer('measure-pts')
+    if (map.getSource('measure')) map.removeSource('measure')
+    m.label?.remove()
+    map.getCanvas().style.cursor = ''
+    btn?.classList.remove('active-tool')
+    map.__measure = null
+    return
+  }
+  const state = { pts: [], label: null }
+  const paint = () => {
+    const data = {
+      type: 'FeatureCollection',
+      features: [
+        ...(state.pts.length > 1 ? [{ type: 'Feature', geometry: { type: 'LineString', coordinates: state.pts } }] : []),
+        ...state.pts.map(p => ({ type: 'Feature', geometry: { type: 'Point', coordinates: p } })),
+      ],
+    }
+    if (map.getSource('measure')) map.getSource('measure').setData(data)
+    else {
+      map.addSource('measure', { type: 'geojson', data })
+      map.addLayer({ id: 'measure-line', type: 'line', source: 'measure', paint: { 'line-color': '#E6EDF0', 'line-width': 1.6, 'line-dasharray': [3, 2] } })
+      map.addLayer({ id: 'measure-pts', type: 'circle', source: 'measure', paint: { 'circle-radius': 3.5, 'circle-color': '#E6EDF0' } })
+    }
+  }
+  const km = (a, b) => {
+    const R = 6371, dLat = (b[1] - a[1]) * Math.PI / 180, dLon = (b[0] - a[0]) * Math.PI / 180
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * Math.PI / 180) * Math.cos(b[1] * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+    return 2 * R * Math.asin(Math.sqrt(s))
+  }
+  state.onClick = e => {
+    if (state.pts.length >= 2) { state.pts = []; state.label?.remove(); state.label = null }
+    state.pts.push([e.lngLat.lng, e.lngLat.lat])
+    paint()
+    if (state.pts.length === 2) {
+      const d = km(state.pts[0], state.pts[1])
+      const el = document.createElement('div')
+      el.className = 'measure-label num'
+      el.textContent = (d >= 100 ? Math.round(d) : d.toFixed(1)) + ' km'
+      state.label = new maplibregl.Marker({ element: el, anchor: 'bottom', offset: [0, -6] })
+        .setLngLat(state.pts[1]).addTo(map)
+    }
+  }
+  map.on('click', state.onClick)
+  map.getCanvas().style.cursor = 'crosshair'
+  btn?.classList.add('active-tool')
+  map.__measure = state
+  CB.toast('Measure: click two points, click again to restart')
+}
+
+CB.map.toggleBasemapPanel = (map, wrapEl) => {
+  const existing = wrapEl.querySelector('.basemap-panel')
+  if (existing) { existing.remove(); return }
+  const vis = id => !map.getLayer(id) || map.getLayoutProperty(id, 'visibility') !== 'none'
+  const row = (label, key, on) => `<label class="bm-row"><span>${label}</span>
+    <button class="toggle${on ? ' on' : ''}" data-bm="${key}" aria-label="${label}"></button></label>`
+  const el = CB.el(`<div class="basemap-panel">
+    <div class="bm-title">Basemap layers</div>
+    ${row('Towns', 'towns', map.__townsOn !== false)}
+    ${row('Lakes', 'lakes', vis('bm-lakes'))}
+    ${row('Rivers', 'rivers', vis('bm-rivers'))}
+    ${row('All 47 counties', 'counties47', vis('bm-counties47-line'))}
+    ${row('Country borders', 'borders', vis('bm-borders'))}
+    <label class="bm-row"><span>Fill opacity</span>
+      <input type="range" min="10" max="100" value="${Math.round((map.__fillOpacity ?? 0.62) * 100)}" data-bm-op></label>
+  </div>`)
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-bm]')
+    if (!b) return
+    const key = b.dataset.bm
+    const turnOn = !b.classList.contains('on')
+    b.classList.toggle('on', turnOn)
+    const setVis = ids => ids.forEach(id => map.getLayer(id) && map.setLayoutProperty(id, 'visibility', turnOn ? 'visible' : 'none'))
+    if (key === 'towns') { map.__townsOn = turnOn; setVis(['bm-towns']); map.__updateTowns?.() }
+    else if (key === 'lakes') setVis(['bm-lakes', 'bm-lakes-line'])
+    else if (key === 'rivers') setVis(['bm-rivers'])
+    else if (key === 'counties47') setVis(['bm-counties47-line', 'bm-kenya'])
+    else if (key === 'borders') setVis(['bm-borders'])
+  })
+  el.querySelector('[data-bm-op]').addEventListener('input', e => {
+    const v = Number(e.target.value) / 100
+    map.__fillOpacity = v
+    map.setPaintProperty('county-fill', 'fill-opacity', ['case',
+      ['boolean', ['feature-state', 'selected'], false], Math.min(1, v + 0.26),
+      ['boolean', ['feature-state', 'hover'], false], Math.min(1, v + 0.18),
+      ['boolean', ['feature-state', 'dimmed'], false], v * 0.5,
+      v,
+    ])
+  })
+  wrapEl.appendChild(el)
 }

@@ -39,6 +39,7 @@
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -63,10 +64,73 @@
     query: '',
   }
 
+  function openInvite() {
+    const body = CB.el(`<div>
+      <div class="form-row"><label>Name</label><input id="iv-name" placeholder="e.g. Amina Duba"></div>
+      <div class="form-row"><label>Email</label><input id="iv-email" type="email" placeholder="a.duba@county.go.ke"></div>
+      <div class="form-row"><label>Role</label><label class="select" style="width:100%">
+        <select id="iv-role" style="width:100%">${['Viewer', 'Field reporter', 'County editor', 'Tenant admin'].map(r => `<option>${r}</option>`).join('')}</select>${CB.icon('chevD', 'sm')}</label></div>
+      <button class="btn btn-teal btn-full" id="iv-save">${CB.icon('plus')}Send invite</button>
+    </div>`)
+    const dlg = CB.ui.dialog({ title: 'Invite member', body })
+    body.querySelector('#iv-save').addEventListener('click', () => {
+      const name = body.querySelector('#iv-name').value.trim()
+      const email = body.querySelector('#iv-email').value.trim()
+      if (!name || !email.includes('@')) { CB.toast('A name and a valid email are needed'); return }
+      D.members.push({ name, email, role: body.querySelector('#iv-role').value, lastActiveAt: null })
+      dlg.close()
+      st.tab = 'members'
+      renderNav(); renderBody()
+      CB.toast('Invite recorded — prototype keeps it in memory')
+    })
+  }
+  function openCreateKey() {
+    const body = CB.el(`<div>
+      <div class="form-row"><label>Label</label><input id="ck-label" placeholder="e.g. Bulletin generator"></div>
+      <div class="form-row"><label>Scopes</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">${['issues:read', 'layers:read', 'stations:write', 'alerts:read'].map(s =>
+          `<label style="display:inline-flex;align-items:center;gap:6px;font-size:12px">
+            <input type="checkbox" data-scope="${s}" ${s.endsWith(':read') ? 'checked' : ''} style="accent-color:var(--teal)"><span class="num">${s}</span></label>`).join('')}</div>
+      </div>
+      <div class="form-row"><label>Rate limit, requests per minute</label><input id="ck-rpm" class="num" type="number" value="120" min="10"></div>
+      <button class="btn btn-teal btn-full" id="ck-save">${CB.icon('plus')}Create key</button>
+    </div>`)
+    const dlg = CB.ui.dialog({ title: 'Create API key', body })
+    body.querySelector('#ck-save').addEventListener('click', () => {
+      const label = body.querySelector('#ck-label').value.trim()
+      if (!label) { CB.toast('Give the key a label'); return }
+      const secret = 'cbk_' + Math.random().toString(36).slice(2, 6) + '_' + Math.random().toString(36).slice(2, 14)
+      D.apiKeys.push({
+        id: 'key-' + Math.random().toString(36).slice(2, 7), label,
+        prefix: secret.slice(0, 12),
+        createdAt: new Date().toISOString().slice(0, 10), lastUsedAt: null,
+        rateLimitRpm: Number(body.querySelector('#ck-rpm').value) || 120,
+        scopes: [...body.querySelectorAll('[data-scope]:checked')].map(x => x.dataset.scope),
+      })
+      dlg.close()
+      const reveal = CB.el(`<div>
+        <p style="margin-bottom:10px;color:var(--text-dim);font-size:12.5px">Copy it now — this is the only time the full key is shown.</p>
+        <pre class="code" style="user-select:all">${secret}</pre>
+        <button class="btn btn-full" id="ck-copy" style="margin-top:12px">${CB.icon('copy')}Copy key</button>
+      </div>`)
+      const rd = CB.ui.dialog({ title: 'Key created', body: reveal })
+      reveal.querySelector('#ck-copy').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(secret); CB.toast('Key copied') } catch { CB.toast(secret) }
+        rd.close()
+      })
+      renderBody()
+    })
+  }
+
   document.getElementById('btn-primary').innerHTML = CB.icon('plus') + 'Invite member'
-  document.getElementById('btn-primary').addEventListener('click', () => CB.toast('Invites are not wired in this prototype'))
+  document.getElementById('btn-primary').addEventListener('click', openInvite)
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'download', label: 'Export settings JSON', action: () => CB.download('settings.json', JSON.stringify(D, null, 2), 'application/json') },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search settings">'
   document.getElementById('search-input').addEventListener('input', e => {
@@ -182,7 +246,7 @@
     host.innerHTML = { org: orgHtml, members: membersHtml, keys: keysHtml, sources: sourcesHtml, export: exportHtml }[st.tab]()
     host.querySelectorAll('[data-reveal]').forEach(b =>
       b.addEventListener('click', () => CB.toast('Keys are never shown twice — rotate instead')))
-    document.getElementById('btn-new-key')?.addEventListener('click', () => CB.toast('Key creation is not wired in this prototype'))
+    document.getElementById('btn-new-key')?.addEventListener('click', openCreateKey)
     host.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', () => {
       const sched = D.export.schedules.find(s => s.id === b.dataset.toggle)
       sched.enabled = !sched.enabled

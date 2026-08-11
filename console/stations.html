@@ -62,6 +62,7 @@ td.nostations { color: var(--text-faint); font-style: italic; }
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -97,9 +98,11 @@ td.nostations { color: var(--text-faint); font-style: italic; }
     activeOverride: {},
   }
 
+  const statusFilter = new Set()
   const visible = () => st.forced === 'empty' ? [] : D.stations.filter(s =>
     (st.scope === 'all' || s.countyId === st.scope) &&
     (st.kind === 'all' || s.kind === st.kind) &&
+    (!statusFilter.size || statusFilter.has(s.status)) &&
     (!st.query || (s.name + ' ' + KIND[s.kind].label + ' ' + countyName(s.countyId)).toLowerCase().includes(st.query)))
 
   st.station = D.stations.some(s => s.id === S.get('station')) ? S.get('station') : (visible()[0]?.id ?? null)
@@ -137,12 +140,67 @@ td.nostations { color: var(--text-faint); font-style: italic; }
       ? `<span class="st-ic warn" title="Stale">${CB.icon('warn', 'sm')}</span>`
       : `<span class="st-ic off" title="Offline">${CB.icon('x', 'sm')}</span>`
 
+  function openAddStation() {
+    const body = CB.el(`<div>
+      <div class="form-row"><label>Station name</label><input id="as-name" placeholder="e.g. Kalokol Rain Gauge 02"></div>
+      <div class="form-row"><label>Kind</label><label class="select" style="width:100%">
+        <select id="as-kind" style="width:100%">${Object.entries(KIND).map(([k, v]) => `<option value="${k}">${CB.esc(v.label)}</option>`).join('')}</select>${CB.icon('chevD', 'sm')}</label></div>
+      <div class="form-row"><label>County</label><label class="select" style="width:100%">
+        <select id="as-county" style="width:100%">${D.counties.map(c => `<option value="${c.id}">${CB.esc(c.name)}</option>`).join('')}</select>${CB.icon('chevD', 'sm')}</label></div>
+      <p class="kbd-hint" style="margin-bottom:12px">The station registers at the county centroid until its first GPS-tagged reading arrives.</p>
+      <button class="btn btn-teal btn-full" id="as-save">${CB.icon('plus')}Add station</button>
+    </div>`)
+    const dlg = CB.ui.dialog({ title: 'Add station', body })
+    body.querySelector('#as-save').addEventListener('click', () => {
+      const name = body.querySelector('#as-name').value.trim()
+      if (!name) { CB.toast('Give the station a name'); return }
+      const county = D.counties.find(c => c.id === body.querySelector('#as-county').value)
+      const kind = body.querySelector('#as-kind').value
+      const s = {
+        id: 'st-new-' + Math.random().toString(36).slice(2, 7),
+        name, kind, countyId: county.id, coords: [...county.centroid],
+        installedAt: new Date().toISOString().slice(0, 10),
+        lastReadingAt: null, active: true, signalPct: null, batteryPct: null,
+        freshnessPct: 0, status: 'offline',
+      }
+      D.stations.unshift(s)
+      st.station = s.id
+      S.set({ station: s.id })
+      dlg.close()
+      CB.toast('Station registered — offline until its first reading arrives')
+      stLayer?.refresh(D.stations)
+      renderMain()
+      syncMap()
+    })
+  }
+
   document.getElementById('btn-station-add').innerHTML = CB.icon('plus') + 'Add station'
-  document.getElementById('btn-station-add').addEventListener('click', () => CB.toast('Add station is not wired in this prototype'))
+  document.getElementById('btn-station-add').addEventListener('click', openAddStation)
   document.getElementById('btn-filter').innerHTML = CB.icon('filter')
-  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-filter').addEventListener('click', e => {
+    CB.filterMenu(e.currentTarget, {
+      title: 'Status',
+      options: [['reporting', 'Reporting'], ['stale', 'Stale'], ['offline', 'Offline']],
+      selected: statusFilter,
+      onChange: () => {
+        document.getElementById('btn-filter').classList.toggle('filter-on', statusFilter.size > 0)
+        renderMain()
+        syncMap()
+      },
+    })
+  })
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'download', label: 'Export stations CSV', action: () => {
+        const rows = [['id', 'name', 'kind', 'county', 'status', 'freshness_pct', 'signal_pct', 'battery_pct', 'last_reading'],
+          ...visible().map(s => [s.id, s.name, s.kind, countyName(s.countyId), s.status, s.freshnessPct, s.signalPct, s.batteryPct, s.lastReadingAt])]
+        CB.download('stations.csv', CB.csv(rows), 'text/csv')
+      } },
+      { icon: 'printer', label: 'Print', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search station, kind, county">'
   document.getElementById('search-input').addEventListener('input', e => {
@@ -386,14 +444,28 @@ td.nostations { color: var(--text-faint); font-style: italic; }
       row.addEventListener('mouseenter', () => setHover(row.dataset.station))
       row.addEventListener('mouseleave', () => setHover(null))
     })
-    document.getElementById('btn-station-add-foot')?.addEventListener('click', () => CB.toast('Add station is not wired in this prototype'))
+    document.getElementById('btn-station-add-foot')?.addEventListener('click', openAddStation)
     document.getElementById('btn-station-close')?.addEventListener('click', () => {
       st.station = null
       S.set({ station: null })
       renderMain()
     })
-    document.getElementById('btn-station-collapse')?.addEventListener('click', () => CB.toast('Not wired in this prototype'))
-    document.getElementById('btn-station-more')?.addEventListener('click', () => CB.toast('Not wired in this prototype'))
+    document.getElementById('btn-station-collapse')?.addEventListener('click', e => {
+      e.currentTarget.closest('.col')?.classList.toggle('detail-collapsed')
+    })
+    document.getElementById('btn-station-more')?.addEventListener('click', e => {
+      const s = D.stations.find(x => x.id === st.station)
+      CB.menu(e.currentTarget, [
+        { icon: 'copy', label: 'Copy link to station', action: CB.copyLink },
+        { icon: 'download', label: 'Export series CSV', action: () => {
+          const ser = D.stationSeries[st.station]
+          if (!ser) { CB.toast('No series recorded yet'); return }
+          const vars = Object.keys(ser.vars)
+          const rows = [['week', ...vars], ...ser.t.map((t, i) => [t, ...vars.map(v => ser.series[v][i])])]
+          CB.download(`${s ? s.id : 'station'}-series.csv`, CB.csv(rows), 'text/csv')
+        } },
+      ])
+    })
     document.getElementById('active-toggle')?.addEventListener('click', e => {
       const s = D.stations.find(x => x.id === st.station)
       if (!s) return

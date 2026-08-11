@@ -39,6 +39,7 @@
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -67,6 +68,7 @@
 
   const visible = () => (st.forced === 'empty' ? [] : D.alerts)
     .filter(a => !st.scope || a.countyId === st.scope)
+    .filter(a => !levelFilter.size || levelFilter.has(a.level))
     .filter(a => st.filter === 'all'
       || (st.filter === 'unread' && !acked[a.id])
       || (st.filter === 'acked' && acked[a.id])
@@ -81,9 +83,31 @@
     render()
   })
   document.getElementById('btn-filter').innerHTML = CB.icon('filter')
-  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  const levelFilter = new Set()
+  document.getElementById('btn-filter').addEventListener('click', e => {
+    CB.filterMenu(e.currentTarget, {
+      title: 'Level',
+      options: [['advisory', 'Advisory'], ['watch', 'Watch'], ['warning', 'Warning'], ['emergency', 'Emergency']],
+      selected: levelFilter,
+      onChange: () => {
+        document.getElementById('btn-filter').classList.toggle('filter-on', levelFilter.size > 0)
+        render()
+      },
+    })
+  })
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'download', label: 'Export alerts CSV', action: () => {
+        const rows = [['id', 'issue', 'county', 'level', 'probability', 'fired_at', 'deliveries'],
+          ...visible().map(a => [a.id, a.issueId, county(a.countyId).name, a.level, a.probability, a.firedAt,
+            a.deliveries.map(d => d.channel + ':' + d.state).join('|')])]
+        CB.download('alerts.csv', CB.csv(rows), 'text/csv')
+      } },
+      { icon: 'printer', label: 'Print', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search county, level, issue">'
   document.getElementById('search-input').addEventListener('input', e => {

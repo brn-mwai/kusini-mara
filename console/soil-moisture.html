@@ -38,6 +38,7 @@
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -96,12 +97,50 @@
     return ['Normal', 'pill-normal']
   }
 
+  const riskFilter = new Set()
+  const riskKey = v => { const r = riskOf(v); return r ? r[0].toLowerCase() : 'none' }
   document.getElementById('btn-export').innerHTML = CB.icon('external') + 'Export view'
-  document.getElementById('btn-export').addEventListener('click', () => CB.toast('Export is not wired in this prototype'))
+  document.getElementById('btn-export').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'camera', label: 'Map as PNG', action: () => {
+        if (!map) { CB.toast('No map to export'); return }
+        const src = map.getCanvas()
+        const canvas = document.createElement('canvas')
+        canvas.width = src.width; canvas.height = src.height
+        canvas.getContext('2d').drawImage(src, 0, 0)
+        canvas.toBlob(blob => CB.download(`${st.layer}-map.png`, blob))
+      } },
+      { icon: 'download', label: 'County values CSV', action: () => {
+        const rows = [['county', 'value', 'delta', 'unit', 'as_of'],
+          ...D.counties.map(c => {
+            const e2 = lv().values[c.id]
+            return [c.name, e2 ? e2.value : '', e2 ? e2.delta : '', layer().unit, lv().asOf]
+          })]
+        CB.download(`${st.layer}-values.csv`, CB.csv(rows), 'text/csv')
+      } },
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+    ])
+  })
   document.getElementById('btn-filter').innerHTML = CB.icon('filter')
-  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-filter').addEventListener('click', e => {
+    if (!RISK_IDX[st.layer]) { CB.toast('This layer has no risk classes to filter by'); return }
+    CB.filterMenu(e.currentTarget, {
+      title: 'Risk class',
+      options: [['severe', 'Severe'], ['moderate', 'Moderate'], ['normal', 'Normal']],
+      selected: riskFilter,
+      onChange: () => {
+        document.getElementById('btn-filter').classList.toggle('filter-on', riskFilter.size > 0)
+        renderList()
+      },
+    })
+  })
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'printer', label: 'Print', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + `<input id="search-input" type="search" placeholder="Search county">`
   document.getElementById('search-input').addEventListener('input', e => {
@@ -157,7 +196,9 @@
     if (!host) return
     if (st.forced === 'loading') { host.innerHTML = `<div class="col-scroll">${CB.ui.skelRows(8)}</div>`; return }
     const rows = st.forced === 'empty' ? [] :
-      D.counties.filter(c => (!st.scope || c.id === st.scope || true) && (!st.query || c.name.toLowerCase().includes(st.query)))
+      D.counties.filter(c =>
+        (!riskFilter.size || riskFilter.has(riskKey(lv().values[c.id]?.value ?? null))) &&
+        (!st.query || c.name.toLowerCase().includes(st.query)))
     const sum = lv().summary
     const head = `<button class="county-row" id="row-all" style="border-bottom-width:2px">
       <span class="thumb" style="display:flex;align-items:center;justify-content:center">${CB.icon(CFG.icon)}</span>

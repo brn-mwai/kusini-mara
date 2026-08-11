@@ -117,14 +117,14 @@ CB.ui.rampColor = (layer, v, range) => {
 
 CB.ui.viewModeToggle = ({ value, onChange, disabled = [] }) => {
   const MODES = [
-    ['single', 'Single', '<rect x="4" y="5" width="16" height="14" rx="1.5"/>'],
-    ['multi', 'Multi', '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>'],
-    ['slider', 'Slider', '<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M12 3v18"/>'],
-    ['overlay', 'Overlay', '<path d="M12 3l9 5-9 5-9-5z M21 12.5l-9 5-9-5"/>'],
+    ['single', 'Single', 'square'],
+    ['multi', 'Multi', 'grid'],
+    ['slider', 'Slider', 'split'],
+    ['overlay', 'Overlay', 'soil'],
   ]
-  const el = CB.el(`<div class="segmented" role="tablist">${MODES.map(([id, label, path]) =>
+  const el = CB.el(`<div class="segmented" role="tablist">${MODES.map(([id, label, icon]) =>
     `<button data-mode="${id}" class="${id === value ? 'active' : ''}${disabled.includes(id) ? ' disabled' : ''}" title="${label}${disabled.includes(id) ? ' (needs exactly 2 layers)' : ''}">
-      <svg class="ic sm" viewBox="0 0 24 24">${path}</svg>${label}</button>`).join('')}</div>`)
+      ${CB.icon(icon, 'sm')}${label}</button>`).join('')}</div>`)
   el.addEventListener('click', e => {
     const b = e.target.closest('button[data-mode]')
     if (!b) return
@@ -301,8 +301,10 @@ CB.ui.progress = ({ label, pct, icon }) => `<div class="progress-row">
 </div>`
 
 CB.ui.photoTile = (photo, { del } = {}) => `<figure class="photo-tile" data-photo="${photo.id}">
-  <div class="photo-ph">${CB.icon('camera')}<span class="num">${photo.width}×${photo.height}</span></div>
-  <figcaption class="num">${CB.esc(photo.id)}.jpg</figcaption>
+  ${photo.previewUrl
+    ? `<img src="${photo.previewUrl}" alt="">`
+    : `<div class="photo-ph">${CB.icon('camera')}<span class="num">${photo.width}×${photo.height}</span></div>`}
+  <figcaption class="num">${CB.esc(photo.id)}${photo.previewUrl ? '' : '.jpg'}</figcaption>
   ${del ? `<button class="photo-del" data-del="${photo.id}" title="Remove">${CB.icon('x', 'sm')}</button>` : ''}
 </figure>`
 

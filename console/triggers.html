@@ -98,6 +98,7 @@ table.matrix tbody tr.selected td:first-child::before { content: ""; position: a
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -119,6 +120,10 @@ table.matrix tbody tr.selected td:first-child::before { content: ""; position: a
   const months = [...new Set(issue.forecasts.map(f => f.validYear + '-' + pad2(f.validMonth)))]
   const covered = D.counties.filter(c => c.hasModelCoverage)
 
+  for (const extra of CB.store.get('trigger-extra', [])) {
+    if (!D.triggers.some(t => t.id === extra.id)) D.triggers.push(extra)
+  }
+
   const st = {
     tab: TABS.includes(S.get('tab')) ? S.get('tab') : 'thresholds',
     month: months.includes(S.get('month')) ? S.get('month') : (months.includes('2026-10') ? '2026-10' : months[0]),
@@ -132,8 +137,9 @@ table.matrix tbody tr.selected td:first-child::before { content: ""; position: a
 
   const copyLevels = src => Object.fromEntries(D.triggers.map(t => [t.id, { ...src[t.id] }]))
   const pristine = Object.fromEntries(D.triggers.map(t => [t.id, { ...t.levels }]))
-  let baseline = copyLevels(pristine)
-  let edited = copyLevels(pristine)
+  const stored = CB.store.get('trigger-levels', null)
+  let baseline = copyLevels(stored && Object.keys(stored).length ? { ...pristine, ...stored } : pristine)
+  let edited = copyLevels(baseline)
 
   const trigOf = id => D.triggers.find(t => t.id === id)
   const fc = (cid, month) => issue.forecasts.find(f => f.countyId === cid && f.validYear + '-' + pad2(f.validMonth) === month)
@@ -143,12 +149,66 @@ table.matrix tbody tr.selected td:first-child::before { content: ""; position: a
   const chips = t => t.channels.map(ch => `<span class="chip-ch">${CH_LABEL[ch] || ch}</span>`).join('')
   const anyDirty = () => D.triggers.some(t => LEVELS.some(l => edited[t.id][l] !== baseline[t.id][l]))
 
+  function openAddTrigger() {
+    const body = CB.el(`<div>
+      <div class="form-row"><label>Tenant name</label><input id="at-name" placeholder="e.g. Isiolo County DRM"></div>
+      <div class="create-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0 10px">
+        ${LEVELS.map(l => `<div class="form-row"><label>${LEVEL_LABEL[l]}</label>
+          <input id="at-${l}" class="num" type="number" step="0.05" min="0" max="1" value="${pristine[D.triggers[0].id][l]}"></div>`).join('')}
+      </div>
+      <div class="form-row"><label>Channels</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">${Object.entries(CH_LABEL).map(([ch, label]) =>
+          `<label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px">
+            <input type="checkbox" data-ch="${ch}" ${ch === 'email' ? 'checked' : ''} style="accent-color:var(--teal)">${label}</label>`).join('')}</div>
+      </div>
+      <button class="btn btn-teal btn-full" id="at-save">${CB.icon('plus')}Add trigger</button>
+    </div>`)
+    const dlg = CB.ui.dialog({ title: 'Add trigger', body, wide: true })
+    body.querySelector('#at-save').addEventListener('click', () => {
+      const name = body.querySelector('#at-name').value.trim()
+      if (!name) { CB.toast('Give the tenant a name'); return }
+      const id = 'trg-' + name.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '')
+      if (D.triggers.some(t => t.id === id)) { CB.toast('That tenant already exists'); return }
+      const levels = Object.fromEntries(LEVELS.map(l => [l, Number(body.querySelector('#at-' + l).value) || 0]))
+      const channels = [...body.querySelectorAll('[data-ch]:checked')].map(x => x.dataset.ch)
+      const trig = {
+        id, tenantId: 'tn-' + id.slice(4), tenantName: name, levels,
+        channels: channels.length ? channels : ['email'],
+        updatedAt: new Date().toISOString().slice(0, 16) + ':00Z', updatedBy: 'You',
+      }
+      D.triggers.push(trig)
+      pristine[id] = { ...levels }
+      baseline[id] = { ...levels }
+      edited[id] = { ...levels }
+      CB.store.set('trigger-extra', [...CB.store.get('trigger-extra', []), trig])
+      st.tenant = id
+      dlg.close()
+      CB.toast('Trigger added and saved to this browser')
+      renderMain()
+    })
+  }
+
   document.getElementById('btn-trigger-add').innerHTML = CB.icon('plus') + 'Add trigger'
-  document.getElementById('btn-trigger-add').addEventListener('click', () => CB.toast('Add trigger is not wired in this prototype'))
+  document.getElementById('btn-trigger-add').addEventListener('click', openAddTrigger)
   document.getElementById('btn-filter').innerHTML = CB.icon('filter')
-  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-filter').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'check', label: 'Show all tenants', action: () => { st.query = ''; document.getElementById('search-input').value = ''; renderMain() } },
+      { icon: 'triggers', label: 'Only my tenant (Turkana DRM)', action: () => { st.query = 'turkana'; document.getElementById('search-input').value = 'turkana'; renderMain() } },
+    ])
+  })
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'download', label: 'Export thresholds CSV', action: () => {
+        const rows = [['tenant', ...LEVELS, 'channels'],
+          ...D.triggers.map(t => [t.tenantName, ...LEVELS.map(l => edited[t.id][l]), t.channels.join('|')])]
+        CB.download('trigger-thresholds.csv', CB.csv(rows), 'text/csv')
+      } },
+      { icon: 'printer', label: 'Print', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search tenant, county, member">'
   document.getElementById('search-input').addEventListener('input', e => {
@@ -272,14 +332,18 @@ table.matrix tbody tr.selected td:first-child::before { content: ""; position: a
 
   function onSave() {
     baseline = copyLevels(edited)
+    CB.store.set('trigger-levels', baseline)
     document.querySelectorAll('.matrix-cell.dirty').forEach(i => i.classList.remove('dirty'))
     updateSaveBar()
-    CB.toast('Thresholds saved — prototype keeps them in memory')
+    CB.toast('Thresholds saved to this browser')
   }
 
   function onReset() {
     edited = copyLevels(pristine)
+    baseline = copyLevels(pristine)
+    CB.store.del('trigger-levels')
     renderMain()
+    CB.toast('Restored the issue defaults')
   }
 
   function renderThresholds(band4) {

@@ -43,6 +43,7 @@
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -67,13 +68,36 @@
     .filter(i => !st.query || i.id.includes(st.query) || i.status.includes(st.query))
     .sort((a, b) => b.id.localeCompare(a.id))
 
+  const statusFilter = new Set()
   document.getElementById('btn-new-view').innerHTML = CB.icon('plus') + 'New view'
-  document.getElementById('btn-new-view').addEventListener('click', () => CB.toast('Saved views are not part of this prototype'))
-  document.getElementById('tab-saved').addEventListener('click', e => { e.preventDefault(); CB.toast('Saved views are not part of this prototype') })
+  document.getElementById('btn-new-view').addEventListener('click', () => { location.href = 'maps.html' })
+  document.getElementById('tab-saved').addEventListener('click', e => { e.preventDefault(); CB.toast('Saved views live on the Layer Explorer tab') })
   document.getElementById('btn-filter').innerHTML = CB.icon('filter')
-  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-filter').addEventListener('click', e => {
+    CB.filterMenu(e.currentTarget, {
+      title: 'Status',
+      options: [['published', 'Published'], ['verified', 'Verified'], ['superseded', 'Superseded']],
+      selected: statusFilter,
+      onChange: sel => {
+        st.filter = sel.size === 1 ? [...sel][0] : 'all'
+        S.set({ filter: st.filter === 'all' ? null : st.filter })
+        document.getElementById('btn-filter').classList.toggle('filter-on', sel.size > 0)
+        renderChips(); renderMain()
+      },
+    })
+  })
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'download', label: 'Export issue list CSV', action: () => {
+        const rows = [['issue', 'status', 'init_date', 'source', 'members', 'reduction', 'label_version', 'brier', 'feature_coverage'],
+          ...issues().map(i => [i.id, i.status, i.initDate, i.run.source, i.run.ensembleMembers, i.run.ensembleReduction, i.run.labelVersion, i.verification ? i.verification.brier : '', i.run.featureCoverage])]
+        CB.download('issues.csv', CB.csv(rows), 'text/csv')
+      } },
+      { icon: 'printer', label: 'Print', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search issue">'
   document.getElementById('search-input').addEventListener('input', e => {
@@ -209,15 +233,55 @@
           <span>ROC AUC <b>${v.rocAuc}</b></span><span>${v.hits} hits</span><span>${v.misses} miss</span>
           <span>${v.falseAlarms} false alarm</span><span>${v.correctNegatives} correct neg</span>
         </div></div>` : `<div class="panel" style="padding:12px;margin-bottom:14px;color:var(--text-dim)">Verification pending — truth arrives with the VCI3M composite after the last valid month.</div>`}
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" data-dl="json">${CB.icon('download', 'sm')}JSON</button>
+        <button class="btn" data-dl="csv">${CB.icon('download', 'sm')}CSV</button>
+        <button class="btn" data-dl="cap">${CB.icon('download', 'sm')}CAP 1.2</button>
         <button class="btn" data-dl="netcdf">${CB.icon('external', 'sm')}NetCDF</button>
         <button class="btn" data-dl="geotiff">${CB.icon('external', 'sm')}GeoTIFF</button>
-        <button class="btn" data-dl="cap">${CB.icon('external', 'sm')}CAP</button>
       </div>
     </div>`)
     body.querySelectorAll('[data-dl]').forEach(b =>
-      b.addEventListener('click', () => CB.toast('Export endpoints ship with the real API')))
+      b.addEventListener('click', () => {
+        const kind = b.dataset.dl
+        if (kind === 'json') CB.download(`issue-${issue.id}.json`, JSON.stringify(issue, null, 2), 'application/json')
+        else if (kind === 'csv') {
+          const rows = [['county', 'valid_year', 'valid_month', 'lead_months', 'prob', 'p10', 'p90', 'members_above', 'members_total', 'signal'],
+            ...issue.forecasts.map(f => [f.countyId, f.validYear, f.validMonth, f.leadMonths, f.droughtProb, f.probP10, f.probP90, f.membersAboveThreshold, f.membersTotal, f.signal])]
+          CB.download(`issue-${issue.id}-forecasts.csv`, CB.csv(rows), 'text/csv')
+        } else if (kind === 'cap') CB.download(`issue-${issue.id}.cap.xml`, capForIssue(issue), 'application/xml')
+        else CB.toast('Binary raster formats ship with the real API')
+      }))
     CB.ui.dialog({ title: 'Issue ' + issue.id + ' — immutable record', body, wide: true })
+  }
+
+  function capForIssue(issue) {
+    const firstMonth = Math.min(...issue.forecasts.map(f => f.validMonth))
+    const infos = issue.forecasts
+      .filter(f => f.validMonth === firstMonth && (f.signal === 'watch' || f.signal === 'drought'))
+      .map(f => {
+        const c = D.counties.find(x => x.id === f.countyId)
+        return `  <info>
+    <category>Met</category>
+    <event>Drought ${f.signal === 'drought' ? 'warning' : 'watch'}, valid ${F.MONTHS[f.validMonth - 1]} ${f.validYear}</event>
+    <urgency>Expected</urgency>
+    <severity>${f.signal === 'drought' ? 'Extreme' : 'Moderate'}</severity>
+    <certainty>Likely</certainty>
+    <parameter><valueName>probability</valueName><value>${f.droughtProb}</value></parameter>
+    <parameter><valueName>issue</valueName><value>${issue.id}</value></parameter>
+    <area><areaDesc>${c.name} County, Kenya</areaDesc></area>
+  </info>`
+      }).join('\n')
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>cb-issue-${issue.id}</identifier>
+  <sender>alerts@cascadebridge.example</sender>
+  <sent>${issue.generatedAt}</sent>
+  <status>Actual</status>
+  <msgType>Alert</msgType>
+  <scope>Public</scope>
+${infos}
+</alert>`
   }
 
   function renderMain() {
@@ -240,8 +304,20 @@
     }
     b4.innerHTML = `<div class="cards">${items.map(cardHtml).join('')}
       <div class="card card-ghost">${CB.icon('plus')}<span>Next issue expected Sep 2026</span></div></div>`
-    b4.querySelectorAll('[data-issue]').forEach(card =>
-      card.addEventListener('click', () => openDetail(card.dataset.issue)))
+    b4.querySelectorAll('[data-issue]').forEach(card => {
+      const id = card.dataset.issue
+      card.addEventListener('click', () => openDetail(id))
+      const [ext, more] = card.querySelectorAll('.card-hover .btn')
+      ext?.addEventListener('click', e => { e.stopPropagation(); location.href = 'maps.html?issue=' + id })
+      more?.addEventListener('click', e => {
+        e.stopPropagation()
+        CB.menu(more, [
+          { icon: 'external', label: 'Open in Layer Explorer', action: () => { location.href = 'maps.html?issue=' + id } },
+          { icon: 'download', label: 'Download JSON', action: () => CB.download(`issue-${id}.json`, JSON.stringify(D.issues[id], null, 2), 'application/json') },
+          { icon: 'copy', label: 'Copy link', action: CB.copyLink },
+        ])
+      })
+    })
   }
 
   renderToggle()

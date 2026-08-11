@@ -131,6 +131,7 @@
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -160,7 +161,17 @@
   document.getElementById('btn-export').innerHTML = CB.icon('external') + 'Export report'
   document.getElementById('btn-export').addEventListener('click', () => window.print())
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'download', label: 'Export skill JSON', action: () => CB.download('skill-report.json', JSON.stringify(D.skill, null, 2), 'application/json') },
+      { icon: 'download', label: 'Export per-county CSV', action: () => {
+        const rows = [['county', 'roc_auc', 'brier'], ...D.skill.perCounty.map(p => [p.countyId, p.rocAuc, p.brier])]
+        CB.download('skill-per-county.csv', CB.csv(rows), 'text/csv')
+      } },
+      { icon: 'printer', label: 'Print report', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search county, issue, source">'
   document.getElementById('search-input').addEventListener('input', e => {

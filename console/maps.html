@@ -43,6 +43,7 @@
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -106,13 +107,96 @@
     : 'Observed as of ' + F.ym(D.layerValues[layerId]?.asOf?.slice(0, 7) || '2026-08')
   const rangeOf = id => st.ranges[id] || [...LAYERS[id].domain]
 
+  function saveView() {
+    const body = CB.el(`<div>
+      <div class="form-row"><label>View name</label><input id="sv-name" placeholder="e.g. Slider, Eastern, Sep"></div>
+      <p class="kbd-hint" style="margin-bottom:12px">Saves the current URL state — issue, layers, mode, month, scope — to this browser.</p>
+      <button class="btn btn-teal btn-full" id="sv-save">${CB.icon('save')}Save view</button>
+    </div>`)
+    const dlg = CB.ui.dialog({ title: 'New saved view', body })
+    body.querySelector('#sv-save').addEventListener('click', () => {
+      const name = body.querySelector('#sv-name').value.trim() || `${st.mode} · ${st.layers.join('+')}`
+      const views = CB.store.get('views', [])
+      views.unshift({ name, search: location.search, savedAt: new Date().toISOString().slice(0, 16).replace('T', ' ') })
+      CB.store.set('views', views)
+      dlg.close()
+      CB.toast('View saved to this browser')
+    })
+  }
+  function openSavedViews() {
+    const views = CB.store.get('views', [])
+    const body = CB.el(`<div>${views.length ? views.map((v, i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid color-mix(in srgb,var(--hairline) 55%,transparent)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600">${CB.esc(v.name)}</div>
+          <div class="kbd-hint num" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${CB.esc(v.search || '(default view)')} · ${CB.esc(v.savedAt)}</div>
+        </div>
+        <button class="btn" data-open="${i}">${CB.icon('external', 'sm')}Open</button>
+        <button class="btn btn-icon btn-ghost" data-del="${i}" title="Delete">${CB.icon('trash', 'sm')}</button>
+      </div>`).join('')
+      : CB.ui.emptyState({ icon: 'maps', title: 'No saved views yet', body: 'Save the current map state with the New view button and it appears here.' })}
+    </div>`)
+    const dlg = CB.ui.dialog({ title: 'Saved views', body, wide: true })
+    body.addEventListener('click', e => {
+      const open = e.target.closest('[data-open]')
+      if (open) { location.href = 'maps.html' + views[Number(open.dataset.open)].search; return }
+      const del = e.target.closest('[data-del]')
+      if (del) {
+        views.splice(Number(del.dataset.del), 1)
+        CB.store.set('views', views)
+        dlg.close(); openSavedViews()
+      }
+    })
+  }
+  function exportPng() {
+    const rects = maps.map(m => ({ m, r: m.getContainer().getBoundingClientRect() }))
+    if (!rects.length) { CB.toast('No map to export'); return }
+    const base = document.getElementById('band-4').getBoundingClientRect()
+    const canvas = document.createElement('canvas')
+    canvas.width = base.width; canvas.height = base.height
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#0A1116'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    for (const { m, r } of rects) {
+      const src = m.getCanvas()
+      if (st.mode === 'slider' && m === maps[1]) {
+        const divider = document.querySelector('.split-divider')
+        const dx = divider ? divider.getBoundingClientRect().left - base.left : canvas.width / 2
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(dx, 0, canvas.width - dx, canvas.height)
+        ctx.clip()
+        ctx.drawImage(src, r.left - base.left, r.top - base.top, r.width, r.height)
+        ctx.restore()
+      } else {
+        ctx.drawImage(src, r.left - base.left, r.top - base.top, r.width, r.height)
+      }
+    }
+    canvas.toBlob(blob => CB.download(`map-${st.issueId}-${st.month}-${st.mode}.png`, blob))
+  }
+
   document.getElementById('btn-new-view').innerHTML = CB.icon('plus') + 'New view'
-  document.getElementById('btn-new-view').addEventListener('click', () => CB.toast('Saved views are not part of this prototype'))
-  document.getElementById('tab-saved').addEventListener('click', e => { e.preventDefault(); CB.toast('Saved views are not part of this prototype') })
+  document.getElementById('btn-new-view').addEventListener('click', saveView)
+  document.getElementById('tab-saved').addEventListener('click', e => { e.preventDefault(); openSavedViews() })
   document.getElementById('btn-filter').innerHTML = CB.icon('filter')
-  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-filter').addEventListener('click', e => {
+    e.stopPropagation()
+    st.pickerOpen ? closePicker() : openPicker()
+  })
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'camera', label: 'Export map as PNG', action: exportPng },
+      { icon: 'download', label: 'Export view state JSON', action: () => {
+        CB.download('view-state.json', JSON.stringify({
+          page: 'maps', issue: st.issueId, month: st.month, layers: st.layers,
+          mode: st.mode, scope: st.scope, ranges: st.ranges,
+        }, null, 2), 'application/json')
+      } },
+      { icon: 'printer', label: 'Print', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search layer, county">'
   document.getElementById('search-input').addEventListener('input', e => {

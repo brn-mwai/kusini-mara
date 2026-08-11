@@ -71,6 +71,7 @@
 </main>
 
 <script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/echarts.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/format.js"></script>
 <script src="assets/shell.js"></script>
@@ -114,6 +115,7 @@
       .filter(r =>
         r.status === st.status &&
         (st.scope === 'all' || r.countyId === st.scope) &&
+        (!topicFilter.size || topicFilter.has(r.topic)) &&
         (!st.query || (r.title + ' ' + topicOf(r.topic).label + ' ' + (county(r.countyId)?.name || '')).toLowerCase().includes(st.query)))
       .sort((a, b) => (a.observedAt < b.observedAt ? 1 : -1))
   }
@@ -125,10 +127,31 @@
 
   document.getElementById('btn-report-add').innerHTML = CB.icon('plus') + 'Add report'
   document.getElementById('btn-report-add').addEventListener('click', openCreate)
+  const topicFilter = new Set()
   document.getElementById('btn-filter').innerHTML = CB.icon('filter')
-  document.getElementById('btn-filter').addEventListener('click', () => CB.toast('Filter is not wired in this prototype'))
+  document.getElementById('btn-filter').addEventListener('click', e => {
+    CB.filterMenu(e.currentTarget, {
+      title: 'Topic',
+      options: Object.entries(TOPICS).map(([id, t]) => [id, t.label]),
+      selected: topicFilter,
+      onChange: () => {
+        document.getElementById('btn-filter').classList.toggle('filter-on', topicFilter.size > 0)
+        renderMain()
+      },
+    })
+  })
   document.getElementById('btn-overflow').innerHTML = CB.icon('more')
-  document.getElementById('btn-overflow').addEventListener('click', () => CB.toast('Not wired in this prototype'))
+  document.getElementById('btn-overflow').addEventListener('click', e => {
+    CB.menu(e.currentTarget, [
+      { icon: 'copy', label: 'Copy link to view', action: CB.copyLink },
+      { icon: 'download', label: 'Export reports CSV', action: () => {
+        const rows = [['id', 'topic', 'county', 'ward', 'observed_at', 'status', 'verified', 'severity', 'vci3m_estimate'],
+          ...filtered().map(r => [r.id, r.topic, county(r.countyId)?.name, r.ward, r.observedAt, r.status, isVerified(r), r.severity, r.labelContribution.vci3mEstimate])]
+        CB.download('field-reports.csv', CB.csv(rows), 'text/csv')
+      } },
+      { icon: 'printer', label: 'Print', action: () => window.print() },
+    ])
+  })
   document.getElementById('search-box').innerHTML =
     CB.icon('search') + '<input id="search-input" type="search" placeholder="Search report, topic, county">'
   document.getElementById('search-input').addEventListener('input', e => {
@@ -246,7 +269,7 @@
         <button class="btn btn-icon btn-ghost" id="btn-attach" title="Attach">${CB.icon('attach')}</button>
         <textarea id="composer-input" rows="1" placeholder="Reply to this thread — Enter to send"></textarea>
         <button class="btn btn-icon btn-ghost" id="btn-mic" title="Voice note">
-          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9.5" y="4" width="5" height="10" rx="2.5"/><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3.5M9 20.5h6"/></svg>
+          ${CB.icon('mic')}
         </button>
       </div>`
   }
@@ -352,9 +375,35 @@
     band4.querySelectorAll('[data-report]').forEach(row =>
       row.addEventListener('click', () => selectReport(row.dataset.report)))
     document.getElementById('btn-report-add-foot')?.addEventListener('click', openCreate)
-    document.getElementById('btn-thread-more')?.addEventListener('click', () => CB.toast('Not wired in this prototype'))
-    document.getElementById('btn-attach')?.addEventListener('click', () => CB.toast('Attachments are not wired in this prototype'))
-    document.getElementById('btn-mic')?.addEventListener('click', () => CB.toast('Voice notes are not wired in this prototype'))
+    document.getElementById('btn-thread-more')?.addEventListener('click', e => {
+      const r = selReport()
+      CB.menu(e.currentTarget, [
+        { icon: 'copy', label: 'Copy link to report', action: CB.copyLink },
+        { icon: 'download', label: 'Export report JSON', action: () => {
+          if (r) CB.download(`${r.id}.json`, JSON.stringify(r, null, 2), 'application/json')
+        } },
+      ])
+    })
+    document.getElementById('btn-attach')?.addEventListener('click', () => {
+      const r = selReport()
+      if (!r) return
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = 'image/*'
+      input.multiple = true
+      input.addEventListener('change', () => {
+        for (const file of input.files) {
+          r.photos.push({
+            id: 'att-' + Math.random().toString(36).slice(2, 7),
+            width: 0, height: 0, previewUrl: URL.createObjectURL(file), name: file.name,
+          })
+        }
+        CB.toast(input.files.length + ' photo' + (input.files.length === 1 ? '' : 's') + ' attached to this report')
+        renderMain()
+      })
+      input.click()
+    })
+    document.getElementById('btn-mic')?.addEventListener('click', () => CB.toast('Voice notes need a microphone — out of prototype scope'))
     document.getElementById('btn-verify')?.addEventListener('click', () => {
       const next = !isVerified(r)
       local.verified[r.id] = next
@@ -439,14 +488,44 @@
     paintPhotos()
 
     body.querySelector('#draft-topics').addEventListener('click', e => {
-      if (e.target.closest('[data-newtopic]')) { CB.toast('Custom topics are not wired in this prototype'); return }
+      const nt = e.target.closest('[data-newtopic]')
+      if (nt) {
+        const name = prompt('New topic name')
+        if (!name || !name.trim()) return
+        const id = name.trim().toLowerCase().replace(/[^a-z]+/g, '_')
+        TOPICS[id] = { label: name.trim(), icon: 'reports', color: 'var(--text-dim)' }
+        draft.topic = id
+        nt.insertAdjacentHTML('beforebegin',
+          `<button class="chip topic-chip on" data-topic="${id}">${CB.icon('reports', 'sm')}${CB.esc(name.trim())}</button>`)
+        body.querySelectorAll('[data-topic]').forEach(x => x.classList.toggle('on', x.dataset.topic === id))
+        return
+      }
       const b = e.target.closest('[data-topic]')
       if (!b) return
       draft.topic = b.dataset.topic
       body.querySelectorAll('[data-topic]').forEach(x => x.classList.toggle('on', x.dataset.topic === draft.topic))
     })
-    body.querySelector('#draft-camera').addEventListener('click', () => CB.toast('Camera capture is not wired in this prototype'))
-    body.querySelector('#draft-library').addEventListener('click', () => CB.toast('Photo library is not wired in this prototype'))
+    const pickFiles = capture => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = 'image/*'
+      input.multiple = !capture
+      if (capture) input.capture = 'environment'
+      input.addEventListener('change', () => {
+        for (const file of input.files) {
+          draft.photos.push({
+            id: 'draft-' + Math.random().toString(36).slice(2, 7),
+            width: 0, height: 0,
+            previewUrl: URL.createObjectURL(file),
+            name: file.name,
+          })
+        }
+        paintPhotos()
+      })
+      input.click()
+    }
+    body.querySelector('#draft-camera').addEventListener('click', () => pickFiles(true))
+    body.querySelector('#draft-library').addEventListener('click', () => pickFiles(false))
 
     const dlg = CB.ui.dialog({ title: 'Add field report', body, wide: true })
 
