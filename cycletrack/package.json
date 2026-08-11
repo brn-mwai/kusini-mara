@@ -1,0 +1,46 @@
+{
+  "name": "cycletrack",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CycleTrack by Revlog — battery traceability platform. Five surfaces (public, producer, partner, field PWA, control tower) on one Convex backend.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "verify": "npm run typecheck && npm run lint && npm run test",
+    "codegen": "convex codegen",
+    "convex:dev": "convex dev",
+    "seed": "convex run seed:run"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^7.7.3",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/dm-mono": "^5.2.8",
+    "convex": "^1.43.0",
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
+    "mapbox-gl": "^3.15.0",
+    "next": "16.3.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/mapbox-gl": "^3.4.1",
+    "@types/node": "^22",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
