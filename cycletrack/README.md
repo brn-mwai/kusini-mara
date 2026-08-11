@@ -5,7 +5,7 @@ backend, five surfaces:
 
 | Surface | Path | Audience |
 |---|---|---|
-| Public | `/find-drop-off`, `/impact`, `/q/[token]`, `/v/[reportId]` | anyone, no sign-in |
+| Public | `/impact`, `/q/[token]`, `/v/[reportId]` | anyone, no sign-in |
 | Producer console | `/oem` | OEMs handing over end-of-life units |
 | Partner console | `/partners` | second-life buyers and recyclers |
 | Field PWA | `/field` | collection crew — installable, offline queue |
@@ -47,9 +47,32 @@ the map surfaces degrade to an explicit notice; everything else works.
   `/v/[reportId]` recomputes and compares, so verification is a real check,
   not a lookup.
 
+## Existing drop-off platform
+
+CycleTrack does not ship a public drop-off finder — that lives in the existing
+drop-off platform. `points.listPublicPoints` is the integration surface: it
+returns active, publicly-listed collection points (name, address, coordinates,
+hours, accepted and prohibited items) and nothing operational. Collection-point
+*operations* (fill, servicing, active state) stay in the control tower.
+
 ## Verify
 
 ```bash
-npm run verify   # tsc --noEmit, eslint, vitest (25 tests)
+npm run verify   # tsc --noEmit, eslint, vitest
 npm run build    # full production build
 ```
+
+## Deploying properly
+
+1. **Convex** — `npx convex deploy` against a production deployment; set
+   `CLERK_JWT_ISSUER_DOMAIN` in the Convex dashboard so identities verify.
+2. **Clerk** — four applications (producer, partner, field, control tower);
+   put each publishable key in its `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY_*` var.
+   With keys present a console requires sign-in; the demo-tenancy fallback is
+   only ever used when a console has no key configured.
+3. **Next** — deploy with `NEXT_PUBLIC_CONVEX_URL` pointing at the production
+   deployment, plus `NEXT_PUBLIC_MAPBOX_TOKEN` for the network map. Host-based
+   rewrites in `next.config.ts` map the four console subdomains onto their
+   path prefixes.
+4. Never set `FIXTURE_DEMO` outside local screenshot/demo work — it swaps the
+   Convex client for a read-only fixture shim.

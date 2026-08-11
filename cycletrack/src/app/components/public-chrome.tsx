@@ -22,12 +22,6 @@ export function PublicChrome({ children }: { children: ReactNode }) {
             </Link>
             <nav className="flex items-center gap-1 text-[13px] font-medium">
               <Link
-                href="/find-drop-off"
-                className="rounded-ctl px-3 py-2 text-ink-secondary hover:bg-raised hover:text-ink"
-              >
-                Find a drop-off
-              </Link>
-              <Link
                 href="/impact"
                 className="rounded-ctl px-3 py-2 text-ink-secondary hover:bg-raised hover:text-ink"
               >

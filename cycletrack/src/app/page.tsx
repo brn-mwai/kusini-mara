@@ -2,11 +2,6 @@ import Link from "next/link";
 
 const SURFACES = [
   {
-    href: "/find-drop-off",
-    title: "Find a drop-off point",
-    body: "Public map of collection points that take used batteries.",
-  },
-  {
     href: "/impact",
     title: "Impact",
     body: "What a kilogram of returned batteries avoids and recovers.",

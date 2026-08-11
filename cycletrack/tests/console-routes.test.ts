@@ -20,7 +20,6 @@ describe("console route registry", () => {
   it("public and record routes exist", () => {
     for (const route of [
       "page.tsx",
-      "find-drop-off/page.tsx",
       "impact/page.tsx",
       "q/[token]/page.tsx",
       "v/[reportId]/page.tsx",

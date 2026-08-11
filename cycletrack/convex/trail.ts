@@ -158,6 +158,8 @@ export const onboardBatch = mutation({
   },
   handler: async (ctx, args) => {
     const { org } = await requireProducer(ctx);
+    if (args.rows.length > 500)
+      throw new Error("Commit at most 500 units per batch");
     const now = Date.now();
     let created = 0;
     const rejected: { tag: string; reason: string }[] = [];

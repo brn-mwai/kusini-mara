@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./lib/auth";
 
+// Public integration surface: the partner drop-off platform reads active,
+// publicly-listed points from here. No CycleTrack UI consumes this directly.
 export const listPublicPoints = query({
   args: {},
   handler: async (ctx) => {
