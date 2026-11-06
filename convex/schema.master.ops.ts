@@ -152,6 +152,7 @@ export const notificationStatus = v.union(
   v.literal("bounced"),
 );
 export const notificationProvider = v.union(
+  v.literal("telegram_bot"),
   v.literal("africas_talking"),
   v.literal("twilio_whatsapp"),
   v.literal("meta_whatsapp"),
@@ -173,6 +174,7 @@ export const webhookStatus = v.union(
   v.literal("retrying"),
 );
 export const integrationProvider = v.union(
+  v.literal("telegram"),
   v.literal("africas_talking"),
   v.literal("twilio"),
   v.literal("meta_whatsapp"),
@@ -775,7 +777,9 @@ export const opsTables = {
   notifications: defineTable({
     ...portable,
     recipientUserId: v.optional(v.string()),
+    recipientAirstripContactId: v.optional(v.string()),
     recipientPhone: v.optional(v.string()),
+    recipientTelegramChatId: v.optional(v.string()), // Telegram target (Bot API)
     recipientEmail: v.optional(v.string()),
     channel: channel,
     provider: notificationProvider,
@@ -958,6 +962,17 @@ export const opsTables = {
   })
     .index("by_portable_id", ["id"])
     .index("by_user", ["userId"]),
+
+  // Idempotency ledger for at-least-once inbound webhooks (Telegram updates, Clerk
+  // events). Handler dedupes on (provider, dedupeKey) before mutating state.
+  webhookDedupe: defineTable({
+    ...portable,
+    provider: v.string(), // telegram | clerk | ...
+    dedupeKey: v.string(), // telegram update_id, clerk event id, ...
+    at: v.number(),
+  })
+    .index("by_portable_id", ["id"])
+    .index("by_provider_key", ["provider", "dedupeKey"]),
 
   messageOutbox: defineTable({
     ...portable,

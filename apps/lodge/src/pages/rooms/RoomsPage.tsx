@@ -19,6 +19,7 @@ import { MenuItemSelect } from "@ui/navigation/MenuItemSelect/MenuItemSelect";
 import { PageHeader } from "@/components/page/PageHeader";
 import { PageLoading, PageUnseeded } from "@/components/PageState";
 import { Dropdown } from "@/components/dropdown/Dropdown";
+import { PageTabs, type PageTab } from "@/components/tabs/PageTabs";
 import { RecordTable, type RecordColumn } from "@/components/table/RecordTable";
 import { SelectField, TextField, FieldShell } from "@/components/form/Field";
 
@@ -56,10 +57,19 @@ const ROOM_TYPES = [
   { id: "villa", label: "Villa" },
 ];
 
+const VIEW_TABS: PageTab[] = [
+  { id: "all", label: "All" },
+  { id: "ready", label: "Ready" },
+  { id: "needs_service", label: "Needs service" },
+  { id: "out_of_order", label: "Out of order" },
+];
+
 export const RoomsPage = () => {
   const data = useQuery(api.rooms.list);
   const setHousekeeping = useMutation(api.rooms.setHousekeeping);
   const create = useMutation(api.rooms.create);
+  const [tabId, setTabId] = useState("all");
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [isNewOpen, setIsNewOpen] = useState(false);
 
   const [name, setName] = useState("");
@@ -161,30 +171,71 @@ export const RoomsPage = () => {
     },
   ];
 
+  const visibleRows = (data.rows as RoomRow[]).filter((r) => {
+    if (tabId === "ready") return r.housekeepingStatus === "clean" || r.housekeepingStatus === "inspected";
+    if (tabId === "needs_service") return r.housekeepingStatus === "dirty" || r.housekeepingStatus === "being_serviced";
+    if (tabId === "out_of_order") return r.housekeepingStatus === "out_of_order";
+    return true;
+  });
+
+  const markSelected = async (status: "clean" | "dirty") => {
+    for (const key of selectedKeys) {
+      await setHousekeeping({ roomId: key, status });
+    }
+    setSelectedKeys([]);
+  };
+
   return (
     <div className={pageStyles.page}>
       <PageHeader
         Icon={IconBed}
         title="Rooms"
+        selectionCount={selectedKeys.length}
         actions={
-          <Button
-            type="button"
-            title="New room"
-            Icon={IconPlus}
-            variant="primary"
-            accent="blue"
-            size="small"
-            onClick={() => setIsNewOpen(true)}
-          />
+          <>
+            <Button
+              type="button"
+              title="New room"
+              Icon={IconPlus}
+              variant="primary"
+              accent="blue"
+              size="small"
+              onClick={() => setIsNewOpen(true)}
+            />
+            {selectedKeys.length > 0 && (
+              <Button
+                type="button"
+                title="Mark clean"
+                Icon={IconSparkles}
+                variant="secondary"
+                size="small"
+                onClick={() => void markSelected("clean")}
+              />
+            )}
+          </>
         }
       />
+      <PageTabs tabs={VIEW_TABS} activeId={tabId} onChange={setTabId} />
       <RecordTable
         columns={columns}
-        rows={data.rows as RoomRow[]}
+        rows={visibleRows}
         rowKey={(r) => r.id}
-        rowClassName={(r) => (r.housekeepingStatus === "dirty" ? pageStyles.dangerRow : undefined)}
         onAddNew={() => setIsNewOpen(true)}
-        emptyText="No rooms yet."
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        rowActions={[
+          {
+            label: "Mark clean",
+            Icon: IconSparkles,
+            onClick: (key) => void setHousekeeping({ roomId: key, status: "clean" }),
+          },
+          {
+            label: "Mark dirty",
+            Icon: IconBed,
+            onClick: (key) => void setHousekeeping({ roomId: key, status: "dirty" }),
+          },
+        ]}
+        emptyText="No rooms match."
       />
       {isNewOpen && (
         <Modal isOpen size="medium" ariaLabel="New room">

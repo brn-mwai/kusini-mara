@@ -19,6 +19,7 @@ import { H2Title } from "@ui/typography/H2Title/H2Title";
 
 import { PageHeader } from "@/components/page/PageHeader";
 import { PageLoading, PageUnseeded } from "@/components/PageState";
+import { PageTabs, type PageTab } from "@/components/tabs/PageTabs";
 import { RecordTable, type RecordColumn } from "@/components/table/RecordTable";
 import { SelectField, TextField } from "@/components/form/Field";
 
@@ -43,10 +44,20 @@ const ROLES = [
   { id: "housekeeping", label: "Housekeeping" },
 ];
 
+const VIEW_TABS: PageTab[] = [
+  { id: "all", label: "All" },
+  { id: "guide", label: "Guides" },
+  { id: "driver", label: "Drivers" },
+  { id: "front_desk", label: "Front desk" },
+  { id: "housekeeping", label: "Housekeeping" },
+  { id: "inactive", label: "Inactive" },
+];
+
 export const StaffPage = () => {
   const data = useQuery(api.staffm.list);
   const create = useMutation(api.staffm.create);
   const setActive = useMutation(api.staffm.setActive);
+  const [tabId, setTabId] = useState("all");
   const [isNewOpen, setIsNewOpen] = useState(false);
 
   const [firstName, setFirstName] = useState("");
@@ -157,12 +168,27 @@ export const StaffPage = () => {
           />
         }
       />
+      <PageTabs tabs={VIEW_TABS} activeId={tabId} onChange={setTabId} />
       <RecordTable
         columns={columns}
-        rows={data.rows as StaffRow[]}
+        rows={(data.rows as StaffRow[]).filter((r) => {
+          if (tabId === "inactive") return !r.active;
+          if (tabId === "all") return true;
+          return r.role === tabId && r.active;
+        })}
         rowKey={(r) => r.id}
         onAddNew={() => setIsNewOpen(true)}
-        emptyText="No staff yet."
+        rowActions={[
+          {
+            label: "Toggle active",
+            Icon: IconUser,
+            onClick: (key) => {
+              const row = (data.rows as StaffRow[]).find((r) => r.id === key);
+              if (row) void setActive({ staffId: key, active: !row.active });
+            },
+          },
+        ]}
+        emptyText="No staff match."
       />
       {isNewOpen && (
         <Modal isOpen size="medium" ariaLabel="New staff">

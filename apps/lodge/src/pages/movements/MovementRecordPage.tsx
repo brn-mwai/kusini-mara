@@ -32,7 +32,7 @@ export const MovementRecordPage = () => {
   return (
     <div className={styles.page}>
       <header className={styles.breadcrumb}>
-        <Link to="/today" className={styles.breadcrumbLink}>
+        <Link to="/movements" className={styles.breadcrumbLink}>
           {movementDef.labelPlural}
         </Link>
         <span className={styles.breadcrumbSep}>/</span>

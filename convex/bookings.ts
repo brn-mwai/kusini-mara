@@ -102,6 +102,11 @@ export const create = mutation({
           guestNames: [args.guestName.trim()],
           scheduledTime: new Date(`${date}T11:00:00`).getTime(),
           guestReportOffsetMinutes: property.defaultReportOffsetMinutes,
+          postedBySide: "lodge" as const,
+          assignedToSide: direction === "arrival" ? ("airstrip" as const) : ("lodge" as const),
+          escalationDeadline:
+            new Date(`${date}T11:00:00`).getTime() -
+            property.escalationWindowMinutes * 60_000,
           status: "posted" as const,
           correlationId,
           createdByOrgId: operator.id,

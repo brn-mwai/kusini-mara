@@ -128,7 +128,6 @@ export const PrintPage = () => {
           columns={columns}
           rows={jobs.rows as JobRow[]}
           rowKey={(r) => r.id}
-          rowClassName={(r) => (r.superseded ? undefined : undefined)}
           emptyText="Nothing printed yet."
         />
       </div>

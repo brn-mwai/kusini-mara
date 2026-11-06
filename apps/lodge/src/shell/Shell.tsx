@@ -1,8 +1,5 @@
-import { useContext, useState } from "react";
-import { useQuery } from "convex/react";
+import { useContext, useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-
-import { api } from "@convex/api";
 import {
   IconBell,
   IconBroadcast,
@@ -14,6 +11,7 @@ import {
   IconChevronDown,
   IconClipboardList,
   IconDoorEnter,
+  IconHelp,
   IconLayoutDashboard,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
@@ -24,68 +22,45 @@ import {
   IconSettings,
   IconSun,
   IconSunOff,
+  IconUserPlus,
   IconUsers,
   IconUsersGroup,
 } from "@tabler/icons-react";
 
-import { Avatar } from "@ui/data-display/Avatar/Avatar";
 import { TintedIconTile } from "@ui/data-display/TintedIconTile/TintedIconTile";
-import { SearchInput } from "@ui/input/SearchInput/SearchInput";
 import { LightIconButton } from "@ui/input/LightIconButton/LightIconButton";
 import { MenuItem } from "@ui/navigation/MenuItem/MenuItem";
 
 import { Dropdown } from "@/components/dropdown/Dropdown";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SearchPanel } from "@/components/search/SearchPanel";
 
 import { NAV_ENTRIES, NAV_GROUPS } from "@/objects/registry";
 
 import { ColorSchemeContext } from "./ColorSchemeContext";
 import styles from "./Shell.module.scss";
 
-const GlobalSearch = ({
-  value,
-  onChange,
-  onNavigate,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  onNavigate: (path: string) => void;
-}) => {
-  const results = useQuery(api.searchq.global, { q: value });
-  const pageHits = NAV_ENTRIES.filter(
-    (n) => value.length >= 2 && n.label.toLowerCase().includes(value.toLowerCase()),
-  );
-
-  return (
-    <>
-      <SearchInput value={value} onChange={onChange} placeholder="Search records…" />
-      {pageHits.map(({ path, label, Icon }) => (
-        <MenuItem key={path} text={label} LeftIcon={Icon} onClick={() => onNavigate(path)} />
-      ))}
-      {(results?.hits ?? []).map((hit) => (
-        <MenuItem
-          key={`${hit.kind}-${hit.id}`}
-          text={hit.label}
-          contextualText={`${hit.kind} · ${hit.sub.replace(/_/g, " ")}`}
-          onClick={() => onNavigate(hit.path)}
-        />
-      ))}
-      {value.length >= 2 && pageHits.length === 0 && (results?.hits ?? []).length === 0 && (
-        <div className={styles.searchEmpty}>No matches.</div>
-      )}
-    </>
-  );
-};
-
 export const Shell = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { colorScheme, setColorScheme } = useContext(ColorSchemeContext);
   const [collapsed, setCollapsed] = useState(false);
-  const [navSearch, setNavSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const toggleScheme = () =>
     setColorScheme(colorScheme === "dark" ? "light" : "dark");
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className={styles.layout}>
@@ -105,23 +80,12 @@ export const Shell = () => {
             accent="tertiary"
             onClick={() => setCollapsed(false)}
           />
-          <Dropdown
-            align="left"
-            width={260}
-            trigger={<LightIconButton Icon={IconSearch} size="small" accent="tertiary" />}
-          >
-            {(close) => (
-              <GlobalSearch
-                value={navSearch}
-                onChange={setNavSearch}
-                onNavigate={(path) => {
-                  navigate(path);
-                  setNavSearch("");
-                  close();
-                }}
-              />
-            )}
-          </Dropdown>
+          <LightIconButton
+            Icon={IconSearch}
+            size="small"
+            accent="tertiary"
+            onClick={() => setSearchOpen((v) => !v)}
+          />
           <div className={styles.railTiles}>
             {NAV_ENTRIES.map(({ path, label, Icon, color }) => {
               return (
@@ -170,6 +134,22 @@ export const Shell = () => {
                     }}
                   />
                   <MenuItem
+                    text="Invite user"
+                    LeftIcon={IconUserPlus}
+                    onClick={() => {
+                      navigate("/settings?tab=team");
+                      close();
+                    }}
+                  />
+                  <MenuItem
+                    text="Support"
+                    LeftIcon={IconHelp}
+                    onClick={() => {
+                      window.open("mailto:support@kusini.app");
+                      close();
+                    }}
+                  />
+                  <MenuItem
                     text="Settings"
                     LeftIcon={IconSettings}
                     onClick={() => {
@@ -181,25 +161,12 @@ export const Shell = () => {
               )}
             </Dropdown>
             <div className={styles.workspaceActions}>
-              <Dropdown
-                align="left"
-                width={260}
-                trigger={
-                  <LightIconButton Icon={IconSearch} size="small" accent="tertiary" />
-                }
-              >
-                {(close) => (
-                  <GlobalSearch
-                    value={navSearch}
-                    onChange={setNavSearch}
-                    onNavigate={(path) => {
-                      navigate(path);
-                      setNavSearch("");
-                      close();
-                    }}
-                  />
-                )}
-              </Dropdown>
+              <LightIconButton
+                Icon={IconSearch}
+                size="small"
+                accent="tertiary"
+                onClick={() => setSearchOpen((v) => !v)}
+              />
               <LightIconButton
                 Icon={IconLayoutSidebarLeftCollapse}
                 size="small"
@@ -229,13 +196,6 @@ export const Shell = () => {
             ))}
           </nav>
 
-          <div className={styles.drawerFooter}>
-            <MenuItem
-              text={colorScheme === "dark" ? "Light mode" : "Dark mode"}
-              LeftIcon={colorScheme === "dark" ? IconSun : IconMoon}
-              onClick={toggleScheme}
-            />
-          </div>
         </aside>
       )}
 
@@ -244,6 +204,7 @@ export const Shell = () => {
           <Outlet />
         </ErrorBoundary>
       </main>
+      {searchOpen && <SearchPanel onClose={() => setSearchOpen(false)} />}
     </div>
   );
 };

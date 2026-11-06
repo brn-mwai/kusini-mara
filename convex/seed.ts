@@ -5,6 +5,9 @@ const SEEDED_TABLES = [
   "organizations",
   "properties",
   "users",
+  "airstrips",
+  "airstripContacts",
+  "propertyAirstrips",
   "staff",
   "vehicles",
   "rooms",
@@ -24,6 +27,9 @@ const SEEDED_TABLES = [
   "broadcasts",
   "messageThreads",
   "notifications",
+  "messageOutbox",
+  "inboundMessages",
+  "webhookDedupe",
   "printJobs",
 ] as const;
 
@@ -80,7 +86,58 @@ export const run = mutation({
       createdAt: now,
       updatedAt: now,
     });
-    await ctx.db.patch(propDocId, { dutyContactUserId: userId });
+    const backupUserId = ulid();
+    await ctx.db.insert("users", {
+      id: backupUserId,
+      clerkUserId: `demo-${backupUserId}`,
+      organizationId: operatorId,
+      propertyId,
+      name: { firstName: "Samuel", lastName: "Ole Kina" },
+      phones: { primaryPhoneNumber: "+254700000002" },
+      telegramChatId: "demo-backup-chat",
+      role: "duty_contact",
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.patch(propDocId, {
+      dutyContactUserId: userId,
+      backupContactUserId: backupUserId,
+    });
+
+    const airstripId = ulid();
+    await ctx.db.insert("airstrips", {
+      id: airstripId,
+      name: "Ol Kiombo",
+      code: "HKOK",
+      region: "maasai_mara",
+      surface: "murram",
+      daylightOnly: true,
+      fuelAvailable: false,
+      condition: "open",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert("airstripContacts", {
+      id: ulid(),
+      airstripId,
+      name: { firstName: "David", lastName: "Kipeno" },
+      role: "handler",
+      phones: { primaryPhoneNumber: "+254700000020" },
+      telegramChatId: "demo-handler-chat",
+      isPrimary: true,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert("propertyAirstrips", {
+      id: ulid(),
+      propertyId,
+      airstripId,
+      isPrimary: true,
+      transferTimeMinutes: 25,
+      notifyStripOnArrival: true,
+    });
 
     const staff = [
       { first: "Joseph", last: "Sankale", role: "driver" as const, phone: "+254700000010" },
@@ -151,16 +208,25 @@ export const run = mutation({
       { guest: "Hendricks", pax: 4, dir: "arrival" as const, mode: "road_transfer" as const, carrier: null, inHours: 6, status: "acknowledged" as const },
     ];
     for (const m of movements) {
+      const scheduledTime = now + m.inHours * hour;
+      const assignedToSide = m.dir === "arrival" ? ("airstrip" as const) : ("lodge" as const);
+      const settled = m.status === "acknowledged";
       await ctx.db.insert("arrivalEvents", {
         id: ulid(),
         direction: m.dir,
         mode: m.mode,
         destinationPropertyId: propertyId,
+        airstripId: m.mode === "charter" ? airstripId : undefined,
         carrierName: m.carrier ?? undefined,
         partySize: m.pax,
         guestNames: [m.guest],
-        scheduledTime: now + m.inHours * hour,
+        scheduledTime,
         guestReportOffsetMinutes: 30,
+        postedBySide: "lodge",
+        assignedToSide,
+        proposedPickupTime: scheduledTime + 25 * 60_000,
+        confirmedPickupTime: settled ? scheduledTime + 25 * 60_000 : undefined,
+        escalationDeadline: settled ? undefined : scheduledTime - 120 * 60_000,
         status: m.status,
         correlationId: ulid(),
         createdByOrgId: operatorId,

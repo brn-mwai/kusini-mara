@@ -66,6 +66,26 @@ export const orgKind = v.union(
   v.literal("lodge_operator"),
   v.literal("airline"),
   v.literal("transfer_provider"),
+  v.literal("airstrip_operator"),
+);
+export const partySide = v.union(v.literal("lodge"), v.literal("airstrip"));
+export const airstripSurface = v.union(
+  v.literal("murram"),
+  v.literal("grass"),
+  v.literal("tarmac"),
+  v.literal("dirt"),
+);
+export const airstripCondition = v.union(
+  v.literal("open"),
+  v.literal("restricted"),
+  v.literal("closed"),
+  v.literal("waterlogged"),
+);
+export const airstripContactRole = v.union(
+  v.literal("manager"),
+  v.literal("attendant"),
+  v.literal("handler"),
+  v.literal("radio"),
 );
 export const userRole = v.union(
   v.literal("operator_admin"),
@@ -99,6 +119,7 @@ export const eventStatus = v.union(
 );
 export const ackType = v.union(v.literal("initial"), v.literal("reconfirm"));
 export const channel = v.union(
+  v.literal("telegram"),
   v.literal("sms"),
   v.literal("whatsapp"),
   v.literal("push"),
@@ -184,6 +205,7 @@ export const foundationTables = {
     emails: v.optional(emails), // EMAILS
     avatarUrl: v.optional(v.string()),
     jobTitle: v.optional(v.string()),
+    telegramChatId: v.optional(v.string()), // captured when the user starts the bot
     role: userRole,
     active: v.boolean(),
     ...stamps,
@@ -222,16 +244,47 @@ export const foundationTables = {
     lat: v.optional(v.number()),
     lng: v.optional(v.number()),
     region,
+    managedByOrgId: v.optional(v.string()), // conservancy/ground handler org (airstrip_operator)
+    surface: v.optional(airstripSurface),
+    lengthM: v.optional(v.number()),
+    elevationFt: v.optional(v.number()),
+    daylightOnly: v.optional(v.boolean()),
+    radioFrequency: v.optional(v.string()),
+    fuelAvailable: v.optional(v.boolean()),
+    condition: airstripCondition, // live operability
+    conditionNote: v.optional(v.string()),
+    conditionUpdatedAt: v.optional(v.number()),
+    notes: v.optional(v.string()),
     ...stamps,
   })
     .index("by_portable_id", ["id"])
-    .index("by_region", ["region"]),
+    .index("by_region", ["region"])
+    .index("by_condition", ["condition"])
+    .index("by_managed_by_org", ["managedByOrgId"]),
+
+  airstripContacts: defineTable({
+    ...portable,
+    airstripId: v.string(),
+    name: fullName,
+    role: airstripContactRole,
+    phones: phones,
+    telegramChatId: v.optional(v.string()), // Telegram coordination target
+    isPrimary: v.boolean(),
+    userId: v.optional(v.string()), // set if the handler is an onboarded platform user
+    active: v.boolean(),
+    ...stamps,
+  })
+    .index("by_portable_id", ["id"])
+    .index("by_airstrip", ["airstripId"]),
 
   propertyAirstrips: defineTable({
     ...portable,
     propertyId: v.string(),
     airstripId: v.string(),
     isPrimary: v.boolean(),
+    transferTimeMinutes: v.optional(v.number()), // drive time strip → lodge
+    notifyStripOnArrival: v.optional(v.boolean()),
+    liaisonNote: v.optional(v.string()),
   })
     .index("by_portable_id", ["id"])
     .index("by_property", ["propertyId"])
@@ -336,6 +389,13 @@ export const foundationTables = {
     specialNeeds: v.optional(v.string()),
     scheduledTime: v.optional(v.number()), // ETA/ETD, shown HHhMM
     guestReportOffsetMinutes: v.optional(v.number()), // "30 mins early"; defaults from property
+    // ── symmetric handshake (master-spec §6): the poster assigns the other side,
+    //    the assigned side acknowledges and sets confirmedPickupTime.
+    postedBySide: partySide,
+    assignedToSide: partySide,
+    proposedPickupTime: v.optional(v.number()), // poster's suggested vehicle-meets-guests time
+    confirmedPickupTime: v.optional(v.number()), // set on ack by the assigned side
+    escalationDeadline: v.optional(v.number()), // window before pickup; drives the escalation scan
     status: eventStatus,
     flightId: v.optional(v.string()), // nullable until scheduled; charter/self-fly only
     correlationId: v.string(), // threads every transfer_events row
@@ -353,6 +413,7 @@ export const foundationTables = {
     .index("by_property_and_date", ["destinationPropertyId", "scheduledTime"])
     .index("by_flight", ["flightId"])
     .index("by_status", ["status"])
+    .index("by_status_deadline", ["status", "escalationDeadline"]) // escalation scan
     .index("by_operator", ["operatorId"])
     .index("by_airline", ["airlineId"])
     .index("by_carrier", ["carrierName"])
@@ -361,12 +422,16 @@ export const foundationTables = {
   acknowledgments: defineTable({
     ...portable,
     arrivalEventId: v.string(),
-    userId: v.string(), // the named duty contact who acked
+    bySide: partySide, // matches the movement's assignedToSide
+    userId: v.optional(v.string()), // the named duty contact/handler who acked
+    airstripContactId: v.optional(v.string()), // handler who isn't a platform user
+    pickupTimeSet: v.optional(v.number()), // the confirmedPickupTime set at this ack
     type: ackType,
     channel: channel,
     at: v.number(),
     propertyId: v.string(),
     operatorId: v.string(),
+    airlineId: v.optional(v.string()),
   })
     .index("by_portable_id", ["id"])
     .index("by_event", ["arrivalEventId"])

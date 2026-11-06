@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import {
   IconBuildingSkyscraper,
   IconCalendarTime,
   IconCheck,
   IconDownload,
-  IconLayoutDashboard,
   IconPlaneTilt,
   IconPlus,
   IconProgressCheck,
@@ -31,11 +30,7 @@ import {
 import { ViewBar } from "@/components/view/ViewBar";
 import { exportCsv } from "@/lib/exportCsv";
 import { getObjectDef } from "@/objects/registry";
-import {
-  RecordTable,
-  type BulkAction,
-  type RecordColumn,
-} from "@/components/table/RecordTable";
+import { RecordTable, type RecordColumn } from "@/components/table/RecordTable";
 
 import { useMovementRecord } from "./useMovementRecord";
 import styles from "./MovementsPage.module.scss";
@@ -82,53 +77,34 @@ const timeOf = (ms: number | null) => {
   return `${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
 };
 
-export type MovementsVariant = "today" | "arrivals" | "departures";
-
 const todayIso = () => new Date().toISOString().slice(0, 10);
-const addDays = (iso: string, n: number) => {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-};
 
-const TABS_BY_VARIANT: Record<MovementsVariant, PageTab[]> = {
-  today: [
-    { id: "all", label: "All" },
-    { id: "needs_attention", label: "Needs attention" },
-    { id: "awaiting_flight", label: "Awaiting flight" },
-  ],
-  arrivals: [
-    { id: "today", label: "Today" },
-    { id: "tomorrow", label: "Tomorrow" },
-    { id: "next7", label: "Next 7 days" },
-    { id: "unscheduled", label: "Unscheduled" },
-  ],
-  departures: [
-    { id: "today", label: "Today" },
-    { id: "tomorrow", label: "Tomorrow" },
-    { id: "next7", label: "Next 7 days" },
-    { id: "unscheduled", label: "Unscheduled" },
-  ],
-};
+const VIEW_TABS: PageTab[] = [
+  { id: "today", label: "Today" },
+  { id: "arrivals", label: "Arrivals" },
+  { id: "departures", label: "Departures" },
+  { id: "awaiting_flight", label: "Awaiting flight" },
+  { id: "needs_attention", label: "Needs attention" },
+  { id: "all", label: "All" },
+];
 
-const TITLE_BY_VARIANT: Record<MovementsVariant, string> = {
-  today: "Today",
-  arrivals: "Arrivals",
-  departures: "Departures",
-};
-
-export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
+export const MovementsPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const board = useQuery(api.board.today);
   const ack = useMutation(api.ack.one);
   const ackMany = useMutation(api.ack.many);
   const createDraft = useMutation(api.movements.createDraft);
 
-  const [tabId, setTabId] = useState(TABS_BY_VARIANT[variant][0].id);
+  const initialView = searchParams.get("view");
+  const [tabId, setTabId] = useState(
+    VIEW_TABS.some((t) => t.id === initialView) ? (initialView as string) : "today",
+  );
   const [filterIds, setFilterIds] = useState<string[]>([]);
   const [sortId, setSortId] = useState("time");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
   const {
     selected,
@@ -138,30 +114,20 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
     updateMovement,
   } = useMovementRecord(selectedId);
 
-  const variantRows = useMemo(() => {
+  const rows = useMemo(() => {
     if (!board) return [];
     let result = [...(board.rows as BoardRow[])];
-    if (variant === "arrivals") result = result.filter((r) => r.direction === "arrival");
-    if (variant === "departures") result = result.filter((r) => r.direction === "departure");
-    return result;
-  }, [board, variant]);
 
-  const rows = useMemo(() => {
-    let result = [...variantRows];
-
-    const today = todayIso();
-    if (tabId === "needs_attention") {
-      result = result.filter((r) => r.needsAck || r.status === "escalated");
-    } else if (tabId === "awaiting_flight" || tabId === "unscheduled") {
+    if (tabId === "today") {
+      result = result.filter((r) => r.dateIso === todayIso());
+    } else if (tabId === "arrivals") {
+      result = result.filter((r) => r.direction === "arrival");
+    } else if (tabId === "departures") {
+      result = result.filter((r) => r.direction === "departure");
+    } else if (tabId === "awaiting_flight") {
       result = result.filter((r) => r.awaitingFlight);
-    } else if (tabId === "today") {
-      result = result.filter((r) => r.dateIso === today);
-    } else if (tabId === "tomorrow") {
-      result = result.filter((r) => r.dateIso === addDays(today, 1));
-    } else if (tabId === "next7") {
-      result = result.filter(
-        (r) => r.dateIso !== null && r.dateIso > today && r.dateIso <= addDays(today, 7),
-      );
+    } else if (tabId === "needs_attention") {
+      result = result.filter((r) => r.needsAck || r.status === "escalated");
     }
 
     const dirFilters = filterIds.filter((f) => f.startsWith("dir:")).map((f) => f.slice(4));
@@ -176,7 +142,7 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
       return ((a.scheduledTime ?? Infinity) - (b.scheduledTime ?? Infinity)) * dir;
     });
     return result;
-  }, [variantRows, tabId, filterIds, sortId, sortDirection]);
+  }, [board, tabId, filterIds, sortId, sortDirection]);
 
   if (board === undefined) {
     return <div className={styles.loading}>Loading board…</div>;
@@ -285,35 +251,45 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
     },
   ];
 
-  const bulkActions: BulkAction[] = [
-    {
-      label: "Acknowledge",
-      Icon: IconCheck,
-      onClick: async (keys) => {
-        const ackable = rows.filter((r) => keys.includes(r.id) && r.needsAck).map((r) => r.id);
-        if (ackable.length > 0) await ackMany({ arrivalEventIds: ackable });
-      },
-    },
-  ];
+  const ackSelected = async () => {
+    const ackable = rows
+      .filter((r) => selectedKeys.includes(r.id) && r.needsAck)
+      .map((r) => r.id);
+    if (ackable.length > 0) await ackMany({ arrivalEventIds: ackable });
+    setSelectedKeys([]);
+  };
 
   return (
     <div className={styles.withPanel}>
     <div className={styles.page}>
       <PageHeader
-        Icon={IconLayoutDashboard}
-        title={TITLE_BY_VARIANT[variant]}
+        Icon={IconPlaneTilt}
+        title="Movements"
+        selectionCount={selectedKeys.length}
         actions={
-          <Button
-            type="button"
-            title="New movement"
-            Icon={IconPlus}
-            variant="primary"
-            accent="blue"
-            size="small"
-            onClick={() =>
-              void createDraft().then(({ id }) => setSelectedId(id))
-            }
-          />
+          <>
+            <Button
+              type="button"
+              title="New movement"
+              Icon={IconPlus}
+              variant="primary"
+              accent="blue"
+              size="small"
+              onClick={() =>
+                void createDraft().then(({ id }) => setSelectedId(id))
+              }
+            />
+            {selectedKeys.length > 0 && (
+              <Button
+                type="button"
+                title="Acknowledge"
+                Icon={IconCheck}
+                variant="secondary"
+                size="small"
+                onClick={() => void ackSelected()}
+              />
+            )}
+          </>
         }
         menuItems={[
           {
@@ -336,10 +312,10 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
           },
         ]}
       />
-      <PageTabs tabs={TABS_BY_VARIANT[variant]} activeId={tabId} onChange={setTabId} />
+      <PageTabs tabs={VIEW_TABS} activeId={tabId} onChange={setTabId} />
       <ViewBar
-        views={[{ id: "default", label: TITLE_BY_VARIANT[variant] }]}
-        activeViewId="default"
+        views={[{ id: tabId, label: VIEW_TABS.find((t) => t.id === tabId)!.label }]}
+        activeViewId={tabId}
         onViewChange={() => undefined}
         count={rows.length}
         filterOptions={FILTER_OPTIONS}
@@ -361,9 +337,21 @@ export const MovementsPage = ({ variant }: { variant: MovementsVariant }) => {
         columns={columns}
         rows={rows}
         rowKey={(r) => r.id}
-        rowClassName={(r) => (r.needsAck ? styles.needsAck : undefined)}
         onAddNew={() => void createDraft().then(({ id }) => setSelectedId(id))}
-        bulkActions={bulkActions}
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        rowActions={[
+          {
+            label: "Acknowledge",
+            Icon: IconCheck,
+            onClick: (key) => void ack({ arrivalEventId: key }),
+          },
+          {
+            label: "Open record",
+            Icon: IconPlaneTilt,
+            onClick: (key) => navigate(`/movements/${key}`),
+          },
+        ]}
         emptyText="No movements match."
       />
     </div>

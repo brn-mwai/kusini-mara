@@ -2,109 +2,267 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import schema from "../convex/schema";
 import { api, internal } from "../convex/_generated/api";
+import { ulid } from "../convex/lib/ids";
 
 const modules = import.meta.glob("../convex/**/*.ts");
 
-// Demo posture: the Lodge app acts as the first property (Riverbend), the Air
-// app as the first airline (Mara Wings). Acacia is a second property to prove
-// the cross-tenant guard.
-async function world(t: ReturnType<typeof convexTest>) {
+// The demo tenant is the first seeded property (Riverbend). seed:run builds the
+// operator + property + airstrip + handler + backup + today's movements.
+async function seeded() {
+  const t = convexTest(schema, modules);
+  await t.mutation(api.seed.run, {});
+  return t;
+}
+
+async function firstPropertyId(t: ReturnType<typeof convexTest>) {
   return await t.run(async (ctx) => {
-    const operator = await ctx.db.insert("operators", { name: "Mara Collection", shortCode: "MC" });
-    const airline = await ctx.db.insert("airlines", { name: "Mara Wings", shortCode: "MW", base: "Wilson", opsPhone: "+254700000001" });
-    const riverbend = await ctx.db.insert("properties", { operatorId: operator, name: "Riverbend", region: "Mara", shortCode: "RB", timezone: "Africa/Nairobi", opsPhone: "+254700000010" });
-    const acacia = await ctx.db.insert("properties", { operatorId: operator, name: "Acacia", region: "Mara", shortCode: "AC", timezone: "Africa/Nairobi" });
-    const backup = await ctx.db.insert("users", { scope: "property", propertyId: riverbend, tokenIdentifier: "seed|backup", name: "Backup", role: "backup_contact", phoneE164: "+254701233880" });
-    await ctx.db.patch(riverbend, { backupContactId: backup });
-    await ctx.db.insert("users", { scope: "airline", airlineId: airline, tokenIdentifier: "seed|ops", name: "Ops", role: "airline_ops" });
-    await ctx.db.insert("users", { scope: "property", propertyId: riverbend, tokenIdentifier: "seed|duty", name: "Duty", role: "duty_contact" });
-    await ctx.db.insert("users", { scope: "property", propertyId: acacia, tokenIdentifier: "seed|ac", name: "AcDuty", role: "duty_contact" });
-    const strip = await ctx.db.insert("airstrips", { name: "Ol Kiombo", region: "Mara" });
-    for (const p of [riverbend, acacia]) {
-      await ctx.db.insert("airlinePropertyLinks", { airlineId: airline, propertyId: p });
-    }
-    const mkArrival = async (property: typeof riverbend, guest: string) =>
-      ctx.db.insert("arrivalEvents", {
-        mode: "charter", direction: "arrival", propertyId: property, operatorId: operator,
-        airlineId: airline, airstripId: strip, origin: "Wilson", destinationLabel: "Ol Kiombo",
-        guestName: guest, pax: 2, special: [], scheduledTime: Date.now() + 3 * 3600_000,
-        status: "requested", createdBy: "property", claimedByAirline: false, reconfirmRequested: false,
-        correlationId: "corr-" + guest,
-      });
-    const chen = await mkArrival(riverbend, "Chen");
-    const brandt = await mkArrival(acacia, "Brandt"); // OTHER property
-    const flight = await ctx.db.insert("flights", { airlineId: airline, code: "F-101", aircraftReg: "5Y-BMF", pilotName: "A. Mwangi", departTime: Date.now() + 2 * 3600_000, base: "Wilson", status: "planned" });
-    return { operator, airline, riverbend, acacia, chen, brandt, flight };
+    const p = await ctx.db.query("properties").first();
+    return p!.id;
   });
 }
 
-describe("schedule → acknowledge → escalate loop (v2, demo)", () => {
-  test("airline schedules, property sees it, property acks, airline sees the ack", async () => {
-    const t = convexTest(schema, modules);
-    const w = await world(t);
-    await t.mutation(api.flights.scheduleArrival, { arrivalId: w.chen, flightId: w.flight });
-
-    const board = await t.query(api.arrivals.board, {});
-    const seen = board.find((a: any) => a._id === w.chen);
-    expect(seen?.status).toBe("scheduled");
-    expect(seen?.flight?.code).toBe("F-101");
-
-    await t.mutation(api.arrivals.acknowledge, { arrivalId: w.chen });
-    const flights = await t.query(api.flights.board, {});
-    const f = flights.find((x: any) => x._id === w.flight);
-    expect(f?.ackCount).toBe(1);
-  });
-
-  test("escalation fires for a scheduled, unacknowledged arrival past deadline", async () => {
-    const t = convexTest(schema, modules);
-    const w = await world(t);
-    await t.mutation(api.flights.scheduleArrival, { arrivalId: w.chen, flightId: w.flight });
-    await t.run(async (ctx) => ctx.db.patch(w.chen, { escalationDeadline: Date.now() - 1000 }));
-    const res = await t.mutation(internal.escalation.sweep, {});
-    expect(res.escalated).toBe(1);
-    const a = await t.run((ctx) => ctx.db.get(w.chen));
-    expect(a?.status).toBe("escalated");
-    await t.finishInProgressScheduledFunctions();
-    const notifs = await t.query(api.notifications.list, { app: "lodge" });
-    expect(notifs.some((n: any) => n.kind === "escalation")).toBe(true);
-  });
-
-  test("acknowledged arrival is NOT escalated", async () => {
-    const t = convexTest(schema, modules);
-    const w = await world(t);
-    await t.mutation(api.flights.scheduleArrival, { arrivalId: w.chen, flightId: w.flight });
-    await t.mutation(api.arrivals.acknowledge, { arrivalId: w.chen });
-    await t.run(async (ctx) => ctx.db.patch(w.chen, { escalationDeadline: Date.now() - 1000 }));
-    const res = await t.mutation(internal.escalation.sweep, {});
-    expect(res.escalated).toBe(0);
-  });
-
-  test("multi-mode: a road arrival can be created and acknowledged", async () => {
-    const t = convexTest(schema, modules);
-    await world(t);
-    const { arrivalId } = await t.mutation(api.arrivals.create, {
-      mode: "road", direction: "arrival", origin: "Nairobi", destinationLabel: "Main gate",
-      guestName: "Okafor", pax: 4, scheduledTime: Date.now() + 2 * 3600_000,
+describe("handshake: post -> assign -> acknowledge -> set pickup time", () => {
+  test("arrival posted by lodge is assigned to the airstrip and acknowledges with a pickup time", async () => {
+    const t = await seeded();
+    const pickup = Date.now() + 3 * 3600_000;
+    const { id } = await t.mutation(api.movements.create, {
+      guestName: "Okafor",
+      partySize: 4,
+      direction: "arrival",
+      mode: "charter",
+      scheduledTime: Date.now() + 2 * 3600_000,
     });
-    const board = await t.query(api.arrivals.board, {});
-    const road = board.find((a: any) => a._id === arrivalId);
-    expect(road?.mode).toBe("road");
-    expect(road?.status).toBe("scheduled");
-    await t.mutation(api.arrivals.acknowledge, { arrivalId });
-    const after = await t.run((ctx) => ctx.db.get(arrivalId));
+
+    const posted = await t.run((ctx) =>
+      ctx.db.query("arrivalEvents").withIndex("by_portable_id", (q) => q.eq("id", id)).first(),
+    );
+    expect(posted?.postedBySide).toBe("lodge");
+    expect(posted?.assignedToSide).toBe("airstrip");
+    expect(posted?.status).toBe("posted");
+
+    await t.mutation(api.ack.one, { arrivalEventId: id, confirmedPickupTime: pickup });
+    const acked = await t.run((ctx) =>
+      ctx.db.query("arrivalEvents").withIndex("by_portable_id", (q) => q.eq("id", id)).first(),
+    );
+    expect(acked?.status).toBe("acknowledged");
+    expect(acked?.confirmedPickupTime).toBe(pickup);
+    expect(acked?.escalationDeadline).toBeUndefined();
+  });
+
+  test("departure posted by lodge is assigned to the lodge side", async () => {
+    const t = await seeded();
+    const { id } = await t.mutation(api.movements.create, {
+      guestName: "Perry",
+      partySize: 2,
+      direction: "departure",
+      mode: "road_transfer",
+      scheduledTime: Date.now() + 4 * 3600_000,
+    });
+    const posted = await t.run((ctx) =>
+      ctx.db.query("arrivalEvents").withIndex("by_portable_id", (q) => q.eq("id", id)).first(),
+    );
+    expect(posted?.assignedToSide).toBe("lodge");
+  });
+
+  test("posting an arrival enqueues a Telegram nudge to the strip handler", async () => {
+    const t = await seeded();
+    const { id } = await t.mutation(api.movements.create, {
+      guestName: "Givens",
+      partySize: 7,
+      direction: "arrival",
+      mode: "charter",
+      scheduledTime: Date.now() + 2 * 3600_000,
+    });
+    const outbox = await t.run((ctx) => ctx.db.query("messageOutbox").collect());
+    expect(outbox.some((o) => o.status === "pending")).toBe(true);
+    const notif = await t.run((ctx) =>
+      ctx.db.query("notifications").withIndex("by_event", (q) => q.eq("arrivalEventId", id)).first(),
+    );
+    expect(notif?.templateKey).toBe("arrival_nudge");
+    expect(notif?.channel).toBe("telegram");
+  });
+});
+
+describe("escalation", () => {
+  test("fires for an unacknowledged movement past its window and enqueues Telegram", async () => {
+    const t = await seeded();
+    const { id } = await t.mutation(api.movements.create, {
+      guestName: "Hargreaves",
+      partySize: 2,
+      direction: "arrival",
+      mode: "charter",
+      scheduledTime: Date.now() + 2 * 3600_000,
+    });
+    await t.run((ctx) =>
+      ctx.db
+        .query("arrivalEvents")
+        .withIndex("by_portable_id", (q) => q.eq("id", id))
+        .first()
+        .then((e) => ctx.db.patch(e!._id, { escalationDeadline: Date.now() - 1000 })),
+    );
+
+    const res = await t.mutation(internal.escalation.sweep, {});
+    expect(res.escalated).toBeGreaterThanOrEqual(1);
+
+    const after = await t.run((ctx) =>
+      ctx.db.query("arrivalEvents").withIndex("by_portable_id", (q) => q.eq("id", id)).first(),
+    );
+    expect(after?.status).toBe("escalated");
+
+    const notifs = await t.run((ctx) =>
+      ctx.db.query("notifications").withIndex("by_event", (q) => q.eq("arrivalEventId", id)).collect(),
+    );
+    expect(notifs.some((n) => n.templateKey === "escalation")).toBe(true);
+  });
+
+  test("an acknowledged movement is never escalated", async () => {
+    const t = await seeded();
+    const { id } = await t.mutation(api.movements.create, {
+      guestName: "Lee",
+      partySize: 2,
+      direction: "arrival",
+      mode: "charter",
+      scheduledTime: Date.now() + 2 * 3600_000,
+    });
+    await t.mutation(api.ack.one, { arrivalEventId: id, confirmedPickupTime: Date.now() + 3 * 3600_000 });
+    await t.run((ctx) =>
+      ctx.db
+        .query("arrivalEvents")
+        .withIndex("by_portable_id", (q) => q.eq("id", id))
+        .first()
+        .then((e) => ctx.db.patch(e!._id, { escalationDeadline: Date.now() - 1000 })),
+    );
+    await t.mutation(internal.escalation.sweep, {});
+    const after = await t.run((ctx) =>
+      ctx.db.query("arrivalEvents").withIndex("by_portable_id", (q) => q.eq("id", id)).first(),
+    );
     expect(after?.status).toBe("acknowledged");
+    const escalations = await t.run((ctx) =>
+      ctx.db.query("transferEvents").withIndex("by_event", (q) => q.eq("arrivalEventId", id)).collect(),
+    );
+    expect(escalations.some((e) => e.action === "escalated")).toBe(false);
   });
 });
 
 describe("tenant isolation", () => {
-  test("the property app cannot acknowledge another property's arrival", async () => {
-    const t = convexTest(schema, modules);
-    const w = await world(t);
-    await t.mutation(api.flights.scheduleArrival, { arrivalId: w.brandt, flightId: w.flight });
-    await expect(
-      t.mutation(api.arrivals.acknowledge, { arrivalId: w.brandt }),
-    ).rejects.toThrow();
-    const board = await t.query(api.arrivals.board, {});
-    expect(board.find((a: any) => a._id === w.brandt)).toBeUndefined();
+  test("the lodge cannot acknowledge another property's movement and never sees it", async () => {
+    const t = await seeded();
+    const otherId = await t.run(async (ctx) => {
+      const now = Date.now();
+      const operatorId = ulid();
+      await ctx.db.insert("organizations", {
+        id: operatorId, kind: "lodge_operator", name: "Other Collection", createdAt: now, updatedAt: now,
+      });
+      const otherPropertyId = ulid();
+      await ctx.db.insert("properties", {
+        id: otherPropertyId, operatorId, name: "Acacia", region: "maasai_mara",
+        escalationWindowMinutes: 120, defaultReportOffsetMinutes: 30,
+        carryoverPolicy: "hard_reset", timezone: "Africa/Nairobi", createdAt: now, updatedAt: now,
+      });
+      const eventId = ulid();
+      await ctx.db.insert("arrivalEvents", {
+        id: eventId, direction: "arrival", mode: "charter", destinationPropertyId: otherPropertyId,
+        partySize: 2, guestNames: ["Brandt"], scheduledTime: now + 2 * 3600_000,
+        postedBySide: "lodge", assignedToSide: "airstrip", status: "posted",
+        correlationId: ulid(), createdByOrgId: operatorId, operatorId, reprotectCount: 0,
+        createdAt: now, updatedAt: now,
+      });
+      return eventId;
+    });
+
+    await expect(t.mutation(api.ack.one, { arrivalEventId: otherId })).rejects.toThrow();
+    const board = await t.query(api.board.today, {});
+    expect(board?.rows.find((r) => r.id === otherId)).toBeUndefined();
+  });
+});
+
+describe("delivery guarantee: outbox retry then dead-letter", () => {
+  test("a repeatedly failing send retries then dead-letters, never silently lost", async () => {
+    const t = await seeded();
+    const { notifId, outboxId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const nId = ulid();
+      await ctx.db.insert("notifications", {
+        id: nId, channel: "telegram", provider: "telegram_bot", templateKey: "escalation",
+        payload: { body: "x" }, status: "queued", retryCount: 0,
+        recipientTelegramChatId: "chat", queuedAt: now,
+      });
+      const oId = ulid();
+      await ctx.db.insert("messageOutbox", {
+        id: oId, kind: "notification", refId: nId, payload: { chatId: "chat", body: "x" },
+        status: "pending", attempts: 0, nextAttemptAt: now,
+      });
+      return { notifId: nId, outboxId: oId };
+    });
+
+    for (let i = 0; i < 5; i++) {
+      await t.mutation(internal.outbox.claimDue, { limit: 10 });
+      await t.mutation(internal.outbox.markFailed, {
+        outboxId, notificationId: notifId, error: "telegram 500",
+      });
+      // re-open nextAttemptAt for the next claim (skip the backoff wait in the test)
+      await t.run((ctx) =>
+        ctx.db
+          .query("messageOutbox")
+          .withIndex("by_portable_id", (q) => q.eq("id", outboxId))
+          .first()
+          .then((o) => o && o.status === "pending" && ctx.db.patch(o._id, { nextAttemptAt: Date.now() })),
+      );
+    }
+
+    const outbox = await t.run((ctx) =>
+      ctx.db.query("messageOutbox").withIndex("by_portable_id", (q) => q.eq("id", outboxId)).first(),
+    );
+    const notif = await t.run((ctx) =>
+      ctx.db.query("notifications").withIndex("by_portable_id", (q) => q.eq("id", notifId)).first(),
+    );
+    expect(outbox?.status).toBe("dead_letter");
+    expect(notif?.status).toBe("failed");
+  });
+});
+
+describe("inbound Telegram webhook is idempotent", () => {
+  test("the same update_id processes once; redelivery is a no-op duplicate", async () => {
+    const t = await seeded();
+    const first = await t.mutation(internal.inbound.recordTelegramUpdate, {
+      updateId: "555", chatId: "chat", text: "Confirmed",
+    });
+    const second = await t.mutation(internal.inbound.recordTelegramUpdate, {
+      updateId: "555", chatId: "chat", text: "Confirmed",
+    });
+    expect(first.duplicate).toBe(false);
+    expect(second.duplicate).toBe(true);
+    const inbound = await t.run((ctx) => ctx.db.query("inboundMessages").collect());
+    expect(inbound.length).toBe(1);
+  });
+});
+
+describe("re-protection voids the ack and re-notifies", () => {
+  test("reprotect flips to reconfirm_required, bumps count, writes audit, re-enqueues", async () => {
+    const t = await seeded();
+    const { id } = await t.mutation(api.movements.create, {
+      guestName: "Mombaerts",
+      partySize: 3,
+      direction: "arrival",
+      mode: "charter",
+      scheduledTime: Date.now() + 2 * 3600_000,
+    });
+    await t.mutation(api.ack.one, { arrivalEventId: id, confirmedPickupTime: Date.now() + 3 * 3600_000 });
+
+    await t.mutation(api.movements.reprotect, {
+      id, carrierName: "Safarilink", scheduledTime: Date.now() + 4 * 3600_000, reason: "weather",
+    });
+
+    const after = await t.run((ctx) =>
+      ctx.db.query("arrivalEvents").withIndex("by_portable_id", (q) => q.eq("id", id)).first(),
+    );
+    expect(after?.status).toBe("reconfirm_required");
+    expect(after?.confirmedPickupTime).toBeUndefined();
+    expect(after?.reprotectCount).toBe(1);
+
+    const audit = await t.run((ctx) =>
+      ctx.db.query("transferEvents").withIndex("by_event", (q) => q.eq("arrivalEventId", id)).collect(),
+    );
+    expect(audit.some((e) => e.action === "reprotected")).toBe(true);
   });
 });

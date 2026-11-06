@@ -3,18 +3,17 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--t-spacing-3);
-  padding: var(--t-spacing-3);
+  gap: var(--t-spacing-8);
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--t-spacing-6) var(--t-spacing-3) var(--t-spacing-20);
 }
 
 .card {
   display: flex;
   flex-direction: column;
   gap: var(--t-spacing-3);
-  padding: var(--t-spacing-3);
-  background: var(--t-background-secondary);
-  border: 1px solid var(--t-border-color-medium);
-  border-radius: var(--t-border-radius-md);
 }
 
 .grid {

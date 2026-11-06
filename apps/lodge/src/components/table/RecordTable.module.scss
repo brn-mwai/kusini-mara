@@ -1,12 +1,18 @@
 .wrap {
   flex: 1;
   overflow: auto;
+
+  &[data-scrolled] thead th:nth-child(2)::after,
+  &[data-scrolled] tbody td:nth-child(2)::after {
+    visibility: visible;
+  }
 }
 
 .table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--t-font-size-sm);
+  width: calc(100% - 1px);
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--t-font-size-md);
 
   th,
   td {
@@ -20,15 +26,52 @@
   }
 
   th {
-    font-weight: var(--t-font-weight-regular);
+    font-weight: var(--t-font-weight-medium);
     color: var(--t-font-color-tertiary);
-    border-top: 1px solid var(--t-border-color-light);
     user-select: none;
   }
 
-  tbody tr:hover {
-    background: var(--t-background-transparent-light);
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--t-background-primary);
   }
+
+  th:nth-child(2),
+  td:nth-child(2) {
+    position: sticky;
+    left: 40px;
+    z-index: 8;
+    background: var(--t-background-primary);
+  }
+
+  thead th:nth-child(2)::after,
+  tbody td:nth-child(2)::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 4px;
+    height: calc(100% + 2px);
+    box-shadow: 2px 0 4px 0 var(--t-box-shadow-color), 0 0 4px 0 var(--t-box-shadow-color);
+    clip-path: inset(0 -4px 0 0);
+    visibility: hidden;
+  }
+
+  thead th:first-child,
+  thead th:nth-child(2) {
+    z-index: 14;
+  }
+
+  tbody tr:hover td {
+    background: var(--t-background-secondary);
+  }
+}
+
+.selectedRow td,
+.selectedRow:hover td {
+  background: var(--t-accent-quaternary) !important;
 }
 
 .headerContent {
@@ -38,10 +81,33 @@
 }
 
 .checkboxCell {
-  width: 32px;
-  min-width: 32px;
+  position: sticky;
+  left: 0;
+  z-index: 8;
+  width: 40px;
+  min-width: 40px;
+  padding: 0 0 0 12px;
   text-align: center;
+  background: var(--t-background-primary);
   border-right: none !important;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: 12px;
+    height: 1px;
+    background: var(--t-background-primary);
+  }
+}
+
+tfoot .checkboxCell {
+  border-bottom-color: transparent !important;
+
+  &::after {
+    content: none;
+  }
 }
 
 .fillerCell {
@@ -82,7 +148,7 @@
 }
 
 .addColumnCell {
-  width: 40px;
+  width: 32px;
   border-right: none !important;
 }
 
@@ -117,13 +183,22 @@
 .calculateHint {
   display: none;
   align-items: center;
-  gap: 2px;
-  color: var(--t-font-color-light);
-  font-size: var(--t-font-size-xs);
+  gap: var(--t-spacing-1);
+  color: var(--t-font-color-tertiary);
+  font-size: var(--t-font-size-md);
 }
 
-tfoot tr:hover .calculateHint {
+.calculateHintVisible {
   display: inline-flex;
+}
+
+tfoot td:hover .calculateHint {
+  display: inline-flex;
+}
+
+tfoot td {
+  border-bottom: none;
+  border-right: none !important;
 }
 
 .empty {
@@ -132,26 +207,21 @@ tfoot tr:hover .calculateHint {
   padding: var(--t-spacing-8) 0 !important;
 }
 
-.wrap {
-  position: relative;
-}
-
-.actionBar {
-  position: sticky;
-  bottom: var(--t-spacing-3);
+.contextMenu {
+  position: fixed;
+  z-index: var(--t-last-layer-z-index, 100);
   display: flex;
-  align-items: center;
-  gap: var(--t-spacing-2);
-  width: fit-content;
-  margin: 0 auto;
-  padding: var(--t-spacing-2) var(--t-spacing-3);
-  background: var(--t-background-primary);
+  flex-direction: column;
+  gap: 1px;
+  min-width: 200px;
+  padding: var(--t-spacing-1);
+  background: var(--t-background-transparent-primary);
+  backdrop-filter: var(--t-blur-medium);
   border: 1px solid var(--t-border-color-medium);
   border-radius: var(--t-border-radius-md);
   box-shadow: var(--t-box-shadow-strong);
 }
 
-.actionBarCount {
-  font-size: var(--t-font-size-sm);
-  color: var(--t-font-color-secondary);
+.wrap {
+  position: relative;
 }

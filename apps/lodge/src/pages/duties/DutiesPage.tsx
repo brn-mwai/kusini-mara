@@ -17,6 +17,7 @@ import { api } from "@convex/api";
 import { Avatar } from "@ui/data-display/Avatar/Avatar";
 import { Banner } from "@ui/feedback/Banner/Banner";
 import { Tag } from "@ui/data-display/Tag/Tag";
+import { Button } from "@ui/input/Button/Button";
 import { LightIconButton } from "@ui/input/LightIconButton/LightIconButton";
 import { MenuItemSelectAvatar } from "@ui/navigation/MenuItemSelectAvatar/MenuItemSelectAvatar";
 import { MenuItemSelect } from "@ui/navigation/MenuItemSelect/MenuItemSelect";
@@ -25,6 +26,7 @@ import { PageHeader } from "@/components/page/PageHeader";
 import { getObjectDef } from "@/objects/registry";
 import { exportCsv } from "@/lib/exportCsv";
 import { Dropdown } from "@/components/dropdown/Dropdown";
+import { PageTabs, type PageTab } from "@/components/tabs/PageTabs";
 import { RecordTable, type RecordColumn } from "@/components/table/RecordTable";
 
 import styles from "./DutiesPage.module.scss";
@@ -60,10 +62,20 @@ const timeOf = (ms: number | null) => {
   return `${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
 };
 
+const VIEW_TABS: PageTab[] = [
+  { id: "today", label: "Today" },
+  { id: "unassigned", label: "Unassigned" },
+  { id: "pickups", label: "Pickups" },
+  { id: "dispatches", label: "Dispatches" },
+  { id: "completed", label: "Completed" },
+];
+
 export const DutiesPage = () => {
   const board = useQuery(api.duties.board);
   const assign = useMutation(api.duties.assign);
   const clear = useMutation(api.duties.clear);
+  const [tabId, setTabId] = useState("today");
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   if (board === undefined) {
@@ -241,11 +253,39 @@ export const DutiesPage = () => {
     },
   ] as RecordColumn<DutyRow>[];
 
+  const visibleRows = (rows as DutyRow[]).filter((r) => {
+    if (tabId === "unassigned") return r.dutyStatus === "unassigned";
+    if (tabId === "pickups") return r.direction === "arrival";
+    if (tabId === "dispatches") return r.direction === "departure";
+    if (tabId === "completed") return r.dutyStatus === "completed";
+    return true;
+  });
+
+  const clearSelected = async () => {
+    for (const key of selectedKeys) {
+      await clear({ arrivalEventId: key });
+    }
+    setSelectedKeys([]);
+  };
+
   return (
     <div className={styles.page}>
       <PageHeader
         Icon={IconClipboardList}
         title="Duties"
+        selectionCount={selectedKeys.length}
+        actions={
+          selectedKeys.length > 0 ? (
+            <Button
+              type="button"
+              title="Clear assignments"
+              Icon={IconX}
+              variant="secondary"
+              size="small"
+              onClick={() => void clearSelected()}
+            />
+          ) : undefined
+        }
         menuItems={[
           {
             label: "Export CSV",
@@ -272,12 +312,21 @@ export const DutiesPage = () => {
           <span className={styles.bannerText}>{error}</span>
         </Banner>
       )}
+      <PageTabs tabs={VIEW_TABS} activeId={tabId} onChange={setTabId} />
       <RecordTable
         columns={columns}
-        rows={rows as DutyRow[]}
+        rows={visibleRows}
         rowKey={(r) => r.eventId}
-        rowClassName={(r) => (r.seatShortfall > 0 ? styles.shortfall : undefined)}
-        emptyText="No ground jobs today."
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        rowActions={[
+          {
+            label: "Clear assignment",
+            Icon: IconX,
+            onClick: (key) => void clear({ arrivalEventId: key }),
+          },
+        ]}
+        emptyText="No ground jobs match."
       />
     </div>
   );

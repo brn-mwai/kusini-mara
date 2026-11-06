@@ -4,10 +4,8 @@ import {
   IconBed,
   IconCalendar,
   IconChevronDown,
-  IconDoorEnter,
   IconLogin,
   IconLogout,
-  IconPlus,
   IconProgressCheck,
   IconUser,
 } from "@tabler/icons-react";
@@ -21,7 +19,6 @@ import { Button } from "@ui/input/Button/Button";
 import { H2Title } from "@ui/typography/H2Title/H2Title";
 import { MenuItemSelect } from "@ui/navigation/MenuItemSelect/MenuItemSelect";
 
-import { PageHeader } from "@/components/page/PageHeader";
 import { PageLoading, PageUnseeded } from "@/components/PageState";
 import { Dropdown } from "@/components/dropdown/Dropdown";
 import { RecordTable, type RecordColumn } from "@/components/table/RecordTable";
@@ -62,7 +59,7 @@ const NEXT_ACTION: Record<string, { to: string; label: string; Icon: typeof Icon
   due_out: { to: "checked_out", label: "Check out", Icon: IconLogout },
 };
 
-export const CheckinPage = () => {
+export const CheckinView = () => {
   const data = useQuery(api.stays.board);
   const transition = useMutation(api.stays.transition);
   const assignRoom = useMutation(api.stays.assignRoom);
@@ -199,22 +196,7 @@ export const CheckinPage = () => {
   };
 
   return (
-    <div className={pageStyles.page}>
-      <PageHeader
-        Icon={IconDoorEnter}
-        title="Check-in"
-        actions={
-          <Button
-            type="button"
-            title="New stay"
-            Icon={IconPlus}
-            variant="primary"
-            accent="blue"
-            size="small"
-            onClick={() => setIsNewOpen(true)}
-          />
-        }
-      />
+    <>
       {error && (
         <Banner color="danger">
           <span className={pageStyles.bannerText}>{error}</span>
@@ -248,6 +230,6 @@ export const CheckinPage = () => {
           </div>
         </Modal>
       )}
-    </div>
+    </>
   );
 };

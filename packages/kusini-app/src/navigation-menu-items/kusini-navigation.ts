@@ -16,12 +16,8 @@ const OBJECT_IDS = {
 };
 
 const FOLDERS = [
-  { key: "operations", name: "Operations", id: "bf010001-0000-4000-8000-000000000001" },
-  { key: "guests", name: "Guests", id: "bf010002-0000-4000-8000-000000000002" },
-  { key: "workforce", name: "Workforce", id: "bf010003-0000-4000-8000-000000000003" },
-  { key: "property", name: "Property", id: "bf010004-0000-4000-8000-000000000004" },
-  { key: "insights", name: "Insights", id: "bf010005-0000-4000-8000-000000000005" },
-  { key: "global", name: "Global", id: "bf010006-0000-4000-8000-000000000006" },
+  { key: "workspace", name: "Workspace", id: "bf010001-0000-4000-8000-000000000001" },
+  { key: "planning", name: "Planning", id: "bf010003-0000-4000-8000-000000000003" },
 ] as const;
 
 const folderId = (key: (typeof FOLDERS)[number]["key"]) =>
@@ -47,22 +43,14 @@ type ItemDef = {
 };
 
 const ITEMS: ItemDef[] = [
-  { id: "bf020001-0000-4000-8000-000000000001", name: "Today", icon: "IconLayoutDashboard", color: "green", folder: "operations", object: "movement", link: "/today" },
-  { id: "bf020002-0000-4000-8000-000000000002", name: "Arrivals", icon: "IconPlaneArrival", color: "blue", folder: "operations", object: "movement", link: "/arrivals" },
-  { id: "bf020003-0000-4000-8000-000000000003", name: "Departures", icon: "IconPlaneDeparture", color: "purple", folder: "operations", object: "movement", link: "/departures" },
-  { id: "bf020004-0000-4000-8000-000000000004", name: "Bookings", icon: "IconPlane", color: "pink", folder: "operations", object: "booking", link: "/bookings" },
-  { id: "bf020005-0000-4000-8000-000000000005", name: "Guest directory", icon: "IconUsers", color: "sky", folder: "guests", object: "guest", link: "/guests" },
-  { id: "bf020006-0000-4000-8000-000000000006", name: "Check-in", icon: "IconDoorEnter", color: "turquoise", folder: "guests", object: "stay", link: "/checkin" },
-  { id: "bf020007-0000-4000-8000-000000000007", name: "Duties", icon: "IconClipboardList", color: "blue", folder: "workforce", object: "dutyAssignment", link: "/duties" },
-  { id: "bf020008-0000-4000-8000-000000000008", name: "Leave planner", icon: "IconSunOff", color: "green", folder: "workforce", link: "/leave" },
-  { id: "bf020009-0000-4000-8000-000000000009", name: "Staff", icon: "IconUsersGroup", color: "purple", folder: "workforce", object: "staff", link: "/staff" },
-  { id: "bf02000a-0000-4000-8000-00000000000a", name: "Rooms", icon: "IconBed", color: "pink", folder: "property", object: "room", link: "/rooms" },
-  { id: "bf02000b-0000-4000-8000-00000000000b", name: "Calendar", icon: "IconCalendarEvent", color: "yellow", folder: "property", link: "/calendar" },
-  { id: "bf02000c-0000-4000-8000-00000000000c", name: "Reports", icon: "IconChartBar", color: "sky", folder: "insights", link: "/reports" },
-  { id: "bf02000d-0000-4000-8000-00000000000d", name: "Notifications", icon: "IconBell", color: "orange", folder: "global", link: "/notifications" },
-  { id: "bf02000e-0000-4000-8000-00000000000e", name: "Broadcasts", icon: "IconBroadcast", color: "red", folder: "global", link: "/broadcasts" },
-  { id: "bf02000f-0000-4000-8000-00000000000f", name: "Print", icon: "IconPrinter", color: "gray", folder: "global", link: "/print" },
-  { id: "bf020010-0000-4000-8000-000000000010", name: "Settings", icon: "IconSettings", color: "orange", folder: "global", link: "/settings" },
+  { id: "bf020001-0000-4000-8000-000000000001", name: "Movements", icon: "IconPlaneTilt", color: "green", folder: "workspace", object: "movement", link: "/movements" },
+  { id: "bf020004-0000-4000-8000-000000000004", name: "Bookings", icon: "IconPlane", color: "pink", folder: "workspace", object: "booking", link: "/bookings" },
+  { id: "bf020005-0000-4000-8000-000000000005", name: "Guests", icon: "IconUsers", color: "sky", folder: "workspace", object: "guest", link: "/guests" },
+  { id: "bf020007-0000-4000-8000-000000000007", name: "Duties", icon: "IconClipboardList", color: "blue", folder: "workspace", object: "dutyAssignment", link: "/duties" },
+  { id: "bf02000a-0000-4000-8000-00000000000a", name: "Rooms", icon: "IconBed", color: "pink", folder: "workspace", object: "room", link: "/rooms" },
+  { id: "bf020009-0000-4000-8000-000000000009", name: "Staff", icon: "IconUsersGroup", color: "purple", folder: "workspace", object: "staff", link: "/staff" },
+  { id: "bf020008-0000-4000-8000-000000000008", name: "Leave planner", icon: "IconSunOff", color: "green", folder: "planning", link: "/leave" },
+  { id: "bf02000c-0000-4000-8000-00000000000c", name: "Dashboards", icon: "IconChartBar", color: "sky", folder: "planning", link: "/dashboards" },
 ];
 
 export const kusiniNavigationItems = ITEMS.map((item, index) =>

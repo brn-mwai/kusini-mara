@@ -18,6 +18,7 @@ import { H2Title } from "@ui/typography/H2Title/H2Title";
 
 import { PageHeader } from "@/components/page/PageHeader";
 import { PageLoading, PageUnseeded } from "@/components/PageState";
+import { PageTabs, type PageTab } from "@/components/tabs/PageTabs";
 import { RecordTable, type RecordColumn } from "@/components/table/RecordTable";
 import { SelectField, TextField } from "@/components/form/Field";
 import { exportCsv } from "@/lib/exportCsv";
@@ -44,9 +45,17 @@ const SOURCES = [
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
+const VIEW_TABS: PageTab[] = [
+  { id: "upcoming", label: "Upcoming" },
+  { id: "in_house", label: "In-house" },
+  { id: "past", label: "Past" },
+  { id: "all", label: "All" },
+];
+
 export const BookingsPage = () => {
   const data = useQuery(api.bookings.list);
   const create = useMutation(api.bookings.create);
+  const [tabId, setTabId] = useState("upcoming");
   const [isNewOpen, setIsNewOpen] = useState(false);
 
   const [guestName, setGuestName] = useState("");
@@ -170,12 +179,19 @@ export const BookingsPage = () => {
           },
         ]}
       />
+      <PageTabs tabs={VIEW_TABS} activeId={tabId} onChange={setTabId} />
       <RecordTable
         columns={columns}
-        rows={data.rows as BookingRow[]}
+        rows={(data.rows as BookingRow[]).filter((r) => {
+          const today = todayIso();
+          if (tabId === "upcoming") return r.arrivalDate > today;
+          if (tabId === "in_house") return r.arrivalDate <= today && r.departureDate >= today;
+          if (tabId === "past") return r.departureDate < today;
+          return true;
+        })}
         rowKey={(r) => r.id}
         onAddNew={() => setIsNewOpen(true)}
-        emptyText="No bookings yet."
+        emptyText="No bookings match."
       />
       {isNewOpen && (
         <Modal isOpen size="medium" ariaLabel="New booking">

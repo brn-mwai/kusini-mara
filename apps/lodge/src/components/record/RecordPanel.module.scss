@@ -1,9 +1,9 @@
 .panel {
   display: flex;
   flex-direction: column;
-  width: 380px;
-  min-width: 380px;
-  border-left: 1px solid var(--t-border-color-light);
+  width: 400px;
+  min-width: 400px;
+  border-left: 1px solid var(--t-border-color-medium);
   background: var(--t-background-primary);
   overflow: hidden;
   transition: width calc(var(--t-animation-duration-fast) * 1s) ease,

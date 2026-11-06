@@ -11,7 +11,8 @@
   flex-direction: column;
   gap: 1px;
   padding: var(--t-spacing-1);
-  background: var(--t-background-primary);
+  background: var(--t-background-transparent-primary);
+  backdrop-filter: var(--t-blur-medium);
   border: 1px solid var(--t-border-color-medium);
   border-radius: var(--t-border-radius-md);
   box-shadow: var(--t-box-shadow-strong);

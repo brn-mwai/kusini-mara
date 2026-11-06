@@ -8,7 +8,6 @@ import { ReportsPage } from "./pages/reports/ReportsPage";
 import { BookingsPage } from "./pages/bookings/BookingsPage";
 import { BroadcastsPage } from "./pages/broadcasts/BroadcastsPage";
 import { CalendarPage } from "./pages/calendar/CalendarPage";
-import { CheckinPage } from "./pages/checkin/CheckinPage";
 import { DutiesPage } from "./pages/duties/DutiesPage";
 import { GuestsPage } from "./pages/guests/GuestsPage";
 import { LeavePage } from "./pages/leave/LeavePage";
@@ -20,18 +19,20 @@ import { StaffPage } from "./pages/staff/StaffPage";
 export const App = () => (
   <Routes>
     <Route element={<Shell />}>
-      <Route path="/" element={<Navigate to="/today" replace />} />
-      <Route path="/board" element={<Navigate to="/today" replace />} />
-      <Route path="/today" element={<MovementsPage variant="today" />} />
+      <Route path="/" element={<Navigate to="/movements" replace />} />
+      <Route path="/board" element={<Navigate to="/movements" replace />} />
+      <Route path="/today" element={<Navigate to="/movements" replace />} />
+      <Route path="/arrivals" element={<Navigate to="/movements?view=arrivals" replace />} />
+      <Route path="/departures" element={<Navigate to="/movements?view=departures" replace />} />
+      <Route path="/checkin" element={<Navigate to="/guests?view=checkin" replace />} />
+      <Route path="/reports" element={<Navigate to="/dashboards" replace />} />
+      <Route path="/movements" element={<MovementsPage />} />
       <Route path="/movements/:id" element={<MovementRecordPage />} />
-      <Route path="/arrivals" element={<MovementsPage variant="arrivals" />} />
-      <Route path="/departures" element={<MovementsPage variant="departures" />} />
-      <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/dashboards" element={<ReportsPage />} />
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/bookings" element={<BookingsPage />} />
       <Route path="/guests" element={<GuestsPage />} />
       <Route path="/rooms" element={<RoomsPage />} />
-      <Route path="/checkin" element={<CheckinPage />} />
       <Route path="/duties" element={<DutiesPage />} />
       <Route path="/staff" element={<StaffPage />} />
       <Route path="/leave" element={<LeavePage />} />

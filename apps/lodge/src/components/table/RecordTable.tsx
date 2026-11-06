@@ -1,8 +1,8 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { IconChevronDown, IconPlus } from "@tabler/icons-react";
 
-import { Button } from "@ui/input/Button/Button";
 import { Checkbox } from "@ui/input/Checkbox/Checkbox";
+import { MenuItem } from "@ui/navigation/MenuItem/MenuItem";
 import { MenuItemMultiSelect } from "@ui/navigation/MenuItemMultiSelect/MenuItemMultiSelect";
 import { MenuItemSelect } from "@ui/navigation/MenuItemSelect/MenuItemSelect";
 import { type IconComponent } from "@ui/icon/types/IconComponent";
@@ -20,13 +20,6 @@ export type RecordColumn<Row> = {
   isEmpty?: (row: Row) => boolean;
 };
 
-export type BulkAction = {
-  label: string;
-  Icon?: IconComponent;
-  accent?: "default" | "blue" | "danger";
-  onClick: (selectedKeys: string[]) => void | Promise<void>;
-};
-
 type Aggregate = "count" | "empty" | "not_empty" | "percent_empty";
 
 const AGGREGATE_LABEL: Record<Aggregate, string> = {
@@ -36,13 +29,20 @@ const AGGREGATE_LABEL: Record<Aggregate, string> = {
   percent_empty: "Empty %",
 };
 
+export type RowAction = {
+  label: string;
+  Icon?: IconComponent;
+  onClick: (key: string) => void;
+};
+
 type RecordTableProps<Row> = {
   columns: RecordColumn<Row>[];
   rows: Row[];
   rowKey: (row: Row) => string;
-  rowClassName?: (row: Row) => string | undefined;
   onAddNew?: () => void;
-  bulkActions?: BulkAction[];
+  selectedKeys?: string[];
+  onSelectionChange?: (keys: string[]) => void;
+  rowActions?: RowAction[];
   emptyText?: string;
 };
 
@@ -50,14 +50,38 @@ export const RecordTable = <Row,>({
   columns,
   rows,
   rowKey,
-  rowClassName,
   onAddNew,
-  bulkActions = [],
+  selectedKeys,
+  onSelectionChange,
+  rowActions = [],
   emptyText = "No records.",
 }: RecordTableProps<Row>) => {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [internalSelected, setInternalSelected] = useState<Set<string>>(new Set());
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [aggregates, setAggregates] = useState<Record<string, Aggregate>>({});
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; key: string } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("click", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [contextMenu]);
+
+  const selected = selectedKeys !== undefined ? new Set(selectedKeys) : internalSelected;
+  const setSelected = (next: Set<string>) => {
+    setInternalSelected(next);
+    onSelectionChange?.([...next]);
+  };
 
   const visibleColumns = useMemo(
     () => columns.filter((c) => !hiddenColumns.has(c.key)),
@@ -69,16 +93,15 @@ export const RecordTable = <Row,>({
   const toggleAll = () =>
     setSelected(allSelected ? new Set() : new Set(rows.map(rowKey)));
 
-  const toggleOne = (key: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
+  const toggleOne = (key: string) => {
+    const next = new Set(selected);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    setSelected(next);
+  };
 
   const toggleColumn = (key: string) =>
     setHiddenColumns((prev) => {
@@ -103,7 +126,12 @@ export const RecordTable = <Row,>({
   };
 
   return (
-    <div className={styles.wrap}>
+    <div
+      className={styles.wrap}
+      onScroll={(e) =>
+        e.currentTarget.toggleAttribute("data-scrolled", e.currentTarget.scrollLeft > 0)
+      }
+    >
       <table className={styles.table}>
         <thead>
           <tr>
@@ -145,7 +173,18 @@ export const RecordTable = <Row,>({
           {rows.map((row) => {
             const key = rowKey(row);
             return (
-              <tr key={key} className={rowClassName?.(row)}>
+              <tr
+                key={key}
+                className={selected.has(key) ? styles.selectedRow : undefined}
+                onContextMenu={
+                  rowActions.length > 0
+                    ? (e) => {
+                        e.preventDefault();
+                        setContextMenu({ x: e.clientX, y: e.clientY, key });
+                      }
+                    : undefined
+                }
+              >
                 <td className={styles.checkboxCell}>
                   <Checkbox
                     checked={selected.has(key)}
@@ -196,13 +235,15 @@ export const RecordTable = <Row,>({
                           {AGGREGATE_LABEL[aggregates[col.key]]}{" "}
                           <strong>{aggregateValue(col)}</strong>
                         </span>
-                      ) : index === 0 ? (
-                        <span className={styles.footerContent}>
-                          Count all <strong>{rows.length}</strong>
-                        </span>
                       ) : (
-                        <span className={styles.calculateHint}>
-                          Calculate <IconChevronDown size={10} />
+                        <span
+                          className={
+                            index === 0
+                              ? `${styles.calculateHint} ${styles.calculateHintVisible}`
+                              : styles.calculateHint
+                          }
+                        >
+                          Calculate <IconChevronDown size={12} />
                         </span>
                       )}
                     </button>
@@ -245,21 +286,19 @@ export const RecordTable = <Row,>({
         </tfoot>
       </table>
 
-      {selected.size > 0 && bulkActions.length > 0 && (
-        <div className={styles.actionBar}>
-          <span className={styles.actionBarCount}>{selected.size} selected</span>
-          {bulkActions.map((action) => (
-            <Button
+      {contextMenu && (
+        <div
+          className={styles.contextMenu}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          {rowActions.map((action) => (
+            <MenuItem
               key={action.label}
-              type="button"
-              title={action.label}
-              Icon={action.Icon}
-              variant="primary"
-              accent={action.accent ?? "blue"}
-              size="small"
+              text={action.label}
+              LeftIcon={action.Icon}
               onClick={() => {
-                void action.onClick([...selected]);
-                setSelected(new Set());
+                action.onClick(contextMenu.key);
+                setContextMenu(null);
               }}
             />
           ))}

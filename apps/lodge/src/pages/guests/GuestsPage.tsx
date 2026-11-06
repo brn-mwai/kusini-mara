@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import {
   IconAlertTriangle,
@@ -19,8 +20,10 @@ import { H2Title } from "@ui/typography/H2Title/H2Title";
 
 import { PageHeader } from "@/components/page/PageHeader";
 import { PageLoading, PageUnseeded } from "@/components/PageState";
+import { PageTabs, type PageTab } from "@/components/tabs/PageTabs";
 import { RecordTable, type RecordColumn } from "@/components/table/RecordTable";
 import { SelectField, TextField, FieldShell } from "@/components/form/Field";
+import { CheckinView } from "../checkin/CheckinPage";
 
 import pageStyles from "@/components/pageStyles.module.scss";
 import formStyles from "../board/NewMovementModal.module.scss";
@@ -57,9 +60,21 @@ const SEVERITIES = [
   { id: "critical", label: "Critical" },
 ];
 
+const VIEW_TABS: PageTab[] = [
+  { id: "directory", label: "Directory" },
+  { id: "checkin", label: "Check-in" },
+  { id: "flagged", label: "Flagged" },
+  { id: "all", label: "All" },
+];
+
 export const GuestsPage = () => {
   const data = useQuery(api.guests.list);
   const create = useMutation(api.guests.create);
+  const [searchParams] = useSearchParams();
+  const initialView = searchParams.get("view");
+  const [tabId, setTabId] = useState(
+    VIEW_TABS.some((t) => t.id === initialView) ? (initialView as string) : "directory",
+  );
   const [isNewOpen, setIsNewOpen] = useState(false);
 
   const [bookingId, setBookingId] = useState("");
@@ -156,31 +171,42 @@ export const GuestsPage = () => {
     },
   ];
 
+  const guestRows =
+    tabId === "flagged"
+      ? (data.rows as GuestRow[]).filter((r) => r.critical)
+      : (data.rows as GuestRow[]);
+
   return (
     <div className={pageStyles.page}>
       <PageHeader
         Icon={IconUsers}
         title="Guests"
         actions={
-          <Button
-            type="button"
-            title="New guest"
-            Icon={IconPlus}
-            variant="primary"
-            accent="blue"
-            size="small"
-            onClick={() => setIsNewOpen(true)}
-          />
+          tabId !== "checkin" ? (
+            <Button
+              type="button"
+              title="New guest"
+              Icon={IconPlus}
+              variant="primary"
+              accent="blue"
+              size="small"
+              onClick={() => setIsNewOpen(true)}
+            />
+          ) : undefined
         }
       />
-      <RecordTable
-        columns={columns}
-        rows={data.rows as GuestRow[]}
-        rowKey={(r) => r.id}
-        rowClassName={(r) => (r.critical ? pageStyles.dangerRow : undefined)}
-        onAddNew={() => setIsNewOpen(true)}
-        emptyText="No guests yet — add them from a booking."
-      />
+      <PageTabs tabs={VIEW_TABS} activeId={tabId} onChange={setTabId} />
+      {tabId === "checkin" ? (
+        <CheckinView />
+      ) : (
+        <RecordTable
+          columns={columns}
+          rows={guestRows}
+          rowKey={(r) => r.id}
+          onAddNew={() => setIsNewOpen(true)}
+          emptyText="No guests yet — add them from a booking."
+        />
+      )}
       {isNewOpen && (
         <Modal isOpen size="medium" ariaLabel="New guest">
           <div className={formStyles.body}>

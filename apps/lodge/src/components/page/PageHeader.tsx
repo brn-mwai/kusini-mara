@@ -18,17 +18,24 @@ export type PageMenuItem = {
 type PageHeaderProps = {
   Icon: IconComponent;
   title: string;
+  selectionCount?: number;
   actions?: ReactNode;
   menuItems?: PageMenuItem[];
 };
 
-export const PageHeader = ({ Icon, title, actions, menuItems }: PageHeaderProps) => (
+export const PageHeader = ({ Icon, title, selectionCount, actions, menuItems }: PageHeaderProps) => (
   <header className={styles.header}>
     <div className={styles.titleGroup}>
       <span className={styles.titleIcon}>
         <Icon size={16} />
       </span>
       <span className={styles.title}>{title}</span>
+      {selectionCount !== undefined && selectionCount > 0 && (
+        <>
+          <span className={styles.selectionArrow}>→</span>
+          <span className={styles.selectionCount}>{selectionCount} selected</span>
+        </>
+      )}
     </div>
     <div className={styles.actions}>
       {actions}

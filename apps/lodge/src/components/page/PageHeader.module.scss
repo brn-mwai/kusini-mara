@@ -20,11 +20,21 @@
 
 .title {
   font-size: var(--t-font-size-md);
-  font-weight: var(--t-font-weight-medium);
+  font-weight: var(--t-font-weight-semi-bold);
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: var(--t-spacing-2);
+}
+
+.selectionArrow {
+  color: var(--t-font-color-light);
+}
+
+.selectionCount {
+  font-size: var(--t-font-size-md);
+  font-weight: var(--t-font-weight-semi-bold);
+  color: var(--t-font-color-tertiary);
 }

@@ -44,7 +44,7 @@ export const global = query({
           kind: "movement",
           label: `${name} ×${e.partySize}`,
           sub: `${e.direction} · ${e.status}`,
-          path: "/board",
+          path: "/movements",
         });
       }
     }

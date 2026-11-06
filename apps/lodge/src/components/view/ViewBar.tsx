@@ -1,8 +1,6 @@
 import { type ReactNode } from "react";
 import {
-  IconArrowsSort,
   IconChevronDown,
-  IconFilter,
   IconList,
   IconSortAscending,
   IconSortDescending,
@@ -93,7 +91,6 @@ export const ViewBar = ({
             width={220}
             trigger={
               <button type="button" className={styles.textAction}>
-                <IconFilter size={14} />
                 Filter
                 {activeFilterIds.length > 0 && (
                   <span className={styles.badge}>{activeFilterIds.length}</span>
@@ -119,7 +116,6 @@ export const ViewBar = ({
             width={200}
             trigger={
               <button type="button" className={styles.textAction}>
-                <IconArrowsSort size={14} />
                 Sort
               </button>
             }

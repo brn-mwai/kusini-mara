@@ -250,7 +250,6 @@ export const LeavePage = () => {
           columns={requestColumns}
           rows={data.requests as RequestRow[]}
           rowKey={(r) => r.id}
-          rowClassName={(r) => (r.conflict ? pageStyles.dangerRow : undefined)}
           onAddNew={() => setIsNewOpen(true)}
           emptyText="No leave requests yet."
         />
